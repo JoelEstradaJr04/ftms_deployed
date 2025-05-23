@@ -9,7 +9,8 @@ import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  const { assignment_id, category, total_amount, date, created_by } = data;
+  // Add other_source to the destructured properties
+  const { assignment_id, category, total_amount, date, created_by, other_source } = data;
 
   try {
     let finalAmount = total_amount;
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
         created_at: new Date(),
         updated_at: null,
         isDeleted: false,
-      },
+        other_source: category === 'Other' ? other_source : null // Now properly defined
+      }
     });
 
     await logAudit({
@@ -67,10 +69,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(newRevenue);
   } catch (error) {
     console.error('Failed to create revenue:', error);
-    
-    // Type guard to check if error is an instance of Error
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    
     return NextResponse.json(
       { error: 'Internal Server Error', details: errorMessage },
       { status: 500 }

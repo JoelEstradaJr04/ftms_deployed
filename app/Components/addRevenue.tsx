@@ -180,7 +180,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   // Format assignment for display
   const formatAssignment = (assignment: typeof assignments[0]) => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType}/${assignment.bus_bodynumber} - ${assignment.bus_route} - ${assignment.driver_name.split(' ').pop()} - ${assignment.conductor_name.split(' ').pop()} - ${new Date(assignment.date_assigned).toLocaleDateString('en-US', {
+    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${new Date(assignment.date_assigned).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -234,7 +234,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                     name="other_source"
                     value={formData.other_source}
                     onChange={handleInputChange}
-                    placeholder="Enter source description"
+                    placeholder="Please specify"
                     required
                     className="formInput"
                   />
@@ -259,6 +259,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                     ))}
                   </select>
                 )}
+
                 {formData.category !== 'Other' && filteredAssignments.length === 0 && (
                   <div className="noAssignments">No {formData.category} assignments available</div>
                 )}

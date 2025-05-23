@@ -18,35 +18,40 @@ interface RevenueRecord {
   created_by: string;        
   created_at: string;        
   updated_at?: string;       
-  isDeleted: boolean;        
+  isDeleted: boolean;
+  other_source?: string; // Add this line
 }
 
 // Updated Assignment interface to include assignment_type and is_recorded
+// Update the Assignment interface
 interface Assignment {
   assignment_id: string;
   bus_bodynumber: string;
-  bus_route: string;
-  bus_type: string; 
+  bus_platenumber: string;
+  bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
+  bus_type: 'Airconditioned' | 'Ordinary';
   driver_name: string;
   conductor_name: string;
   date_assigned: string;
+  trip_fuel_expense: number;
   trip_revenue: number;
-  assignment_type: "Boundary" | "Percentage" | "Bus_Rental"; 
-  is_recorded: boolean; 
+  is_recorded: boolean;
+  assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
 }
 
-// Define the type for the API response
-interface AssignmentResponse {
+interface RawAssignment {
   assignment_id: string;
   bus_bodynumber: string;
-  bus_route: string;
-  bus_type: string; 
+  bus_platenumber: string;
+  bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
+  bus_type: 'Airconditioned' | 'Ordinary';
   driver_name: string;
   conductor_name: string;
   date_assigned: string;
-  trip_revenue: number;
-  assignment_type?: "Boundary" | "Percentage" | "Bus_Rental"; 
-  is_recorded: boolean; 
+  trip_fuel_expense: string | number; // API might return string
+  trip_revenue: string | number; // API might return string
+  is_recorded: boolean;
+  assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
 }
 
 // UI data type that matches your schema exactly
@@ -57,6 +62,7 @@ type RevenueData = {
   date: string;             
   created_by: string;       
   assignment_id?: string;   
+  other_source?: string;
 };
 
 const RevenuePage = () => {
@@ -73,6 +79,17 @@ const RevenuePage = () => {
   const [recordToEdit, setRecordToEdit] = useState<RevenueData | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
+  // Reuse the same format function from addRevenue.tsx
+  const formatAssignment = (assignment: Assignment): string => {
+    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${new Date(assignment.date_assigned).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })}`;
+  };
+
+
   // Fetch assignments function
   const fetchAssignments = async () => {
     try {
@@ -81,57 +98,109 @@ const RevenuePage = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: AssignmentResponse[] = await response.json();
-      const mappedAssignments = data.map((assignment) => ({
-        ...assignment,
-        assignment_type: assignment.assignment_type || "Boundary"
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Expected array of assignments');
+      }
+
+      // Ensure all required fields are present
+      const mappedAssignments: Assignment[] = data.map(assignment => ({
+        assignment_id: assignment.assignment_id,
+        bus_bodynumber: assignment.bus_bodynumber,
+        bus_platenumber: assignment.bus_platenumber,
+        bus_route: assignment.bus_route,
+        bus_type: assignment.bus_type,
+        driver_name: assignment.driver_name,
+        conductor_name: assignment.conductor_name,
+        date_assigned: assignment.date_assigned,
+        trip_fuel_expense: Number(assignment.trip_fuel_expense),
+        trip_revenue: Number(assignment.trip_revenue),
+        is_recorded: assignment.is_recorded,
+        assignment_type: assignment.assignment_type
       }));
-      
-      setAssignments(mappedAssignments);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      console.error('Error fetching assignments:', errorMessage);
-      Swal.fire('Error', 'Failed to load assignments: ' + errorMessage, 'error');
-    }
-  };
+    
+    setAssignments(mappedAssignments);
+    console.log('Fetched assignments:', mappedAssignments); // Debug log
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Error fetching assignments:', errorMessage);
+    Swal.fire('Error', 'Failed to load assignments: ' + errorMessage, 'error');
+  }
+};
 
   useEffect(() => {
     fetchAssignments(); // Fetch assignments on component mount
   }, []);
 
   useEffect(() => {
-    const fetchRevenues = async () => {
+    const fetchRevenuesAndAssignments = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/revenues');
-        if (!response.ok) throw new Error('Failed to fetch revenues');
         
-        const revenues: RevenueRecord[] = await response.json();
+        // Fetch assignments first
+        const assignmentsResponse = await fetch('/api/assignments');
+        if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
+        const assignmentsData = await assignmentsResponse.json();
         
-        // Transform API data to match UI data structure
+        // Map assignments with proper typing
+        const mappedAssignments: Assignment[] = (assignmentsData as RawAssignment[]).map((assignment: RawAssignment) => ({
+          assignment_id: assignment.assignment_id,
+          bus_bodynumber: assignment.bus_bodynumber,
+          bus_platenumber: assignment.bus_platenumber,
+          bus_route: assignment.bus_route,
+          bus_type: assignment.bus_type,
+          driver_name: assignment.driver_name,
+          conductor_name: assignment.conductor_name,
+          date_assigned: assignment.date_assigned,
+          trip_fuel_expense: Number(assignment.trip_fuel_expense),
+          trip_revenue: Number(assignment.trip_revenue),
+          is_recorded: assignment.is_recorded,
+          assignment_type: assignment.assignment_type
+        }));
+        
+        setAssignments(mappedAssignments);
+        
+        // Then fetch revenues
+        const revenuesResponse = await fetch('/api/revenues');
+        if (!revenuesResponse.ok) throw new Error('Failed to fetch revenues');
+        
+        const revenues: RevenueRecord[] = await revenuesResponse.json();
+        
         const transformedData: RevenueData[] = revenues.map(revenue => ({
           revenue_id: revenue.revenue_id,
           category: revenue.category,
           total_amount: Number(revenue.total_amount),
           date: new Date(revenue.date).toISOString().split('T')[0],
           created_by: revenue.created_by,
-          assignment_id: revenue.assignment_id
+          assignment_id: revenue.assignment_id,
+          other_source: revenue.other_source || undefined
         }));
         
         setData(transformedData);
       } catch (error) {
-        console.error('Error fetching revenues:', error);
-        Swal.fire('Error', 'Failed to load revenue data', 'error');
+        console.error('Error fetching data:', error);
+        Swal.fire('Error', 'Failed to load data', 'error');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchRevenues();
-  }, []);
+    fetchRevenuesAndAssignments();
+  }, []); // Empty dependency array as we only want this to run once on mount
+
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      await fetchAssignments();
+    };
+    
+    if (assignments.length === 0) {
+      loadAssignments();
+    }
+  }, [assignments.length]);
 
   // Filter and pagination logic
-  const filteredData = data.filter(item => {
+  const filteredData = data.filter((item: RevenueData) => {
     const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase());
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesDate = (!dateFrom || item.date >= dateFrom) && 
@@ -153,50 +222,84 @@ const RevenuePage = () => {
     other_source?: string;
   }) => {
     try {
-      const response = await fetch('/api/revenues', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: newRevenue.category,
-          total_amount: newRevenue.total_amount,
-          date: new Date(newRevenue.date).toISOString(),
-          created_by: newRevenue.created_by,
-          assignment_id: newRevenue.assignment_id || null
-        })
+      // Check for duplicates if category is not "Other"
+      if (newRevenue.category !== 'Other') {
+      const duplicate = data.find(item => {
+        const assignment = assignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
+        const itemAssignment = item.assignment_id 
+          ? assignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
+          : null;
+
+        if (!assignment || !itemAssignment) return false;
+
+        return (
+          new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.date &&
+          assignment.bus_bodynumber === itemAssignment.bus_bodynumber &&
+          item.category === newRevenue.category &&
+          assignment.driver_name === itemAssignment.driver_name &&
+          assignment.conductor_name === itemAssignment.conductor_name
+        );
       });
 
-      if (!response.ok) throw new Error('Create failed');
-
-      const result: RevenueRecord = await response.json();
-      
-      setData(prev => [...prev, {
-        revenue_id: result.revenue_id,
-        category: result.category,
-        total_amount: Number(result.total_amount),
-        date: new Date(result.date).toISOString().split('T')[0],
-        created_by: result.created_by,
-        assignment_id: result.assignment_id
-      }]);
-
-      // Update is_recorded to true for the used assignment
-      if (newRevenue.assignment_id) {
-        await fetch(`/api/assignments/${newRevenue.assignment_id}`, {
-          method: 'PUT', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_recorded: true })
-        });
+        if (duplicate) {
+          Swal.fire('Error', 'Duplicate revenue record found for the same assignment.', 'error');
+          return;
+        }
       }
 
-      // Refetch assignments to update the dropdown
-      await fetchAssignments(); // Call the function to fetch assignments
+      // Existing code to create revenue record
+    const response = await fetch('/api/revenues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: newRevenue.category,
+        total_amount: newRevenue.total_amount,
+        date: new Date(newRevenue.date).toISOString(),
+        created_by: newRevenue.created_by,
+        assignment_id: newRevenue.assignment_id || null,
+        other_source: newRevenue.category === 'Other' ? newRevenue.other_source : null
+      })
+    });
 
-      Swal.fire('Success', 'Revenue added successfully', 'success');
-      setShowModal(false);
-    } catch (error) {
-      console.error('Create error:', error);
-      Swal.fire('Error', 'Failed to add revenue', 'error');
+    if (!response.ok) throw new Error('Create failed');
+
+    const result: RevenueRecord = await response.json();
+    
+    // Update revenues state
+    setData(prev => [...prev, {
+      revenue_id: result.revenue_id,
+      category: result.category,
+      total_amount: Number(result.total_amount),
+      date: new Date(result.date).toISOString().split('T')[0],
+      created_by: result.created_by,
+      assignment_id: result.assignment_id,
+      other_source: result.other_source || undefined
+    }]);
+
+    // Update assignments state locally instead of re-fetching
+    if (newRevenue.assignment_id) {
+      const response = await fetch(`/api/assignments/${newRevenue.assignment_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_recorded: true })
+      });
+
+      if (response.ok) {
+        setAssignments(prev => prev.map(assignment => 
+          assignment.assignment_id === newRevenue.assignment_id 
+            ? { ...assignment, is_recorded: true }
+            : assignment
+        ));
+      }
     }
-  };
+
+    Swal.fire('Success', 'Revenue added successfully', 'success');
+    setShowModal(false);
+  } catch (error) {
+    console.error('Create error:', error);
+    Swal.fire('Error', 'Failed to add revenue: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+  }
+};
 
   const handleDelete = async (revenue_id: string) => {
     const result = await Swal.fire({
@@ -290,8 +393,8 @@ const RevenuePage = () => {
       try {
         const importPromises = lines
           .filter(line => line.trim())
-          .map(async line => {
-            const [, date, category, amount] = line.split(","); // Skip revenue_id as it's auto-generated
+          .map(async (line: string) => {  // Explicitly type the line parameter
+            const [, date, category, amount] = line.split(",");
             const response = await fetch('/api/revenues', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -302,12 +405,11 @@ const RevenuePage = () => {
                 created_by: 'import-job'
               })
             });
-            return await response.json();
+            return await response.json() as RevenueRecord;
           });
 
-        const imported: RevenueRecord[] = await Promise.all(importPromises);
-        
-        // Add imported records following schema structure
+      const imported = await Promise.all(importPromises);
+      
         setData(prev => [...prev, ...imported.map((item: RevenueRecord) => ({
           revenue_id: item.revenue_id,
           category: item.category,
@@ -317,14 +419,14 @@ const RevenuePage = () => {
           assignment_id: item.assignment_id
         }))]);
 
-        Swal.fire('Success', 'Import completed', 'success');
-      } catch (error) {
-        console.error('Import error:', error);
-        Swal.fire('Error', 'Failed to import some records', 'error');
-      }
+          Swal.fire('Success', 'Import completed', 'success');
+        } catch (error) {
+          console.error('Import error:', error);
+          Swal.fire('Error', 'Failed to import some records', 'error');
+        }
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
-  };
 
   return (
     <div className="revenuePage">
@@ -381,42 +483,57 @@ const RevenuePage = () => {
           <thead>
             <tr>
               <th><input type="checkbox" /></th>
-              <th>Revenue ID</th>
               <th>Date</th>
+              <th>Source</th>
               <th>Category</th>
               <th>Amount</th>
-              <th>Created By</th>
               <th>Action</th>
             </tr>
           </thead>
-          <tbody>
-            {currentRecords.map(item => (
-              <tr key={item.revenue_id}>
-                <td><input type="checkbox" /></td>
-                <td>{item.revenue_id}</td>
-                <td>{item.date}</td>
-                <td>{item.category}</td>
-                <td>₱{Number(item.total_amount).toFixed(2)}</td>
-                <td>{item.created_by}</td>
-                <td className="actionButtons">
-                  <button 
-                    className="editBtn" 
-                    onClick={() => {
-                      setRecordToEdit(item);
-                      setEditModalOpen(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    className="deleteBtn" 
-                    onClick={() => handleDelete(item.revenue_id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            <tbody>
+            {currentRecords.map(item => {
+            const assignment = item.assignment_id 
+              ? assignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
+              : null;
+
+              console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
+
+              let source: string;
+              if (item.category === 'Other') {
+                source = item.other_source || 'N/A';
+              } else if (assignment) {
+                source = formatAssignment(assignment);
+              } else {
+                source = 'Loading...'; // Changed from 'Assignment not found' to indicate loading state
+              }
+
+              return (
+                <tr key={item.revenue_id}>
+                  <td><input type="checkbox" /></td>
+                  <td>{new Date(item.date).toLocaleDateString()}</td>
+                  <td>{source}</td>
+                  <td>{item.category}</td>
+                  <td>₱{item.total_amount.toLocaleString()}</td>
+                  <td className="actionButtons">
+                    <button 
+                      className="editBtn" 
+                      onClick={() => {
+                        setRecordToEdit(item);
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="deleteBtn" 
+                      onClick={() => handleDelete(item.revenue_id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {currentRecords.length === 0 && !loading && <p>No records found.</p>}

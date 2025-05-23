@@ -56,6 +56,7 @@
     created_at     DateTime @default(now())
     updated_at     DateTime?
     isDeleted      Boolean  @default(false)
+    other_source   String?  // New column for "Other" category
   }
 
   model AuditLog {
