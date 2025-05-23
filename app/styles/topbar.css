@@ -1,0 +1,65 @@
+i {
+    height: 100%;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    font-size: 110%;
+    font-family: 'poppins', sans-serif;
+}
+
+.topBar {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center the inner content horizontally */
+    text-align: center;
+    box-shadow: none;
+}
+
+.topBarItems {
+    width:80%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: None;
+    font-size: 1rem;
+  }
+  
+
+.topBarItem {
+    width: min-content;
+    flex:1;
+    text-align: center; /* Center-align text */
+    padding: 10px 20px; /* Adjust padding */
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center content within each item */
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Prevent overflow */
+    font-size: 1rem; /* Match font size with topBarItems */
+    color: #000;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    gap: 10px; /* Space between icon and text */
+}
+
+.topBarItem:hover {
+    color: #FFCC3D;
+}
+
+.topBarItem.active {
+    color: #d32f2f;
+    font-weight: bold;
+    border-bottom: 4px solid #d32f2f;
+    width: 100%;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 100%;
+    transition: all 0.3s ease;
+}

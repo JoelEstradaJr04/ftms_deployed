@@ -1,0 +1,165 @@
+.modalOverlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050  !important;
+  }
+
+.addExpenseModal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: scroll;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 1000px;
+    max-height: 80vh;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    font-family: 'open-sans', sans-serif;
+    color: black;
+    overflow-y: scroll; /* still scrollable */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  }
+
+  .modalOverlay::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+
+  .modalHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 10px;
+    margin-bottom: 2rem;
+  }
+
+  .timeDate {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .currTime, .currDate {
+    font-size: 0.7rem;
+    font-weight: lighter;
+    color: rgb(44, 43, 43);
+    font-style: italic;
+    align-self: start;
+  }
+
+  form {
+    width: 100%;
+  }
+
+  .formFields {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    margin: 0 auto;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    margin-bottom: 1rem;
+  }
+
+    .formField label {
+      width: 100%;
+      padding: 8px 0px;
+    }
+
+    .formField input, select {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+
+    .formField {
+      display:flex;
+      flex-direction: column;
+      gap: 0rem;
+      background-color: none;
+    }
+
+    .modalButtons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 100%;
+      background-color: none;
+    }
+
+    .buttonRow {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-content: center;
+    }
+
+    .buttonContainer {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        width: 50%;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+        background-color: none;
+        }
+
+    .buttonContainer button:hover {
+      transform: scale(1.05);
+    }
+
+
+    .cancelButton {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        width: 50%;
+        background-color: #961C1E;
+        color: white;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .addButton {
+        flex: 1;
+        width:unset;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 50%;
+        background-color: #13CE66;
+        color: white;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+
+
+
+  

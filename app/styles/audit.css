@@ -1,0 +1,159 @@
+button {
+    outline: 1px solid black;
+    border-radius: 5px;
+  } 
+  
+  .auditPage {
+      padding: 20px;
+      font-family: 'poppins', sans-serif;
+      color: black;
+    }
+  
+    .settings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: space-between;
+    }
+    
+    .settings input[type="text"],
+    .settings input[type="date"],
+    .settings select {
+      padding: 8px;
+      font-size: 1rem;
+    }
+  
+    .settings input {
+      outline: 1px solid black;
+      border-radius: 5px;
+    }
+    
+    .settings button{
+      padding: 8px 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      outline: 1px solid black;
+      border-radius: 5px;
+      width: fit-content;
+    }
+    
+    .importExport {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 1rem;
+      justify-content: flex-end;
+    }
+    
+    .importExport button {
+      padding: 8px 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      outline: 1px solid black;
+      border-radius: 5px;
+      width: fit-content;
+    }
+    
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .searchBar,
+    .datePicker,
+    .categoryDropdown {
+      padding: 8px;
+      font-size: 14px;
+    }
+  
+    #categoryFilter {
+      max-width: max-content;
+    }
+    
+    .tableContainer {
+      overflow-x: auto;
+    }
+    
+    .revenueTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .revenueTable th,
+    .revenueTable td {
+      padding: 15px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+  
+    .actionButtons {
+      display: flex;
+      flex-direction: row;
+      wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    
+
+    
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      background-color: white;
+      cursor: pointer;
+    }
+    
+    .pagination button:hover {
+      background-color: #eee;
+    }
+    
+    .pagination .active {
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+    }
+    
+    .pagination button:disabled {
+      background-color: #f0f0f0;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    
+    
+    .tableContainer {
+      overflow: scroll;
+    }
+  
+    .tableContainer table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    
+    .tableContainer th,
+    .tableContainer td {
+      border: none;
+      padding: 10px;
+      text-align: center;
+      word-wrap: break-word;
+    }
+    
+    .tableContainer th {
+      background-color: #961C1E;
+      color: white;
+    }
+
+    tr {
+        transition: 0.3s ease;
+    }
+
+    tbody tr:hover {
+      background-color: #FFCC3D;
+      color: white;
+      transform: scale(1.02);
+      font-weight: bold;
+  }
+  
+    

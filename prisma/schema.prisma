@@ -1,0 +1,69 @@
+ generator client {
+    provider = "prisma-client-js"
+  }
+
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
+
+  enum ExpenseCategory {
+    Equipments
+    Fuel
+    Other
+  }
+
+  enum RevenueCategory {
+    Boundary
+    Percentage
+    Bus_Rental
+    Other
+  }
+
+  enum Department {
+    Operations
+    Inventory
+    Human_Resources
+  }
+
+  model Sequence {
+    name  String @id
+    value Int    @default(1)
+  }
+
+  model ExpenseRecord {
+    expense_id     String   @id @default(uuid())
+    assignment_id  String?  // FK to Supabase assignment
+    request_id     String?  // Reserved for future use
+    category       ExpenseCategory
+    department_from Department
+    total_amount   Decimal  @db.Decimal(20, 4)
+    date           DateTime
+    receipt_id     String?  // Reserved for future use
+    recorded_by    String   // user_id
+    created_at     DateTime @default(now())
+    updated_at     DateTime?
+    isDeleted      Boolean  @default(false)
+  }
+
+  model RevenueRecord {
+    revenue_id     String   @id @default(uuid())
+    assignment_id  String?  // FK to Supabase assignment
+    category       RevenueCategory
+    total_amount   Decimal  @db.Decimal(20, 4)
+    date           DateTime
+    created_by     String   // user_id
+    created_at     DateTime @default(now())
+    updated_at     DateTime?
+    isDeleted      Boolean  @default(false)
+  }
+
+  model AuditLog {
+    log_id         String   @id @default(uuid())
+    action         String
+    table_affected String
+    record_id      String   // Polymorphic: could be any ID from other tables
+    performed_by   String   // user_id
+    timestamp      DateTime @default(now())
+    details        String
+  }
