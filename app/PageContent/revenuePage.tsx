@@ -316,38 +316,47 @@ const RevenuePage = () => {
     }
   };
 
-  const handleSaveEdit = async (updatedRecord: RevenueData) => {
+  const handleSaveEdit = async (updatedRecord: {
+    revenue_id: string;
+    date: string;
+    total_amount: number;
+    other_source?: string;
+  }) => {
     try {
       const response = await fetch(`/api/revenues/${updatedRecord.revenue_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: updatedRecord.category, 
-          total_amount: updatedRecord.total_amount, 
-        })
+        body: JSON.stringify(updatedRecord)
       });
 
       if (!response.ok) throw new Error('Update failed');
 
-      const result: RevenueRecord = await response.json();
+      const result = await response.json();
       
-      // Update local state with response from API
-      setData(prev => prev.map(rec => 
-        rec.revenue_id === updatedRecord.revenue_id ? {
-          ...rec,
+      // Update local state by moving the edited record to the top
+      setData(prev => {
+        // Remove the old version of the record
+        const filtered = prev.filter(rec => rec.revenue_id !== updatedRecord.revenue_id);
+        // Create the updated record
+        const updated = {
+          revenue_id: result.revenue_id,
           category: result.category,
           total_amount: Number(result.total_amount),
-        } : rec
-      ));
+          date: new Date(result.date).toISOString().split('T')[0],
+          created_by: result.created_by,
+          assignment_id: result.assignment_id,
+          other_source: result.other_source || undefined
+        };
+        // Add the updated record at the beginning of the array
+        return [updated, ...filtered];
+      });
 
       setEditModalOpen(false);
       setRecordToEdit(null);
       Swal.fire('Success', 'Record updated successfully', 'success');
-      return true;
     } catch (error) {
       console.error('Update error:', error);
       Swal.fire('Error', 'Failed to update record', 'error');
-      return false;
     }
   };
 
@@ -469,7 +478,7 @@ const RevenuePage = () => {
           <thead>
             <tr>
               <th><input type="checkbox" /></th>
-              <th>Date</th>
+              <th>Collection Date</th>
               <th>Source</th>
               <th>Category</th>
               <th>Amount</th>
@@ -550,24 +559,21 @@ const RevenuePage = () => {
       {editModalOpen && recordToEdit && (
         <EditRevenueModal
           record={{
-            id: 1, // Dummy numeric ID for modal compatibility
+            revenue_id: recordToEdit.revenue_id,
             date: recordToEdit.date,
             category: recordToEdit.category,
-            source: recordToEdit.category, // Using category as source since schema doesn't have department_from
-            amount: recordToEdit.total_amount
+            source: recordToEdit.assignment_id 
+              ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)
+              : recordToEdit.other_source || 'N/A',
+            amount: recordToEdit.total_amount,
+            assignment_id: recordToEdit.assignment_id,
+            other_source: recordToEdit.other_source
           }}
           onClose={() => {
             setEditModalOpen(false);
             setRecordToEdit(null);
           }}
-          onSave={(updatedRecord) => handleSaveEdit({
-            revenue_id: recordToEdit.revenue_id,
-            category: updatedRecord.category,
-            total_amount: updatedRecord.amount,
-            date: updatedRecord.date,
-            created_by: recordToEdit.created_by,
-            assignment_id: recordToEdit.assignment_id
-          })}
+          onSave={handleSaveEdit}
         />
       )}
     </div>

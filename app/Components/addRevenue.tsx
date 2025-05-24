@@ -204,7 +204,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
               <div className="formLabel">Category</div>
               <div className="formLabel">Source</div>
               <div className="formLabel">Amount</div>
-              <div className="formLabel">Date</div>
+              <div className="formLabel">Collection Date</div>
             </div>
             
             <div className="formInputs">

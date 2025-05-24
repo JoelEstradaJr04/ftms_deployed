@@ -85,3 +85,121 @@ export async function GET() {
   })
   return NextResponse.json(revenues)
 }
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await req.json();
+    const { total_amount, date, other_source } = data;
+    const revenue_id = params.id;
+
+    // Get the original record for comparison and validation
+    const originalRecord = await prisma.revenueRecord.findUnique({
+      where: { revenue_id }
+    });
+
+    if (!originalRecord || originalRecord.isDeleted) {
+      return NextResponse.json(
+        { error: 'Revenue record not found' },
+        { status: 404 }
+      );
+    }
+
+    // If linked to an assignment, get the original trip_revenue for comparison
+    let originalTripRevenue = null;
+    if (originalRecord.assignment_id) {
+      const assignmentData = await getAssignmentById(originalRecord.assignment_id);
+      originalTripRevenue = assignmentData?.trip_revenue;
+    }
+
+    // Calculate deviation percentage if there's an original trip revenue
+    let deviationPercentage = null;
+    if (originalTripRevenue !== null && originalTripRevenue !== undefined) {
+      deviationPercentage = Math.abs((total_amount - originalTripRevenue) / originalTripRevenue * 100);
+    }
+
+    // Update the record
+    const updatedRevenue = await prisma.revenueRecord.update({
+      where: { revenue_id },
+      data: {
+        total_amount,
+        date: new Date(date),
+        other_source: originalRecord.category === 'Other' ? other_source : null,
+        updated_at: new Date()
+      }
+    });
+
+    // Log the audit trail, including deviation information if applicable
+    let auditDetails = `Updated revenue record. Amount changed from ₱${originalRecord.total_amount} to ₱${total_amount}.`;
+    if (deviationPercentage !== null) {
+      auditDetails += ` Deviation from original trip revenue: ${deviationPercentage.toFixed(2)}%`;
+    }
+
+    await logAudit({
+      action: 'UPDATE',
+      table_affected: 'RevenueRecord',
+      record_id: revenue_id,
+      performed_by: originalRecord.created_by, // Using original creator as the updater
+      details: auditDetails,
+    });
+
+    return NextResponse.json(updatedRevenue);
+  } catch (error) {
+    console.error('Failed to update revenue:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const revenue_id = params.id;
+
+    // Get the record before deletion for audit purposes
+    const record = await prisma.revenueRecord.findUnique({
+      where: { revenue_id }
+    });
+
+    if (!record) {
+      return NextResponse.json(
+        { error: 'Revenue record not found' },
+        { status: 404 }
+      );
+    }
+
+    // Soft delete by setting isDeleted flag
+    const deletedRevenue = await prisma.revenueRecord.update({
+      where: { revenue_id },
+      data: { 
+        isDeleted: true,
+        updated_at: new Date()
+      }
+    });
+
+    // Log the deletion in audit trail
+    await logAudit({
+      action: 'DELETE',
+      table_affected: 'RevenueRecord',
+      record_id: revenue_id,
+      performed_by: record.created_by,
+      details: `Soft deleted revenue record with amount ₱${record.total_amount}`,
+    });
+
+    return NextResponse.json(deletedRevenue);
+  } catch (error) {
+    console.error('Failed to delete revenue:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}

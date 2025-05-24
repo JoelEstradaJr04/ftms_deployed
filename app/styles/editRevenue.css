@@ -3,124 +3,133 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 999;
+    z-index: 1000;
 }
 
 /* Modal Header */
-h2 {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 0.2rem;
+.modalHeader {
+    margin-bottom: 1.5rem;
 }
 
-.editRevenue_row input[type="text"], .editRevenue_row input[type="number"], .editRevenue_row input[type="date"], .editRevenue_row select {
-    flex: 1;
-    padding: 10px 12px;
+.modalHeader h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 0.75rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
-    color: #333;
-    background-color: white;
-    height: 42px;
-    box-sizing: border-box;
-    gap: 1rem;
+    font-size: 1rem;
+}
+
+.amountInputGroup {
+    position: relative;
+}
+
+.tripRevenueReference {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    padding: 0.5rem;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.deviationWarning {
+    color: #d32f2f;
+    margin-top: 0.25rem;
+    font-weight: 500;
 }
 
 /* Modal Box */
 .modalContent {
     background: white;
     padding: 2rem;
-    border-radius: 12px;
-    width: 40%;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-    animation: fadeIn 0.3s ease;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Buttons */
 .modalButtons {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    margin-top: 20px;
-    background-color: none;
-}
-
-.row {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      width: 100%;
-      background-color: none;
-      margin-bottom: 1rem ;
-}
-
-.buttonContainer {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-end;
     gap: 1rem;
-    width: 100%;
-    flex-wrap: wrap;
     margin-top: 2rem;
-    background-color: none;
+}
+
+.cancelBtn,
+.saveBtn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .cancelBtn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    width: 100px;
-    padding: 10px;
-    background-color: #961C1E;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f5f5f5;
+    color: #333;
 }
 
 .cancelBtn:hover {
-    background-color: #7e1719;
+    background-color: #e0e0e0;
 }
 
 .saveBtn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100px;
-    padding: 10px;
     background-color: #13CE66;
     color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .saveBtn:hover {
-    background-color: #0fb85a;
+    background-color: #10b85a;
 }
 
-/* Optional Fade Animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.formGroup input:focus {
+    outline: none;
+    border-color: #13CE66;
+    box-shadow: 0 0 0 2px rgba(19, 206, 102, 0.1);
+}
+
+/* Tooltip styles */
+.amountInputGroup .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.amountInputGroup:hover .tooltip {
+    opacity: 1;
 }
