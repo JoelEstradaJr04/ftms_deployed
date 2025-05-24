@@ -12,6 +12,7 @@ import {
   showInvalidAmountAlert
 } from '../utility/Alerts';
 import { isValidAmount } from '../utility/validation';
+import { formatDate } from '../utility/dateFormatter';
 
 type AddRevenueProps = {
   onClose: () => void;
@@ -61,7 +62,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     const updateDateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(now.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }));
+      setCurrentDate(formatDate(now));
     };
     updateDateTime();
     const interval = setInterval(updateDateTime, 60000);
@@ -180,11 +181,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   // Format assignment for display
   const formatAssignment = (assignment: typeof assignments[0]) => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${new Date(assignment.date_assigned).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })}`;
+    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
   };
 
   return (

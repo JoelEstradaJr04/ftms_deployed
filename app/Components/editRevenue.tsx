@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import "../styles/editRevenue.css";
 import { getAssignmentById } from '@/lib/supabase/assignments';
+import { formatDate } from '../utility/dateFormatter';
 
 type EditProps = {
   record: {
@@ -94,6 +95,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
         <div className="modalHeader">
           <h2>Edit Revenue</h2>
           <p><strong>Category:</strong> {record.category}</p>
+          <p><strong>Collection Date:</strong> {formatDate(record.date)}</p>
         </div>
 
         <div className="formGroup">

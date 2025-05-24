@@ -8,6 +8,7 @@ import AddRevenue from "../Components/addRevenue";
 import Swal from 'sweetalert2';
 import EditRevenueModal from "../Components/editRevenue";
 import { getAllAssignments } from '@/lib/supabase/assignments';
+import { formatDate } from '../utility/dateFormatter';
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
@@ -40,21 +41,6 @@ interface Assignment {
   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
 }
 
-// interface RawAssignment {
-//   assignment_id: string;
-//   bus_bodynumber: string;
-//   bus_platenumber: string;
-//   bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
-//   bus_type: 'Airconditioned' | 'Ordinary';
-//   driver_name: string;
-//   conductor_name: string;
-//   date_assigned: string;
-//   trip_fuel_expense: string | number; // API might return string
-//   trip_revenue: string | number; // API might return string
-//   is_recorded: boolean;
-//   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
-// }
-
 // UI data type that matches your schema exactly
 type RevenueData = {
   revenue_id: string;       
@@ -85,11 +71,7 @@ const RevenuePage = () => {
   // Reuse the same format function from addRevenue.tsx
   const formatAssignment = (assignment: Assignment): string => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${new Date(assignment.date_assigned).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })}`;
+    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
   };
 
   // Fetch assignments with periodic refresh and error handling
@@ -360,19 +342,220 @@ const RevenuePage = () => {
     }
   };
 
+      // Generate the file name helper function
+    const generateFileName = () => {
+      const now = new Date();
+      const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
+      const dateStamp = now.toISOString().split('T')[0];
+      
+      let fileName = 'revenue_records';
+      
+      if (categoryFilter) {
+        fileName += `_${categoryFilter.toLowerCase().replace('_', '-')}`;
+      }
+      
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? new Date(dateFrom).toISOString().split('T')[0] : 'all';
+        const to = dateTo ? new Date(dateTo).toISOString().split('T')[0] : 'present';
+        fileName += `_${from}_to_${to}`;
+      }
+      
+      fileName += `_${dateStamp}_${timeStamp}`;
+      
+      return `${fileName}.csv`;
+    };
+  
   // UI Handlers
   const handleExport = () => {
-    const headers = "Revenue ID,Date,Category,Amount,Created By\n";
-    const rows = data
-      .map(item => `${item.revenue_id},${item.date},${item.category},${item.total_amount},${item.created_by}`)
-      .join("\n");
 
-    const blob = new Blob([headers + rows], { type: "text/csv" });
+    // Generate confirmation message helper function
+    const generateConfirmationMessage = () => {
+      let message = `<strong>Revenue Records Export</strong><br/><br/>`;
+      
+      if (categoryFilter) {
+        message += `<strong>Category:</strong> ${categoryFilter}<br/>`;
+      } else {
+        message += `<strong>Category:</strong> All Categories<br/>`;
+      }
+      
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+        const to = dateTo ? formatDate(dateTo) : 'Present';
+        message += `<strong>Date Range:</strong> ${from} to ${to}<br/>`;
+      } else {
+        message += `<strong>Date Range:</strong> All Dates<br/>`;
+      }
+      
+      message += `<strong>Total Records:</strong> ${filteredData.length}`;
+      return message;
+    };
+
+    // Show confirmation dialog
+    Swal.fire({
+      title: 'Confirm Export',
+      html: generateConfirmationMessage(),
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Export CSV',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'export-confirmation-dialog'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (filteredData.length === 0) {
+          Swal.fire({
+            title: 'No Records Found',
+            text: 'There are no records to export based on current filters. Do you want to proceed anyway?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Export Empty File',
+            cancelButtonText: 'Cancel',
+          }).then((emptyResult) => {
+            if (emptyResult.isConfirmed) {
+              performExport(filteredData);
+            }
+          });
+          return;
+        }
+        performExport(filteredData);
+      }
+    });
+  };
+
+    const performExport = (recordsToExport: RevenueData[]) => {
+    // Generate header comment with consistent date formatting
+    const generateHeaderComment = () => {
+      let comment = '"# Revenue Records Export","","","","","","","","","",""\n';
+      comment += `"# Generated:","${formatDate(new Date())}","","","","","","","","",""\n`;
+      
+      if (categoryFilter) {
+        comment += `"# Category:","${categoryFilter}","","","","","","","","",""\n`;
+      } else {
+        comment += '"# Category:","All Categories","","","","","","","","",""\n';
+      }
+      
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+        const to = dateTo ? formatDate(dateTo) : 'Present';
+        comment += `"# Date Range:","${from} to ${to}","","","","","","","","",""\n`;
+      } else {
+        comment += '"# Date Range:","All Dates","","","","","","","","",""\n';
+      }
+      
+      comment += `"# Total Records:","${recordsToExport.length}","","","","","","","","",""\n\n`;
+      return comment;
+    };
+
+        const getExportColumns = () => {
+      const baseColumns = [
+        "Collection Date",
+        "Category",
+        "Amount",
+        "Source Type"
+      ];
+  
+      if (!categoryFilter) {
+        return [
+          ...baseColumns,
+          "Bus Type",
+          "Body Number",
+          "Route",
+          "Driver Name",
+          "Conductor Name",
+          "Assignment Date",
+          "Other Source Description"
+        ];
+      }
+  
+      if (categoryFilter === 'Other') {
+        return [
+          ...baseColumns,
+          "Other Source Description"
+        ];
+      }
+
+            return [
+        ...baseColumns,
+        "Bus Type",
+        "Body Number",
+        "Route",
+        "Driver Name",
+        "Conductor Name",
+        "Assignment Date"
+      ];
+    };
+  
+    const columns = getExportColumns();
+    const headers = columns.join(",") + "\n";
+  
+    const rows = recordsToExport.map(item => {
+      const assignment = item.assignment_id 
+        ? allAssignments.find(a => a.assignment_id === item.assignment_id)
+        : null;
+      const escapeField = (field: string | undefined) => {
+        if (!field) return '';
+        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+            const rowData: string[] = [];
+      
+      columns.forEach(col => {
+        switch(col) {
+          case "Collection Date":
+            rowData.push(escapeField(formatDate(item.date)));
+            break;
+          case "Category":
+            rowData.push(escapeField(item.category));
+            break;
+          case "Amount":
+            rowData.push(item.total_amount.toFixed(2));
+            break;
+          case "Source Type":
+            rowData.push(assignment ? 'Assignment' : 'Other');
+            break;
+          case "Bus Type":
+            rowData.push(escapeField(assignment?.bus_type));
+            break;
+          case "Body Number":
+            rowData.push(escapeField(assignment?.bus_bodynumber));
+            break;
+          case "Route":
+            rowData.push(escapeField(assignment?.bus_route));
+            break;
+          case "Driver Name":
+            rowData.push(escapeField(assignment?.driver_name));
+            break;
+          case "Conductor Name":
+            rowData.push(escapeField(assignment?.conductor_name));
+            break;
+          case "Assignment Date":
+            rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
+            break;
+                    case "Other Source Description":
+            rowData.push(escapeField(item.other_source));
+            break;
+          default:
+            rowData.push('');
+        }
+      });
+      return rowData.join(',');
+    }).join("\n");
+  
+    const blob = new Blob([generateHeaderComment() + headers + rows], { 
+      type: "text/csv;charset=utf-8;" 
+    });
+    
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "revenue_data.csv";
+    a.download = generateFileName(); // Call generateFileName here
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
@@ -510,7 +693,7 @@ const RevenuePage = () => {
               return (
                 <tr key={item.revenue_id}>
                   <td><input type="checkbox" /></td>
-                  <td>{new Date(item.date).toLocaleDateString()}</td>
+                  <td>{formatDate(item.date)}</td>
                   <td>{source}</td>
                   <td>{item.category}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>

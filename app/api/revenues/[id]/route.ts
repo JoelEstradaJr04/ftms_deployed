@@ -88,12 +88,13 @@ export async function GET() {
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Changed to use Promise
 ) {
   try {
+    const { id } = await params; // Await the params promise
     const data = await req.json();
     const { total_amount, date, other_source } = data;
-    const revenue_id = params.id;
+    const revenue_id = id; // Use the awaited id
 
     // Get the original record for comparison and validation
     const originalRecord = await prisma.revenueRecord.findUnique({
@@ -158,10 +159,11 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Changed to use Promise
 ) {
   try {
-    const revenue_id = params.id;
+    const { id } = await params; // Await the params promise
+    const revenue_id = id; // Use the awaited id
 
     // Get the record before deletion for audit purposes
     const record = await prisma.revenueRecord.findUnique({
