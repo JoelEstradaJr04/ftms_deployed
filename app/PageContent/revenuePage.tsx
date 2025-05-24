@@ -7,6 +7,7 @@ import PaginationComponent from "../Components/pagination";
 import AddRevenue from "../Components/addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "../Components/editRevenue";
+import { getAllAssignments } from '@/lib/supabase/assignments';
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
@@ -39,20 +40,20 @@ interface Assignment {
   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
 }
 
-interface RawAssignment {
-  assignment_id: string;
-  bus_bodynumber: string;
-  bus_platenumber: string;
-  bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
-  bus_type: 'Airconditioned' | 'Ordinary';
-  driver_name: string;
-  conductor_name: string;
-  date_assigned: string;
-  trip_fuel_expense: string | number; // API might return string
-  trip_revenue: string | number; // API might return string
-  is_recorded: boolean;
-  assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
-}
+// interface RawAssignment {
+//   assignment_id: string;
+//   bus_bodynumber: string;
+//   bus_platenumber: string;
+//   bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
+//   bus_type: 'Airconditioned' | 'Ordinary';
+//   driver_name: string;
+//   conductor_name: string;
+//   date_assigned: string;
+//   trip_fuel_expense: string | number; // API might return string
+//   trip_revenue: string | number; // API might return string
+//   is_recorded: boolean;
+//   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
+// }
 
 // UI data type that matches your schema exactly
 type RevenueData = {
@@ -78,6 +79,8 @@ const RevenuePage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<RevenueData | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+  const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
 
   // Reuse the same format function from addRevenue.tsx
   const formatAssignment = (assignment: Assignment): string => {
@@ -89,76 +92,57 @@ const RevenuePage = () => {
     })}`;
   };
 
-
-  // Fetch assignments function
+  // Fetch assignments with periodic refresh and error handling
   const fetchAssignments = async () => {
     try {
-      const response = await fetch('/api/assignments');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      setAssignmentsLoading(true);
+      const data = await getAllAssignments();
+      if (!data) {
+        console.warn('No assignments data received');
+        return;
       }
+      setAssignments(data);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      console.error('Error fetching assignments:', errorMessage);
+      // Don't show error toast here as it might be too frequent with auto-refresh
+    } finally {
+      setAssignmentsLoading(false);
+    }
+  };
 
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new Error('Expected array of assignments');
-      }
-
-      // Ensure all required fields are present
-      const mappedAssignments: Assignment[] = data.map(assignment => ({
-        assignment_id: assignment.assignment_id,
-        bus_bodynumber: assignment.bus_bodynumber,
-        bus_platenumber: assignment.bus_platenumber,
-        bus_route: assignment.bus_route,
-        bus_type: assignment.bus_type,
-        driver_name: assignment.driver_name,
-        conductor_name: assignment.conductor_name,
-        date_assigned: assignment.date_assigned,
-        trip_fuel_expense: Number(assignment.trip_fuel_expense),
-        trip_revenue: Number(assignment.trip_revenue),
-        is_recorded: assignment.is_recorded,
-        assignment_type: assignment.assignment_type
-      }));
-    
-    setAssignments(mappedAssignments);
-    console.log('Fetched assignments:', mappedAssignments); // Debug log
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Error fetching assignments:', errorMessage);
-    Swal.fire('Error', 'Failed to load assignments: ' + errorMessage, 'error');
-  }
-};
-
+  // Set up periodic refresh of assignments with error boundary
   useEffect(() => {
-    fetchAssignments(); // Fetch assignments on component mount
+    fetchAssignments();
+
+    const refreshInterval = setInterval(() => {
+      fetchAssignments().catch(error => {
+        console.error('Background refresh failed:', error);
+        // Silent fail for background refresh
+      });
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
+  // Single useEffect for initial data fetching
   useEffect(() => {
-    const fetchRevenuesAndAssignments = async () => {
+    const fetchAllData = async () => {
+      setLoading(true);
+      setAssignmentsLoading(true);
+      
       try {
-        setLoading(true);
-        
-        // Fetch assignments first
-        const assignmentsResponse = await fetch('/api/assignments');
+        // Fetch all assignments for displaying in the table
+        const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
         if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
-        const assignmentsData = await assignmentsResponse.json();
+        const { data: assignmentsData } = await assignmentsResponse.json();
         
-        // Map assignments with proper typing
-        const mappedAssignments: Assignment[] = (assignmentsData as RawAssignment[]).map((assignment: RawAssignment) => ({
-          assignment_id: assignment.assignment_id,
-          bus_bodynumber: assignment.bus_bodynumber,
-          bus_platenumber: assignment.bus_platenumber,
-          bus_route: assignment.bus_route,
-          bus_type: assignment.bus_type,
-          driver_name: assignment.driver_name,
-          conductor_name: assignment.conductor_name,
-          date_assigned: assignment.date_assigned,
-          trip_fuel_expense: Number(assignment.trip_fuel_expense),
-          trip_revenue: Number(assignment.trip_revenue),
-          is_recorded: assignment.is_recorded,
-          assignment_type: assignment.assignment_type
-        }));
+        // Filter out recorded assignments for the AddRevenue modal
+        const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_recorded);
+        setAssignments(unrecordedAssignments);
         
-        setAssignments(mappedAssignments);
+        // Store all assignments for table display
+        setAllAssignments(assignmentsData);
         
         // Then fetch revenues
         const revenuesResponse = await fetch('/api/revenues');
@@ -182,22 +166,24 @@ const RevenuePage = () => {
         Swal.fire('Error', 'Failed to load data', 'error');
       } finally {
         setLoading(false);
+        setAssignmentsLoading(false);
       }
     };
     
-    fetchRevenuesAndAssignments();
+    fetchAllData();
+
+    // Set up periodic refresh of assignments
+    const refreshInterval = setInterval(() => {
+      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`)
+        .then(response => response.json())
+        .then(({ data }) => {
+          if (data) setAssignments(data);
+        })
+        .catch(error => console.error('Background refresh failed:', error));
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
   }, []); // Empty dependency array as we only want this to run once on mount
-
-
-  useEffect(() => {
-    const loadAssignments = async () => {
-      await fetchAssignments();
-    };
-    
-    if (assignments.length === 0) {
-      loadAssignments();
-    }
-  }, [assignments.length]);
 
   // Filter and pagination logic
   const filteredData = data.filter((item: RevenueData) => {
@@ -266,7 +252,7 @@ const RevenuePage = () => {
     const result: RevenueRecord = await response.json();
     
     // Update revenues state
-    setData(prev => [...prev, {
+    setData(prev => [{
       revenue_id: result.revenue_id,
       category: result.category,
       total_amount: Number(result.total_amount),
@@ -274,7 +260,7 @@ const RevenuePage = () => {
       created_by: result.created_by,
       assignment_id: result.assignment_id,
       other_source: result.other_source || undefined
-    }]);
+    }, ...prev]); // Prepend new record instead of appending
 
     // Update assignments state locally instead of re-fetching
     if (newRevenue.assignment_id) {
@@ -430,7 +416,7 @@ const RevenuePage = () => {
 
   return (
     <div className="revenuePage">
-      {loading && <div className="loading">Loading revenues...</div>}
+      {(loading || assignmentsLoading) && <div className="loading">Loading...</div>}
 
       <div className="importExport">
         <button onClick={handleExport}>Export CSV</button>
@@ -493,7 +479,7 @@ const RevenuePage = () => {
             <tbody>
             {currentRecords.map(item => {
             const assignment = item.assignment_id 
-              ? assignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
+              ? allAssignments.find(a => a.assignment_id === item.assignment_id)
               : null;
 
               console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
@@ -501,10 +487,15 @@ const RevenuePage = () => {
               let source: string;
               if (item.category === 'Other') {
                 source = item.other_source || 'N/A';
+              } else if (assignmentsLoading) {
+                source = 'Loading...';
               } else if (assignment) {
                 source = formatAssignment(assignment);
               } else {
-                source = 'Loading...'; // Changed from 'Assignment not found' to indicate loading state
+                // More descriptive message when assignment is not found
+                source = item.assignment_id 
+                  ? `Assignment ${item.assignment_id} not found`
+                  : 'No assignment linked';
               }
 
               return (

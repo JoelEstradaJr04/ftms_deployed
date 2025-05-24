@@ -68,3 +68,19 @@
     timestamp      DateTime @default(now())
     details        String
   }
+
+  model AssignmentCache {
+    assignment_id     String   @id
+    bus_bodynumber    String
+    bus_platenumber   String
+    bus_route         String
+    bus_type         String
+    driver_name      String
+    conductor_name   String
+    date_assigned    DateTime
+    trip_fuel_expense Decimal  @db.Decimal(20, 4)
+    trip_revenue     Decimal  @db.Decimal(20, 4)
+    is_recorded      Boolean  @default(false)
+    assignment_type  String
+    last_updated     DateTime @default(now())
+  }

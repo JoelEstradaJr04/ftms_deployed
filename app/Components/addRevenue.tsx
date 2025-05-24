@@ -33,9 +33,9 @@ type AddRevenueProps = {
     date_assigned: string;
     trip_revenue: number;
     assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
-    is_recorded: boolean; // New field to track if the assignment is recorded
+    is_recorded: boolean;
   }[];
-  currentUser:  string;
+  currentUser: string;
 };
 
 const AddRevenue: React.FC<AddRevenueProps> = ({ 
@@ -46,14 +46,14 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [filteredAssignments, setFilteredAssignments] = useState(assignments);
+  const [filteredAssignments, setFilteredAssignments] = useState(assignments.filter(a => !a.is_recorded));
   
   const [formData, setFormData] = useState({
     category: 'Boundary',
     assignment_id: '',
     total_amount: 0,
     date: new Date().toISOString().split('T')[0],
-    created_by: currentUser ,
+    created_by: currentUser,
     other_source: '',
   });
 
@@ -78,7 +78,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
       }));
     } else {
       const filtered = assignments.filter(a => {
-        // No need to check is_recorded here since API already filters
+        if (a.is_recorded) return false;
         if (formData.category === 'Boundary') return a.assignment_type === 'Boundary';
         if (formData.category === 'Percentage') return a.assignment_type === 'Percentage';
         if (formData.category === 'Bus_Rental') return a.assignment_type === 'Bus_Rental';
@@ -156,7 +156,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
           category,
           total_amount,
           date,
-          created_by: currentUser ,
+          created_by: currentUser,
           ...(category !== 'Other' ? { assignment_id } : { other_source })
         });
 
