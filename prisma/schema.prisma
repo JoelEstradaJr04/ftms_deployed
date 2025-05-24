@@ -61,7 +61,7 @@
 
   model AuditLog {
     log_id         String   @id @default(uuid())
-    action         String
+    action         String   // Valid values: 'CREATE', 'UPDATE', 'DELETE', 'EXPORT'
     table_affected String
     record_id      String   // Polymorphic: could be any ID from other tables
     performed_by   String   // user_id

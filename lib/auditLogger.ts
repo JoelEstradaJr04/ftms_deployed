@@ -2,7 +2,7 @@
 import { prisma } from './prisma'
 
 interface AuditLogInput {
-  action: 'CREATE' | 'UPDATE' | 'DELETE'
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
   table_affected: 'ExpenseRecord' | 'RevenueRecord'
   record_id: string
   performed_by: string

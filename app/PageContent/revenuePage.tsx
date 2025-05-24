@@ -342,32 +342,116 @@ const RevenuePage = () => {
     }
   };
 
-      // Generate the file name helper function
-    const generateFileName = () => {
-      const now = new Date();
-      const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
-      const dateStamp = now.toISOString().split('T')[0];
-      
-      let fileName = 'revenue_records';
-      
-      if (categoryFilter) {
-        fileName += `_${categoryFilter.toLowerCase().replace('_', '-')}`;
-      }
-      
-      if (dateFrom || dateTo) {
-        const from = dateFrom ? new Date(dateFrom).toISOString().split('T')[0] : 'all';
-        const to = dateTo ? new Date(dateTo).toISOString().split('T')[0] : 'present';
-        fileName += `_${from}_to_${to}`;
-      }
-      
-      fileName += `_${dateStamp}_${timeStamp}`;
-      
-      return `${fileName}.csv`;
-    };
-  
-  // UI Handlers
-  const handleExport = () => {
+  // Generate the file name helper function
+  const generateFileName = () => {
+    const now = new Date();
+    const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
+    const dateStamp = now.toISOString().split('T')[0];
+    
+    let fileName = 'revenue_records';
+    
+    if (categoryFilter) {
+      fileName += `_${categoryFilter.toLowerCase().replace('_', '-')}`;
+    }
+    
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? new Date(dateFrom).toISOString().split('T')[0] : 'all';
+      const to = dateTo ? new Date(dateTo).toISOString().split('T')[0] : 'present';
+      fileName += `_${from}_to_${to}`;
+    }
+    
+    fileName += `_${dateStamp}_${timeStamp}`;
+    
+    return `${fileName}.csv`;
+  };
 
+  const getExportColumns = () => {
+    const baseColumns = [
+      "Collection Date",
+      "Category",
+      "Amount",
+      "Source Type"
+    ];
+
+    if (!categoryFilter) {
+      return [
+        ...baseColumns,
+        "Bus Type",
+        "Body Number",
+        "Route",
+        "Driver Name",
+        "Conductor Name",
+        "Assignment Date",
+        "Other Source Description"
+      ];
+    }
+
+    if (categoryFilter === 'Other') {
+      return [
+        ...baseColumns,
+        "Other Source Description"
+      ];
+    }
+
+    return [
+      ...baseColumns,
+      "Bus Type",
+      "Body Number",
+      "Route",
+      "Driver Name",
+      "Conductor Name",
+      "Assignment Date"
+    ];
+  };
+
+  // Generate export details helper function
+  const generateExportDetails = () => {
+    let details = `Export Details:\n`;
+    details += `Category: ${categoryFilter || 'All Categories'}\n`;
+    
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+      const to = dateTo ? formatDate(dateTo) : 'Present';
+      details += `Date Range: ${from} to ${to}\n`;
+    } else {
+      details += `Date Range: All Dates\n`;
+    }
+    
+    details += `Total Records: ${filteredData.length}\n`;
+    details += `Export Time: ${new Date().toISOString()}\n`;
+    details += `Exported Columns: ${getExportColumns().join(', ')}`;
+    
+    return details;
+  };
+
+  // Add a new function to handle audit logging
+  const logExportAudit = async (details: string) => {
+    try {
+      const response = await fetch('/api/auditlogs/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'EXPORT',
+          table_affected: 'RevenueRecord',
+          record_id: 'EXPORT_' + new Date().getTime(),
+          performed_by: 'user1', // Replace with actual user ID
+          details: details
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create audit log');
+      }
+    } catch (error) {
+      console.error('Failed to create audit log:', error);
+      // Don't show error to user as this is not critical to the export functionality
+    }
+  };
+
+  // Modify the handleExport function
+  const handleExport = () => {
     // Generate confirmation message helper function
     const generateConfirmationMessage = () => {
       let message = `<strong>Revenue Records Export</strong><br/><br/>`;
@@ -401,7 +485,7 @@ const RevenuePage = () => {
       customClass: {
         popup: 'export-confirmation-dialog'
       }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
         if (filteredData.length === 0) {
           Swal.fire({
@@ -411,14 +495,18 @@ const RevenuePage = () => {
             showCancelButton: true,
             confirmButtonText: 'Export Empty File',
             cancelButtonText: 'Cancel',
-          }).then((emptyResult) => {
+          }).then(async (emptyResult) => {
             if (emptyResult.isConfirmed) {
-              performExport(filteredData);
+              await performExport(filteredData);
+              // Log the export action using the new function
+              await logExportAudit(generateExportDetails());
             }
           });
           return;
         }
-        performExport(filteredData);
+        await performExport(filteredData);
+        // Log the export action using the new function
+        await logExportAudit(generateExportDetails());
       }
     });
   };
@@ -447,116 +535,77 @@ const RevenuePage = () => {
       return comment;
     };
 
-        const getExportColumns = () => {
-      const baseColumns = [
-        "Collection Date",
-        "Category",
-        "Amount",
-        "Source Type"
-      ];
-  
-      if (!categoryFilter) {
-        return [
-          ...baseColumns,
-          "Bus Type",
-          "Body Number",
-          "Route",
-          "Driver Name",
-          "Conductor Name",
-          "Assignment Date",
-          "Other Source Description"
-        ];
-      }
-  
-      if (categoryFilter === 'Other') {
-        return [
-          ...baseColumns,
-          "Other Source Description"
-        ];
-      }
-
-            return [
-        ...baseColumns,
-        "Bus Type",
-        "Body Number",
-        "Route",
-        "Driver Name",
-        "Conductor Name",
-        "Assignment Date"
-      ];
-    };
-  
-    const columns = getExportColumns();
-    const headers = columns.join(",") + "\n";
-  
-    const rows = recordsToExport.map(item => {
-      const assignment = item.assignment_id 
-        ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-        : null;
-      const escapeField = (field: string | undefined) => {
-        if (!field) return '';
-        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-          return `"${field.replace(/"/g, '""')}"`;
-        }
-        return field;
-      };
-
-            const rowData: string[] = [];
+        const columns = getExportColumns();
+        const headers = columns.join(",") + "\n";
       
-      columns.forEach(col => {
-        switch(col) {
-          case "Collection Date":
-            rowData.push(escapeField(formatDate(item.date)));
-            break;
-          case "Category":
-            rowData.push(escapeField(item.category));
-            break;
-          case "Amount":
-            rowData.push(item.total_amount.toFixed(2));
-            break;
-          case "Source Type":
-            rowData.push(assignment ? 'Assignment' : 'Other');
-            break;
-          case "Bus Type":
-            rowData.push(escapeField(assignment?.bus_type));
-            break;
-          case "Body Number":
-            rowData.push(escapeField(assignment?.bus_bodynumber));
-            break;
-          case "Route":
-            rowData.push(escapeField(assignment?.bus_route));
-            break;
-          case "Driver Name":
-            rowData.push(escapeField(assignment?.driver_name));
-            break;
-          case "Conductor Name":
-            rowData.push(escapeField(assignment?.conductor_name));
-            break;
-          case "Assignment Date":
-            rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
-            break;
-                    case "Other Source Description":
-            rowData.push(escapeField(item.other_source));
-            break;
-          default:
-            rowData.push('');
-        }
-      });
-      return rowData.join(',');
-    }).join("\n");
-  
-    const blob = new Blob([generateHeaderComment() + headers + rows], { 
-      type: "text/csv;charset=utf-8;" 
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = generateFileName(); // Call generateFileName here
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        const rows = recordsToExport.map(item => {
+          const assignment = item.assignment_id 
+            ? allAssignments.find(a => a.assignment_id === item.assignment_id)
+            : null;
+          const escapeField = (field: string | undefined) => {
+            if (!field) return '';
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+          };
+
+                const rowData: string[] = [];
+        
+          columns.forEach(col => {
+            switch(col) {
+              case "Collection Date":
+                rowData.push(escapeField(formatDate(item.date)));
+                break;
+              case "Category":
+                rowData.push(escapeField(item.category));
+                break;
+              case "Amount":
+                rowData.push(item.total_amount.toFixed(2));
+                break;
+              case "Source Type":
+                rowData.push(assignment ? 'Assignment' : 'Other');
+                break;
+              case "Bus Type":
+                rowData.push(escapeField(assignment?.bus_type));
+                break;
+              case "Body Number":
+                rowData.push(escapeField(assignment?.bus_bodynumber));
+                break;
+              case "Route":
+                rowData.push(escapeField(assignment?.bus_route));
+                break;
+              case "Driver Name":
+                rowData.push(escapeField(assignment?.driver_name));
+                break;
+              case "Conductor Name":
+                rowData.push(escapeField(assignment?.conductor_name));
+                break;
+              case "Assignment Date":
+                rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
+                break;
+                        case "Other Source Description":
+                rowData.push(escapeField(item.other_source));
+                break;
+              default:
+                rowData.push('');
+            }
+          });
+          return rowData.join(',');
+        }).join("\n");
+      
+        const blob = new Blob([generateHeaderComment() + headers + rows], { 
+          type: "text/csv;charset=utf-8;" 
+        });
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = generateFileName(); // Call generateFileName here
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
