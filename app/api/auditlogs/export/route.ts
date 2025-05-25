@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { generateId } from '@/lib/idGenerator';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -8,11 +9,12 @@ export async function POST(request: Request) {
 
     const log = await prisma.auditLog.create({
       data: {
+        log_id: await generateId('LOG'),
         action,
         table_affected,
         record_id,
         performed_by,
-        details,
+        details, // Use details as is, without adding export ID
       },
     });
 

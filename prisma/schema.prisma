@@ -1,86 +1,157 @@
- generator client {
-    provider = "prisma-client-js"
-  }
+generator client {
+  provider = "prisma-client-js"
+}
 
-  datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-  }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-  enum ExpenseCategory {
-    Equipments
-    Fuel
-    Other
-  }
+enum ExpenseCategory {
+  Fuel          // Diesel, gasoline
+  Vehicle_Parts // Brake pads, hub bolts, filters
+  Tools         // Wrenches, pliers, hand tools
+  Equipment     // Welding machines, compressors, diagnostic devices
+  Supplies      // Consumables like paint, sealant, adhesives, tape
+  Other         // Catch-all for unclassified purchases
+}
 
-  enum RevenueCategory {
-    Boundary
-    Percentage
-    Bus_Rental
-    Other
-  }
+enum RevenueCategory {
+  Boundary
+  Percentage
+  Bus_Rental
+  Other
+}
 
-  enum Department {
-    Operations
-    Inventory
-    Human_Resources
-  }
+enum Department {
+  Operations
+  Inventory
+  Human_Resources
+}
 
-  model Sequence {
-    name  String @id
-    value Int    @default(1)
-  }
+enum ReceiptStatus {
+  Paid
+  Pending
+  Cancelled
+}
 
-  model ExpenseRecord {
-    expense_id     String   @id @default(uuid())
-    assignment_id  String?  // FK to Supabase assignment
-    request_id     String?  // Reserved for future use
-    category       ExpenseCategory
-    department_from Department
-    total_amount   Decimal  @db.Decimal(20, 4)
-    date           DateTime
-    receipt_id     String?  // Reserved for future use
-    recorded_by    String   // user_id
-    created_at     DateTime @default(now())
-    updated_at     DateTime?
-    isDeleted      Boolean  @default(false)
-  }
+model Sequence {
+  name  String @id
+  value Int    @default(1)
+}
 
-  model RevenueRecord {
-    revenue_id     String   @id @default(uuid())
-    assignment_id  String?  // FK to Supabase assignment
-    category       RevenueCategory
-    total_amount   Decimal  @db.Decimal(20, 4)
-    date           DateTime
-    created_by     String   // user_id
-    created_at     DateTime @default(now())
-    updated_at     DateTime?
-    isDeleted      Boolean  @default(false)
-    other_source   String?  // New column for "Other" category
-  }
+model ExpenseRecord {
+  expense_id     String   @id @default(uuid())
+  assignment_id  String?
+  request_id     String?
+  category       ExpenseCategory
+  department_from Department?
+  total_amount   Decimal  @db.Decimal(20, 4)
+  date           DateTime
+  receipt_id     String?  @unique
+  receipt        Receipt? @relation(fields: [receipt_id], references: [receipt_id])
+  recorded_by    String
+  created_at     DateTime @default(now())
+  updated_at     DateTime?
+  isDeleted      Boolean  @default(false)
+  other_source   String?
+}
 
-  model AuditLog {
-    log_id         String   @id @default(uuid())
-    action         String   // Valid values: 'CREATE', 'UPDATE', 'DELETE', 'EXPORT'
-    table_affected String
-    record_id      String   // Polymorphic: could be any ID from other tables
-    performed_by   String   // user_id
-    timestamp      DateTime @default(now())
-    details        String
-  }
+model RevenueRecord {
+  revenue_id     String   @id @default(uuid())
+  assignment_id  String?
+  category       RevenueCategory
+  total_amount   Decimal  @db.Decimal(20, 4)
+  date           DateTime
+  created_by     String
+  created_at     DateTime @default(now())
+  updated_at     DateTime?
+  isDeleted      Boolean  @default(false)
+  other_source   String?
+}
 
-  model AssignmentCache {
-    assignment_id     String   @id
-    bus_bodynumber    String
-    bus_platenumber   String
-    bus_route         String
-    bus_type         String
-    driver_name      String
-    conductor_name   String
-    date_assigned    DateTime
-    trip_fuel_expense Decimal  @db.Decimal(20, 4)
-    trip_revenue     Decimal  @db.Decimal(20, 4)
-    is_recorded      Boolean  @default(false)
-    assignment_type  String
-    last_updated     DateTime @default(now())
-  }
+model AuditLog {
+  log_id         String   @id @default(uuid())
+  action         String
+  table_affected String
+  record_id      String
+  performed_by   String
+  timestamp      DateTime @default(now())
+  details        String
+}
+
+model AssignmentCache {
+  assignment_id     String   @id
+  bus_bodynumber    String
+  bus_platenumber   String
+  bus_route         String
+  bus_type         String
+  driver_name      String
+  conductor_name   String
+  date_assigned    DateTime
+  trip_fuel_expense Decimal  @db.Decimal(20, 4)
+  trip_revenue     Decimal  @db.Decimal(20, 4)
+  is_recorded      Boolean  @default(false)
+  assignment_type  String
+  last_updated     DateTime @default(now())
+}
+
+model Receipt {
+  receipt_id          String   @id @default(uuid())
+  supplier           String
+  receipt_date       DateTime
+  vat_reg_tin        String?
+  terms              String?
+  date_paid          DateTime?
+  status             ReceiptStatus
+  total_amount       Decimal   @db.Decimal(20, 4)
+  vat_amount        Decimal?  @db.Decimal(20, 4)
+  total_amount_due   Decimal?  @db.Decimal(20, 4)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime?
+  created_by         String
+  is_deleted         Boolean   @default(false)
+  items              ReceiptItem[]
+  transactions       ItemTransaction[]
+  expense           ExpenseRecord?
+}
+
+model ReceiptItem {
+  receipt_item_id    String   @id @default(uuid())
+  receipt_id        String
+  receipt           Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
+  item_name         String
+  unit              String
+  quantity          Decimal   @db.Decimal(10, 2)
+  unit_price        Decimal   @db.Decimal(20, 4)
+  total_price       Decimal   @db.Decimal(20, 4)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime?
+  created_by        String
+  is_deleted        Boolean   @default(false)
+}
+
+model Item {
+  item_id       String   @id @default(uuid())
+  item_name     String   @unique
+  unit          String
+  created_at    DateTime @default(now())
+  updated_at    DateTime?
+  is_deleted    Boolean  @default(false)
+  transactions  ItemTransaction[]
+}
+
+model ItemTransaction {
+  transaction_id String   @id @default(uuid())
+  item_id       String
+  item          Item     @relation(fields: [item_id], references: [item_id])
+  receipt_id    String?
+  receipt       Receipt? @relation(fields: [receipt_id], references: [receipt_id])
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit_price    Decimal  @db.Decimal(20, 4)
+  transaction_date DateTime @default(now())
+  created_by    String
+  created_at    DateTime @default(now())
+  updated_at    DateTime?
+  is_deleted    Boolean  @default(false)
+}

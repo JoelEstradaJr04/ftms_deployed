@@ -6,13 +6,9 @@
 
 /* ───── imports ─────────────────────────────────────────────── */
 import React, { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
-
-import '../styles/addExpense.css';          // ← same CSS as Add/View modals
+import '../styles/addExpense.css';
 import ItemList from '../Components/addExpense_itemList';
-
 import { Item, calcAmount } from '../utility/calcAmount';
-
 import {
   showEmptyFieldWarning,
   showAddConfirmation,
@@ -22,19 +18,41 @@ import {
 import { isValidSource } from '../utility/validation';
 
 /* ───── types ──────────────────────────────────────────────── */
+type ReceiptItem = {
+  receipt_item_id: string;
+  item_name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+};
+
+type Receipt = {
+  receipt_id: string;
+  supplier: string;
+  receipt_date: string;
+  vat_reg_tin?: string;
+  terms?: string;
+  status: string;
+  total_amount: number;
+  vat_amount?: number;
+  total_amount_due?: number;
+  items: ReceiptItem[];
+};
+
 export type ExpenseData = {
-  id: number;
+  expense_id: string;
   date: string;
-  department: string;
-  description: string;
-  amount: number;
-  items?: Item[];
+  department_from: string;
+  category: string;
+  total_amount: number;
+  receipt?: Receipt;
 };
 
 type EditExpenseModalProps = {
-  record:   ExpenseData;           // record to edit (pre-filled)
-  onSave:   (updated: ExpenseData) => void;
-  onClose:  () => void;
+  record: ExpenseData;
+  onSave: (updated: ExpenseData) => void;
+  onClose: () => void;
 };
 
 /* ───── component ──────────────────────────────────────────── */
@@ -59,33 +77,47 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   }, []);
 
   /* ——— editable state ——— */
-  const [department, setDepartment]   = useState(record.department);
-  const [description, setDescription] = useState(record.description);
-  const [items, setItems]             = useState<Item[]>(
-    record.items?.length ? record.items : [{ name: '', quantity: '', unitPrice: '' }]
+  const [department, setDepartment] = useState(record.department_from);
+  const [category, setCategory] = useState(record.category);
+  const [items, setItems] = useState<Item[]>(
+    record.receipt?.items.map(item => ({
+      name: item.item_name,
+      quantity: item.quantity.toString(),
+      unitPrice: item.unit_price.toString()
+    })) ?? [{ name: '', quantity: '', unitPrice: '' }]
   );
 
   /* ——— handlers ——— */
   const handleSave = async () => {
-    if (!description.trim() || !isValidSource(description)) {
-      await showEmptyFieldWarning();               // reuse existing alert helpers
+    if (!category.trim() || !isValidSource(category)) {
+      await showEmptyFieldWarning();
       return;
     }
 
     const total = calcAmount(items);
 
-    const confirm = await showAddConfirmation();   // confirmation SweetAlert
+    const confirm = await showAddConfirmation();
     if (!confirm.isConfirmed) return;
 
     try {
       const updated: ExpenseData = {
         ...record,
-        department,
-        description,
-        items,
-        amount: total,
+        department_from: department,
+        category,
+        total_amount: Number(total),
+        receipt: record.receipt ? {
+          ...record.receipt,
+          items: items.map((item, index) => ({
+            receipt_item_id: record.receipt?.items[index]?.receipt_item_id ?? `new-${index}`,
+            item_name: item.name,
+            unit: 'piece', // Default unit since it's not in the Item type
+            quantity: parseFloat(item.quantity),
+            unit_price: parseFloat(item.unitPrice),
+            total_price: parseFloat(item.quantity) * parseFloat(item.unitPrice)
+          }))
+        } : undefined
       };
-      onSave(updated);                             // push update to parent
+      onSave(updated);
       await showSuccess('Expense updated successfully!');
       onClose();
     } catch {
@@ -129,13 +161,13 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
               {/* Description */}
               <div className="formField">
-                <label htmlFor="desc">Expense</label>
+                <label htmlFor="desc">Category</label>
                 <input
                   type="text"
                   id="desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Expense title"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="Expense category"
                 />
               </div>
             </div>

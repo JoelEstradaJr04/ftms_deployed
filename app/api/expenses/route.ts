@@ -15,45 +15,76 @@ export async function POST(req: NextRequest) {
     total_amount,
     date,
     recorded_by,
+    receipt_data
   } = data
 
   try {
     let finalAmount = total_amount
+    let receiptId = null
 
-    if (assignment_id) {
-      const duplicate = await prisma.expenseRecord.findFirst({
-        where: {
-          assignment_id,
-          date: new Date(date),
-        },
+    if (receipt_data) {
+      const receipt = await prisma.receipt.create({
+        data: {
+          supplier: receipt_data.supplier,
+          receipt_date: new Date(receipt_data.date),
+          vat_reg_tin: receipt_data.vat_reg_tin,
+          terms: receipt_data.terms,
+          status: receipt_data.status,
+          total_amount: receipt_data.total_amount,
+          vat_amount: receipt_data.vat_amount,
+          total_amount_due: receipt_data.total_amount_due,
+          created_by: recorded_by,
+          items: {
+            create: receipt_data.items.map((item: any) => ({
+              item_name: item.name,
+              unit: item.unit,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_price: item.quantity * item.unitPrice,
+              created_by: recorded_by
+            }))
+          }
+        }
       })
+      
+      receiptId = receipt.receipt_id
+      finalAmount = receipt.total_amount
 
-      if (duplicate) {
-        return NextResponse.json(
-          { error: 'Expense record for this assignment and date already exists.' },
-          { status: 409 }
-        )
+      for (const item of receipt_data.items) {
+        const masterItem = await prisma.item.upsert({
+          where: { item_name: item.name },
+          create: {
+            item_name: item.name,
+            unit: item.unit,
+            created_at: new Date()
+          },
+          update: {
+            updated_at: new Date()
+          }
+        })
+
+        await prisma.itemTransaction.create({
+          data: {
+            item_id: masterItem.item_id,
+            receipt_id: receipt.receipt_id,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            created_by: recorded_by,
+            transaction_date: new Date(receipt_data.date)
+          }
+        })
       }
-
-      const assignmentData = await getAssignmentById(assignment_id)
-      if (!assignmentData || assignmentData.trip_fuel_expense == null) {
-        return NextResponse.json(
-          { error: 'Assignment not found or missing trip_fuel_expense in Supabase' },
-          { status: 404 }
-        )
-      }
-
-      finalAmount = assignmentData.trip_fuel_expense
     }
 
     const newExpense = await prisma.expenseRecord.create({
       data: {
-        expense_id: await generateId('exp'),
+        expense_id: await generateId('EXP'),
         assignment_id: assignment_id ?? null,
         category,
         department_from,
         total_amount: finalAmount,
         date: new Date(date),
+        receipt_id: receiptId,
         recorded_by,
         created_at: new Date(),
         updated_at: null,
@@ -66,7 +97,7 @@ export async function POST(req: NextRequest) {
       table_affected: 'ExpenseRecord',
       record_id: newExpense.expense_id,
       performed_by: recorded_by,
-      details: `Created expense record with amount ₱${finalAmount}`,
+      details: `Created expense record with amount ₱${finalAmount}${receiptId ? ' with receipt' : ''}`
     })
 
     return NextResponse.json(newExpense)
@@ -88,7 +119,21 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const expenses = await prisma.expenseRecord.findMany({ 
     where: { isDeleted: false },
+    include: {
+      receipt: {
+        include: {
+          items: true
+        }
+      }
+    },
     orderBy: { created_at: 'desc' }
   })
-  return NextResponse.json(expenses)
+
+  // Convert Decimal fields to numbers before sending response
+  const formattedExpenses = expenses.map(expense => ({
+    ...expense,
+    total_amount: Number(expense.total_amount)
+  }))
+
+  return NextResponse.json(formattedExpenses)
 }

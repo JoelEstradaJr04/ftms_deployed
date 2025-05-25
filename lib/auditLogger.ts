@@ -1,5 +1,6 @@
 // ftms/lib/auditLogger.ts
 import { prisma } from './prisma'
+import { generateId } from './idGenerator'
 
 interface AuditLogInput {
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
@@ -19,6 +20,7 @@ export async function logAudit({
   try {
     await prisma.auditLog.create({
       data: {
+        log_id: await generateId('LOG'),
         action,
         table_affected,
         record_id,

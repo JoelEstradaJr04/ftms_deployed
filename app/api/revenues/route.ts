@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const newRevenue = await prisma.revenueRecord.create({
       data: {
-        revenue_id: await generateId('rev'),
+        revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
         category,
         total_amount: finalAmount,

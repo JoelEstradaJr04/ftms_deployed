@@ -425,8 +425,18 @@ const RevenuePage = () => {
   };
 
   // Add a new function to handle audit logging
-  const logExportAudit = async (details: string) => {
+  const logExportAudit = async () => {
     try {
+      // First get the export ID from the API
+      const idResponse = await fetch('/api/generate-export-id');
+      if (!idResponse.ok) {
+        throw new Error('Failed to generate export ID');
+      }
+      const { exportId } = await idResponse.json();
+
+      // Generate details without export ID
+      const details = generateExportDetails();
+
       const response = await fetch('/api/auditlogs/export', {
         method: 'POST',
         headers: {
@@ -435,7 +445,7 @@ const RevenuePage = () => {
         body: JSON.stringify({
           action: 'EXPORT',
           table_affected: 'RevenueRecord',
-          record_id: 'EXPORT_' + new Date().getTime(),
+          record_id: exportId,  // Export ID only appears here
           performed_by: 'user1', // Replace with actual user ID
           details: details
         })
@@ -444,9 +454,11 @@ const RevenuePage = () => {
       if (!response.ok) {
         throw new Error('Failed to create audit log');
       }
+  
+      return exportId;
     } catch (error) {
       console.error('Failed to create audit log:', error);
-      // Don't show error to user as this is not critical to the export functionality
+      throw error;
     }
   };
 
@@ -473,7 +485,7 @@ const RevenuePage = () => {
       message += `<strong>Total Records:</strong> ${filteredData.length}`;
       return message;
     };
-
+  
     // Show confirmation dialog
     Swal.fire({
       title: 'Confirm Export',
@@ -497,24 +509,37 @@ const RevenuePage = () => {
             cancelButtonText: 'Cancel',
           }).then(async (emptyResult) => {
             if (emptyResult.isConfirmed) {
-              await performExport(filteredData);
-              // Log the export action using the new function
-              await logExportAudit(generateExportDetails());
+              try {
+                // First log the audit, which will generate the export ID
+                const exportId = await logExportAudit();
+                // Then perform the export
+                await performExport(filteredData, exportId);
+              } catch (error) {
+                console.error('Export failed:', error);
+                Swal.fire('Error', 'Failed to complete export', 'error');
+              }
             }
           });
           return;
         }
-        await performExport(filteredData);
-        // Log the export action using the new function
-        await logExportAudit(generateExportDetails());
+        try {
+          // First log the audit, which will generate the export ID
+          const exportId = await logExportAudit();
+          // Then perform the export
+          await performExport(filteredData, exportId);
+        } catch (error) {
+          console.error('Export failed:', error);
+          Swal.fire('Error', 'Failed to complete export', 'error');
+        }
       }
     });
   };
 
-    const performExport = (recordsToExport: RevenueData[]) => {
+  const performExport = (recordsToExport: RevenueData[], exportId: string) => {
     // Generate header comment with consistent date formatting
     const generateHeaderComment = () => {
       let comment = '"# Revenue Records Export","","","","","","","","","",""\n';
+      comment += `"# Export ID:","${exportId}","","","","","","","","",""\n`; // Keep in CSV if needed
       comment += `"# Generated:","${formatDate(new Date())}","","","","","","","","",""\n`;
       
       if (categoryFilter) {
@@ -601,12 +626,12 @@ const RevenuePage = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = generateFileName(); // Call generateFileName here
+        a.download = generateFileName();
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-  };
+      };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

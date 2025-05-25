@@ -5,13 +5,35 @@ import '../styles/addExpense.css';
 import ItemList from '../Components/addExpense_itemList';
 import { Item } from '../utility/calcAmount';
 
+type ReceiptItem = {
+  receipt_item_id: string;
+  item_name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+};
+
+type Receipt = {
+  receipt_id: string;
+  supplier: string;
+  receipt_date: string;
+  vat_reg_tin?: string;
+  terms?: string;
+  status: string;
+  total_amount: number;
+  vat_amount?: number;
+  total_amount_due?: number;
+  items: ReceiptItem[];
+};
+
 type ExpenseData = {
-  id: number;
+  expense_id: string;
   date: string;
-  department: string;
-  description: string;
-  amount: number;
-  items?: Item[];
+  department_from: string;
+  category: string;
+  total_amount: number;
+  receipt?: Receipt;
 };
 
 type ViewExpenseModalProps = {
@@ -28,6 +50,12 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ onClose, record }) 
     setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setCurrentDate(now.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }));
   }, []);
+
+  const items: Item[] = record.receipt?.items.map(item => ({
+    name: item.item_name,
+    quantity: item.quantity.toString(),
+    unitPrice: item.unit_price.toString()
+  })) ?? [];
 
   return (
     <div className="modalOverlay">
@@ -46,19 +74,19 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ onClose, record }) 
               {/* Department */}
               <div className="formField">
                 <label htmlFor="category">Category</label>
-                <select id="category" name="category" value={record.department} disabled>
-                  <option value={record.department}>{record.department}</option>
+                <select id="category" name="category" value={record.department_from} disabled>
+                  <option value={record.department_from}>{record.department_from}</option>
                 </select>
               </div>
 
               {/* Description */}
               <div className="formField">
-                <label htmlFor="expense">Expense</label>
+                <label htmlFor="expense">Category</label>
                 <input
                   type="text"
                   id="expense"
                   name="expense"
-                  value={record.description}
+                  value={record.category}
                   readOnly
                 />
               </div>
@@ -67,13 +95,13 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ onClose, record }) 
 
           {/* Item List */}
           <div className="itemList">
-            <ItemList items={record.items ?? []} setItems={() => {}} readOnly />
+            <ItemList items={items} readOnly />
           </div>
 
           {/* Total Amount */}
           <div className="formField" style={{ marginTop: '1rem' }}>
             <label>Total Amount</label>
-            <input type="text" value={`$${record.amount.toFixed(2)}`} readOnly />
+            <input type="text" value={`₱${Number(record.total_amount).toFixed(2)}`} readOnly />
           </div>
 
           {/* Close Button Only */}

@@ -3,41 +3,47 @@
 
 //---------------------IMPORTS HERE----------------------//
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import '../styles/addExpense.css';
-import { calcAmount, Item } from '../utility/calcAmount';
+import { Item, calcAmount } from '../utility/calcAmount';
 import {
   showEmptyFieldWarning,
   showAddConfirmation,
-  showAddSuccess,
-  showInvalidCategoryAlert,
-  showInvalidSourceAlert,
-  showInvalidAmountAlert,
-  showError, 
-  showSuccess} from '../utility/Alerts';
-import {
-  isValidCategory,
-  isValidSource,
-  isValidAmount,
-} from '../utility/validation';
-
-import ItemList from '../Components/addExpense_itemList'
-
-
+  showSuccess,
+  showError
+} from '../utility/Alerts';
+import { isValidSource } from '../utility/validation';
+import ItemList from '../Components/addExpense_itemList';
 
 //---------------------DECLARATIONS HERE----------------------//
-
-type ExpenseData = {
-  id: number;
-  date: string;
-  department: string;
-  description: string;
-  amount: number;
+type ReceiptItem = {
+  receipt_item_id: string;
+  item_name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
 };
 
-type ItemListProps = {
-  items: Item[];
-  setItems: React.Dispatch<React.SetStateAction<Item[]>>;
+type Receipt = {
+  receipt_id: string;
+  supplier: string;
+  receipt_date: string;
+  vat_reg_tin?: string;
+  terms?: string;
+  status: string;
+  total_amount: number;
+  vat_amount?: number;
+  total_amount_due?: number;
+  items: ReceiptItem[];
+};
+
+type ExpenseData = {
+  expense_id: string;
+  date: string;
+  department_from: string;
+  category: string;
+  total_amount: number;
+  receipt?: Receipt;
 };
 
 type AddExpenseModalProps = {
@@ -46,27 +52,22 @@ type AddExpenseModalProps = {
 };
 
 const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess }) => {
-
   //----------------set the current date and time----------------//
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
 
   //Get the current date and time
   useEffect(() => {
-      const updateDateTime = () => {
-        const now = new Date();
-        // Format time as HH:MM am/pm
-        setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        // Format date as MM/DD/YYYY
-        setCurrentDate(now.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }));
-      };
+    const updateDateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setCurrentDate(now.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }));
+    };
 
-      updateDateTime();
-      // Update every minute
-      const interval = setInterval(updateDateTime, 60000);
-      
-      return () => clearInterval(interval);
-    }, []);
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -74,11 +75,10 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
     expense: '',
   });
 
-// Items for dynamic item list
-  const [items, setItems] = useState<Item[]>([{ name: '', unitPrice: '', quantity: '' }]);
+  // Items for dynamic item list
+  const [items, setItems] = useState<Item[]>([{ name: '', quantity: '', unitPrice: '' }]);
 
-
-//-------------------EVENT HANDLER------------------//
+  //-------------------EVENT HANDLER------------------//
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -94,44 +94,48 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
       return;
     }
 
-    if (!isValidCategory(category)) {
-      await showInvalidCategoryAlert();
-      return;
-    }
-
     if (!isValidSource(expense)) {
-      await showInvalidSourceAlert();
+      await showEmptyFieldWarning();
       return;
     }
 
-    const computedAmount = calcAmount(items);
+    const total = calcAmount(items);
 
-    const result = await showAddConfirmation();
+    const confirm = await showAddConfirmation();
+    if (!confirm.isConfirmed) return;
 
-    if (result.isConfirmed) {
-      try {
-          const newRecord: ExpenseData = {
-            id: Date.now(),
-            date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-            department: category,
-            description: expense,
-            amount: computedAmount,
-          }
-        console.log('Expense added:', formData);
+    try {
+      const newRecord: ExpenseData = {
+        expense_id: Date.now().toString(),
+        date: new Date().toISOString().split('T')[0],
+        department_from: category,
+        category: expense,
+        total_amount: Number(total),
+        receipt: {
+          receipt_id: `REC-${Date.now()}`,
+          supplier: 'Direct Purchase',
+          receipt_date: new Date().toISOString(),
+          status: 'Paid',
+          total_amount: Number(total),
+          items: items.map((item, index) => ({
+            receipt_item_id: `ITEM-${Date.now()}-${index}`,
+            item_name: item.name,
+            unit: 'piece',
+            quantity: parseFloat(item.quantity),
+            unit_price: parseFloat(item.unitPrice),
+            total_price: parseFloat(item.quantity) * parseFloat(item.unitPrice)
+          }))
+        }
+      };
 
-        await showSuccess("Expense added successfully.");
-        onAddSuccess(newRecord);
-        onClose();
-      }
-      catch (err){
-        showError ("Failed to add expense.")
-      }
-      
+      onAddSuccess(newRecord);
+      await showSuccess('Expense added successfully');
+      onClose();
+    } catch {
+      showError('Failed to add expense');
     }
   };
 
-
-  //---------------------BODY HERE----------------------//
   return (
     <div className="modalOverlay">
       <div className="addExpenseModal">
@@ -144,7 +148,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
         </div>
 
         <form onSubmit={handleSubmit}>
-
           <div className='row'>
             <div className="formFields">
               {/*CATEGORY*/}
@@ -155,7 +158,8 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  required disabled
+                  required
+                  disabled
                 >
                   <option value="Others">Other Expenses</option>
                 </select>
@@ -163,14 +167,14 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
 
               {/*EXPENSE TITLE*/}
               <div className="formField">
-                <label htmlFor="expense">Expense</label>
+                <label htmlFor="expense">Category</label>
                 <input
                   type="text"
                   id="expense"
                   name="expense"
                   value={formData.expense}
                   onChange={handleInputChange}
-                  placeholder="Expense Title"
+                  placeholder="Expense category"
                   required
                 />
               </div>
@@ -193,7 +197,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({ onClose, onAddSuccess
               </button>
             </div>
           </div>
-          
         </form>
       </div>
     </div>

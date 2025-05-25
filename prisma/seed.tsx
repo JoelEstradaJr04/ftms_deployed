@@ -16,7 +16,7 @@ async function main() {
 
   // 15 revenue records with assignment_id
   for (let i = 1; i <= 15; i++) {
-    const revenueId = await generateId('rev')
+    const revenueId = await generateId('REV')
     const assignmentId = `ASGN-0000${i}`
     const category = i % 2 === 0 ? 'Boundary' : 'Percentage'
     const totalAmount = Math.floor(Math.random() * 1000) + 500
@@ -48,7 +48,7 @@ async function main() {
 
   // 15 revenue records without assignment_id
   for (let i = 1; i <= 15; i++) {
-    const revenueId = await generateId('rev')
+    const revenueId = await generateId('REV')
     const category = i % 2 === 0 ? 'Bus_Rental' : 'Other'
     const totalAmount = Math.floor(Math.random() * 1000) + 200
     const date = addDays(baseDateWithoutAssignment, i - 1)
