@@ -2,6 +2,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import '../styles/navbar.css'; // External CSS for styling
 import NavItem from './NavItem'; // Importing NavItem component
 import SubModule from './SubModule'; // Importing SubModule component
@@ -38,7 +39,13 @@ const Navbar: React.FC<NavbarProps> = ({
       {/* ===== Logo Section ===== */}
       <div className="Logo">
         <div className="LogoImage">
-          <img src="/agilaLogo.png" alt="Logo" className="logoImage" />
+          <Image 
+            src="/agilaLogo.png" 
+            alt="Logo" 
+            width={150}
+            height={50}
+            className="logoImage"
+          />
         </div>
       </div>
 

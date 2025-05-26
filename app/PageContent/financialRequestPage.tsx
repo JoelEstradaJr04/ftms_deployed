@@ -17,7 +17,7 @@ type financialRequestData = {
 
 };
 
-const financialRequestPage = () => {
+const FinancialRequestPage = () => {
   // ===== State Management =====
   const [data, setData] = useState<financialRequestData[]>([
     //Dummy data
@@ -147,12 +147,13 @@ const financialRequestPage = () => {
           <thead>
             <tr>
               <>
-                <th>Date</th> {/*Request Date*/}
-                <th>Request</th> {/*Request Title */}
-                <th>Department</th> {/*Department where request came from */}
-                <th>Amount</th> {/*Requested Amount*/}
-                <th>Status</th> {/*Pending/ Approved / Rejected */}
-                <th>Priority</th> {/*Priority Level (High - Red, Medium - Orange, Low - blue)*/}
+                <th>Date</th>
+                <th>Request</th>
+                <th>Department</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Actions</th>
               </>
             </tr>
           </thead>
@@ -184,6 +185,11 @@ const financialRequestPage = () => {
                           : 'unknown'
                       }
                   </td>
+                  <td>
+                    <button onClick={() => handleDelete(item.id)} className="deleteBtn">
+                      Delete
+                    </button>
+                  </td>
                 </>
                 
               </tr>
@@ -208,4 +214,4 @@ const financialRequestPage = () => {
   );
 };
 
-export default financialRequestPage;
+export default FinancialRequestPage;

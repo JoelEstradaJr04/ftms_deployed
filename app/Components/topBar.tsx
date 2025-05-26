@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import '../styles/topbar.css';
 
 const TopBar = () => {
-    const [activeModule, setActiveModule] = useState('Accounting'); // State to track the active module
+    //const [activeModule, setActiveModule] = useState('Accounting'); // State to track the active module
     const [activeSystem, setActiveSystem] = useState(''); // State to track the active submodule
 
     const handleSystemClick = (systemName: string) => {
