@@ -17,9 +17,11 @@ const TABLE_PREFIXES = {
 type TablePrefix = keyof typeof TABLE_PREFIXES
 
 export async function generateId(prefix: TablePrefix) {
+  const tableName = TABLE_PREFIXES[prefix]
+  if (!tableName) throw new Error(`Invalid table prefix: ${prefix}`)
+  
   return await prisma.$transaction(async (tx) => {
-    const tableName = TABLE_PREFIXES[prefix]
-    
+    // Generate sequence for table: ${tableName}
     const sequence = await tx.sequence.upsert({
       where: { name: prefix },
       update: { value: { increment: 1 } },
