@@ -159,9 +159,62 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const dateFilter = searchParams.get('dateFilter');
+  const dateFrom = searchParams.get('dateFrom');
+  const dateTo = searchParams.get('dateTo');
+
+  let dateCondition = {};
+
+  if (dateFilter) {
+    const now = new Date();
+    switch (dateFilter) {
+      case 'Day':
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        dateCondition = {
+          expense_date: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        };
+        break;
+      case 'Month':
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateCondition = {
+          expense_date: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          }
+        };
+        break;
+      case 'Year':
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateCondition = {
+          expense_date: {
+            gte: startOfYear,
+            lte: endOfYear
+          }
+        };
+        break;
+    }
+  } else if (dateFrom && dateTo) {
+    dateCondition = {
+      expense_date: {
+        gte: new Date(dateFrom),
+        lte: new Date(dateTo)
+      }
+    };
+  }
+
   const expenses = await prisma.expenseRecord.findMany({ 
-    where: { is_deleted: false },
+    where: { 
+      is_deleted: false,
+      ...dateCondition
+    },
     include: {
       receipt: {
         include: {
@@ -170,13 +223,7 @@ export async function GET() {
       }
     },
     orderBy: { created_at: 'desc' }
-  })
-
-  // Convert Decimal fields to numbers before sending response
-  const formattedExpenses = expenses.map(expense => ({
-    ...expense,
-    total_amount: Number(expense.total_amount)
-  }))
-
-  return NextResponse.json(formattedExpenses)
+  });
+  
+  return NextResponse.json(expenses);
 }

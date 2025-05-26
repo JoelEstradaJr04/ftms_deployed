@@ -1,14 +1,20 @@
 button {
     outline: 1px solid black;
     border-radius: 5px;
-  } 
+    cursor: pointer;
+    transition: all 0.3s ease;
+} 
+
+button:hover {
+    background-color: #f0f0f0;
+}
   
-  .dashboardPage {
-      padding: 1rem;
-      font-family: 'poppins', sans-serif;
-      color: black;
-      width: 100%;
-    }
+.dashboardPage {
+    padding: 1rem;
+    font-family: 'poppins', sans-serif;
+    color: black;
+    width: 100%;
+}
     
 
     /*===================ACCOUNTING DASHBOARD===================*/
@@ -39,6 +45,16 @@ button {
     .settings select {
       padding: 8px;
       font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      transition: border-color 0.3s ease;
+    }
+  
+    .settings input[type="text"]:focus,
+    .settings input[type="date"]:focus,
+    .settings select:focus {
+      outline: none;
+      border-color: #4373A1;
     }
   
     .settings input {
@@ -83,14 +99,21 @@ button {
       justify-content: flex-end;
       background-color: #961C1E;
       color: white;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    
+    .exportButton:hover {
+      background-color: #7a1618;
     }
     
     .exportButton button {
       padding: 8px 12px;
       font-size: 1rem;
       cursor: pointer;
-      outline: 1px solid black;
-      border-radius: 5px;
+      border: none;
+      background: none;
+      color: white;
       width: fit-content;
     }
     
@@ -123,7 +146,7 @@ button {
         background-color: none;
         padding: 1rem;
         height: 100vh; /* Ensures the container fills the viewport height */
-        max-height: 400px ;
+        max-height: 600px;
     }
 
     .data {
@@ -141,10 +164,36 @@ button {
         gap: 1rem;
         border-radius: 0.5rem;
         padding: 1rem;
-        background-color: none;
+        background-color: white;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         justify-content: space-between;
         align-content: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .dataGrid:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .categoryBreakdown {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .categoryItem {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.3rem;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+    }
+
+    .categoryItem span:last-child {
+        font-weight: bold;
     }
 
     #emoji {
@@ -183,6 +232,7 @@ button {
     #revenue {
         border: 10px solid #13CE66;
         border-radius: 1.2rem;
+        cursor: pointer;
     }
 
     #expenses p {
@@ -192,6 +242,7 @@ button {
     #expenses {
         border: 10px solid #961C1E;
         border-radius: 1.2rem;
+        cursor: pointer;
     }
 
     #profit p {
@@ -229,16 +280,27 @@ button {
         margin-bottom: 1rem;
         width: 50%;
         flex-grow: 1; /* Allows the element to grow and fill available space */
-        background-color: nonergb(165, 162, 168);
+        background-color: white;
         justify-content: center;
         align-items: center;
         border-radius: 1.2rem;
         border: 10px solid #FFCC3D;
+        padding: 1rem;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
     .graph .title {
         height: 10%;
         background-color: none;
+        margin-bottom: 1rem;
+    }
+
+    .pieChartContainer {
+        width: 100%;
+        height: 90%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
 
@@ -274,6 +336,10 @@ button {
 
         .dataGrid p {
             font-size: 1rem; /* Adjust font size for smaller screens */
+        }
+
+        .categoryBreakdown {
+            font-size: 0.8rem;
         }
     }
     

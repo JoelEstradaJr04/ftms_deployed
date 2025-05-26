@@ -535,7 +535,7 @@ const ExpensePage = () => {
             rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')));
             break;
           case "Amount":
-            rowData.push(escapeField(item.total_amount.toFixed(2)));
+            rowData.push(escapeField(Number(item.total_amount).toFixed(2)));
             break;
           case "Source Type":
             rowData.push(escapeField(assignment ? 'Assignment' : item.receipt ? 'Receipt' : 'Other'));

@@ -77,10 +77,64 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams;
+  const dateFilter = searchParams.get('dateFilter');
+  const dateFrom = searchParams.get('dateFrom');
+  const dateTo = searchParams.get('dateTo');
+
+  let dateCondition = {};
+
+  if (dateFilter) {
+    const now = new Date();
+    switch (dateFilter) {
+      case 'Day':
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        dateCondition = {
+          collection_date: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        };
+        break;
+      case 'Month':
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateCondition = {
+          collection_date: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          }
+        };
+        break;
+      case 'Year':
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        dateCondition = {
+          collection_date: {
+            gte: startOfYear,
+            lte: endOfYear
+          }
+        };
+        break;
+    }
+  } else if (dateFrom && dateTo) {
+    dateCondition = {
+      collection_date: {
+        gte: new Date(dateFrom),
+        lte: new Date(dateTo)
+      }
+    };
+  }
+
   const revenues = await prisma.revenueRecord.findMany({ 
-    where: { is_deleted: false },
+    where: { 
+      is_deleted: false,
+      ...dateCondition
+    },
     orderBy: { created_at: 'desc' }
-  })
-  return NextResponse.json(revenues)
+  });
+  
+  return NextResponse.json(revenues);
 }
