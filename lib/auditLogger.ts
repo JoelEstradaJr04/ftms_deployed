@@ -2,13 +2,13 @@
 import { prisma } from './prisma'
 import { generateId } from './idGenerator'
 
-interface AuditLogInput {
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'EXPORT'
-  table_affected: 'ExpenseRecord' | 'RevenueRecord'
-  record_id: string
-  performed_by: string
-  details: string
-}
+type AuditLogData = {
+  action: string;
+  table_affected: 'ExpenseRecord' | 'RevenueRecord' | 'Receipt';
+  record_id: string;
+  performed_by: string;
+  details: string;
+};
 
 export async function logAudit({
   action,
@@ -16,7 +16,7 @@ export async function logAudit({
   record_id,
   performed_by,
   details,
-}: AuditLogInput) {
+}: AuditLogData) {
   try {
     await prisma.auditLog.create({
       data: {

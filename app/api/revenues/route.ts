@@ -10,7 +10,7 @@ import { logAudit } from '@/lib/auditLogger'
 export async function POST(req: NextRequest) {
   const data = await req.json();
   // Add other_source to the destructured properties
-  const { assignment_id, category, total_amount, date, created_by, other_source } = data;
+  const { assignment_id, category, total_amount, collection_date, created_by, other_source } = data;
 
   try {
     let finalAmount = total_amount;
@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
-          date: new Date(date),
+          collection_date: new Date(collection_date),
         },
       });
 
       if (duplicate) {
-        console.log(`Duplicate record found for assignment_id: ${assignment_id} on date: ${date}`);
+        console.log(`Duplicate record found for assignment_id: ${assignment_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
-          { error: 'Revenue record for this assignment and date already exists.' },
+          { error: 'Revenue record for this assignment and collection_date already exists.' },
           { status: 409 }
         );
       }
@@ -49,11 +49,11 @@ export async function POST(req: NextRequest) {
         assignment_id: assignment_id ?? null,
         category,
         total_amount: finalAmount,
-        date: new Date(date),
+        collection_date: new Date(collection_date),
         created_by,
         created_at: new Date(),
         updated_at: null,
-        isDeleted: false,
+        is_deleted: false,
         other_source: category === 'Other' ? other_source : null // Now properly defined
       }
     });
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   const revenues = await prisma.revenueRecord.findMany({ 
-    where: { isDeleted: false },
+    where: { is_deleted: false },
     orderBy: { created_at: 'desc' }
   })
   return NextResponse.json(revenues)

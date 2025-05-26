@@ -12,7 +12,8 @@ export type Assignment = {
   date_assigned: string
   trip_fuel_expense: number
   trip_revenue: number
-  is_recorded: boolean
+  is_revenue_recorded: boolean
+  is_expense_recorded: boolean
   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental'
 }
 
@@ -39,7 +40,8 @@ async function getAssignmentsFromCache(): Promise<Assignment[] | null> {
       date_assigned: new Date(assignment.date_assigned).toISOString(),
       trip_fuel_expense: Number(assignment.trip_fuel_expense),
       trip_revenue: Number(assignment.trip_revenue),
-      is_recorded: assignment.is_recorded,
+      is_revenue_recorded: assignment.is_revenue_recorded,
+      is_expense_recorded: assignment.is_expense_recorded,
       assignment_type: assignment.assignment_type as 'Boundary' | 'Percentage' | 'Bus_Rental'
     }));
   } catch (error) {
@@ -105,14 +107,14 @@ export async function getAllAssignments(): Promise<Assignment[]> {
     const cachedAssignments = await getAssignmentsFromCache();
     if (cachedAssignments) {
       // For UI dropdown, only return unrecorded assignments
-      return cachedAssignments.filter(a => !a.is_recorded);
+      return cachedAssignments.filter(a => !a.is_revenue_recorded);
     }
 
     // If cache miss, fetch from Supabase
     const { data, error } = await supabase
       .from('op_bus_assignments')
       .select('*')
-      .eq('is_recorded', false);
+      .eq('is_revenue_recorded', false);
 
     if (error) {
       throw new Error(error.message);
@@ -132,16 +134,16 @@ export async function getAllAssignments(): Promise<Assignment[]> {
   }
 }
 
-export async function updateAssignmentIsRecorded(id: string, is_recorded: boolean) {
+export async function updateAssignmentIsRecorded(id: string, is_revenue_recorded: boolean) {
   try {
     const { data, error } = await supabase
       .from('op_bus_assignments')
-      .update({ is_recorded })
+      .update({ is_revenue_recorded })
       .eq('assignment_id', id)
       .select();
 
     if (error) {
-      throw new Error(`Failed to update is_recorded: ${error.message}`);
+      throw new Error(`Failed to update is_revenue_recorded: ${error.message}`);
     }
 
     // Update cache to reflect the change

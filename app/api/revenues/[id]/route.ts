@@ -9,7 +9,7 @@ import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  const { assignment_id, category, total_amount, date, created_by } = data;
+  const { assignment_id, category, total_amount, collection_date, created_by } = data;
 
   try {
     let finalAmount = total_amount;
@@ -18,14 +18,14 @@ export async function POST(req: NextRequest) {
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
-          date: new Date(date),
+          collection_date: new Date(collection_date),
         },
       });
 
       if (duplicate) {
-        console.log(`Duplicate record found for assignment_id: ${assignment_id} on date: ${date}`);
+        console.log(`Duplicate record found for assignment_id: ${assignment_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
-          { error: 'Revenue record for this assignment and date already exists.' },
+          { error: 'Revenue record for this assignment and collection_date already exists.' },
           { status: 409 }
         );
       }
@@ -44,15 +44,15 @@ export async function POST(req: NextRequest) {
 
     const newRevenue = await prisma.revenueRecord.create({
       data: {
-        revenue_id: await generateId('rev'),
+        revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
         category,
         total_amount: finalAmount,
-        date: new Date(date),
+        collection_date: new Date(collection_date),
         created_by,
         created_at: new Date(),
         updated_at: null,
-        isDeleted: false,
+        is_deleted: false,
       },
     });
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   const revenues = await prisma.revenueRecord.findMany({ 
-    where: { isDeleted: false },
+    where: { is_deleted: false },
     orderBy: { created_at: 'desc' }
   })
   return NextResponse.json(revenues)
@@ -93,7 +93,7 @@ export async function PUT(
   try {
     const { id } = await params; // Await the params promise
     const data = await req.json();
-    const { total_amount, date, other_source } = data;
+    const { total_amount, collection_date, other_source } = data;
     const revenue_id = id; // Use the awaited id
 
     // Get the original record for comparison and validation
@@ -101,7 +101,7 @@ export async function PUT(
       where: { revenue_id }
     });
 
-    if (!originalRecord || originalRecord.isDeleted) {
+    if (!originalRecord || originalRecord.is_deleted) {
       return NextResponse.json(
         { error: 'Revenue record not found' },
         { status: 404 }
@@ -126,7 +126,7 @@ export async function PUT(
       where: { revenue_id },
       data: {
         total_amount,
-        date: new Date(date),
+        collection_date: new Date(collection_date),
         other_source: originalRecord.category === 'Other' ? other_source : null,
         updated_at: new Date()
       }
@@ -177,11 +177,11 @@ export async function DELETE(
       );
     }
 
-    // Soft delete by setting isDeleted flag
+    // Soft delete by setting is_deleted flag
     const deletedRevenue = await prisma.revenueRecord.update({
       where: { revenue_id },
       data: { 
-        isDeleted: true,
+        is_deleted: true,
         updated_at: new Date()
       }
     });

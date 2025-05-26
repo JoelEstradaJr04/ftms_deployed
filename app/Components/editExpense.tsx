@@ -4,18 +4,12 @@
    ──────────────────────────────────────────────────────────── */
 'use client';
 
-/* ───── imports ─────────────────────────────────────────────── */
-import React, { useEffect, useState } from 'react';
-import '../styles/addExpense.css';
-import ItemList from '../Components/addExpense_itemList';
-import { Item, calcAmount } from '../utility/calcAmount';
-import {
-  showEmptyFieldWarning,
-  showAddConfirmation,
-  showSuccess,
-  showError,
-} from '../utility/Alerts';
-import { isValidSource } from '../utility/validation';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
+import '../styles/editExpense.css';
+import { getAssignmentById } from '@/lib/supabase/assignments';
 
 /* ───── types ──────────────────────────────────────────────── */
 type ReceiptItem = {
@@ -30,7 +24,7 @@ type ReceiptItem = {
 type Receipt = {
   receipt_id: string;
   supplier: string;
-  receipt_date: string;
+  transaction_date: string;
   vat_reg_tin?: string;
   terms?: string;
   status: string;
@@ -50,146 +44,159 @@ export type ExpenseData = {
 };
 
 type EditExpenseModalProps = {
-  record: ExpenseData;
-  onSave: (updated: ExpenseData) => void;
+  record: {
+    expense_id: string;
+    expense_date: string;
+    category: string;
+    source: string;
+    amount: number;
+    assignment_id?: string;
+    receipt_id?: string;
+    other_source?: string;
+    other_category?: string;
+  };
   onClose: () => void;
+  onSave: (updatedRecord: {
+    expense_id: string;
+    expense_date: string;
+    total_amount: number;
+    other_source?: string;
+    other_category?: string;
+  }) => void;
 };
 
 /* ───── component ──────────────────────────────────────────── */
 const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   record,
-  onSave,
   onClose,
+  onSave
 }) => {
-  /* ——— header clock ——— */
-  const [clock, setClock] = useState({ t: '', d: '' });
+  const [expenseDate, setExpenseDate] = useState(record.expense_date);
+  const [amount, setAmount] = useState(record.amount);
+  const [otherSource, setOtherSource] = useState(record.other_source || '');
+  const [otherCategory, setOtherCategory] = useState(record.other_category || '');
+  const [originalAmount] = useState(record.amount);
+  const [showDeviationWarning, setShowDeviationWarning] = useState(false);
+  const [deviationPercentage, setDeviationPercentage] = useState(0);
+
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setClock({
-        t: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        d: now.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' }),
-      });
+    const fetchOriginalAmount = async () => {
+      if (record.assignment_id) {
+        try {
+          const assignmentData = await getAssignmentById(record.assignment_id);
+          if (assignmentData?.trip_fuel_expense) {
+            const deviation = Math.abs((record.amount - assignmentData.trip_fuel_expense) / assignmentData.trip_fuel_expense * 100);
+            setDeviationPercentage(deviation);
+            setShowDeviationWarning(deviation > 10);
+          }
+        } catch (error) {
+          console.error('Error fetching assignment data:', error);
+        }
+      }
     };
-    tick();
-    const id = setInterval(tick, 60_000);
-    return () => clearInterval(id);
-  }, []);
 
-  /* ——— editable state ——— */
-  const [department, setDepartment] = useState(record.department_from);
-  const [category, setCategory] = useState(record.category);
-  const [items, setItems] = useState<Item[]>(
-    record.receipt?.items.map(item => ({
-      name: item.item_name,
-      quantity: item.quantity.toString(),
-      unitPrice: item.unit_price.toString()
-    })) ?? [{ name: '', quantity: '', unitPrice: '' }]
-  );
+    fetchOriginalAmount();
+  }, [record.assignment_id, record.amount]);
 
-  /* ——— handlers ——— */
-  const handleSave = async () => {
-    if (!category.trim() || !isValidSource(category)) {
-      await showEmptyFieldWarning();
-      return;
-    }
-
-    const total = calcAmount(items);
-
-    const confirm = await showAddConfirmation();
-    if (!confirm.isConfirmed) return;
-
-    try {
-      const updated: ExpenseData = {
-        ...record,
-        department_from: department,
-        category,
-        total_amount: Number(total),
-        receipt: record.receipt ? {
-          ...record.receipt,
-          items: items.map((item, index) => ({
-            receipt_item_id: record.receipt?.items[index]?.receipt_item_id ?? `new-${index}`,
-            item_name: item.name,
-            unit: 'piece', // Default unit since it's not in the Item type
-            quantity: parseFloat(item.quantity),
-            unit_price: parseFloat(item.unitPrice),
-            total_price: parseFloat(item.quantity) * parseFloat(item.unitPrice)
-          }))
-        } : undefined
-      };
-      onSave(updated);
-      await showSuccess('Expense updated successfully!');
-      onClose();
-    } catch {
-      showError('Failed to update expense.');
+  const handleAmountChange = (newAmount: number) => {
+    setAmount(newAmount);
+    if (originalAmount) {
+      const deviation = Math.abs((newAmount - originalAmount) / originalAmount * 100);
+      setDeviationPercentage(deviation);
+      setShowDeviationWarning(deviation > 10);
     }
   };
 
-  /* ——— render ——— */
+  const handleSave = () => {
+    if (!expenseDate) {
+      Swal.fire('Error', 'Please fill in all required fields', 'error');
+      return;
+    }
+
+    if (record.category === 'Other' && !otherCategory) {
+      Swal.fire('Error', 'Please specify the category', 'error');
+      return;
+    }
+
+    onSave({
+      expense_id: record.expense_id,
+      expense_date: expenseDate,
+      total_amount: amount,
+      other_source: record.category === 'Other' ? otherSource : undefined,
+      other_category: record.category === 'Other' ? otherCategory : undefined
+    });
+  };
+
   return (
     <div className="modalOverlay">
-      <div className="addExpenseModal">
-        {/* header */}
+      <div className="modalContent">
         <div className="modalHeader">
           <h2>Edit Expense</h2>
-          <div className="timeDate">
-            <div className="currTime">{clock.t}</div>
-            <div className="currDate">{clock.d}</div>
+          <p><strong>Category:</strong> {record.category === 'Other' ? record.other_category || 'Other' : record.category}</p>
+          <p><strong>Source:</strong> {record.source}</p>
+        </div>
+
+        <div className="formGroup">
+          <label>Expense Date</label>
+          <input
+            type="date"
+            value={expenseDate}
+            onChange={(e) => setExpenseDate(e.target.value)}
+          />
+        </div>
+
+        {record.category === 'Other' && (
+          <>
+            <div className="formGroup">
+              <label>Category</label>
+              <input
+                type="text"
+                value={otherCategory}
+                onChange={(e) => setOtherCategory(e.target.value)}
+                placeholder="Specify category"
+                required
+              />
+            </div>
+            <div className="formGroup">
+              <label>Source</label>
+              <input
+                type="text"
+                value={otherSource}
+                onChange={(e) => setOtherSource(e.target.value)}
+                placeholder="Specify source"
+                required
+              />
+            </div>
+          </>
+        )}
+
+        <div className="formGroup">
+          <label>Amount</label>
+          <div className="amountInputGroup">
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => handleAmountChange(parseFloat(e.target.value))}
+              min="0"
+              step="0.01"
+            />
+            {originalAmount !== null && (
+              <div className="amountReference">
+                Original Amount: ₱{originalAmount.toLocaleString()}
+                {showDeviationWarning && (
+                  <div className="deviationWarning">
+                    Deviation: {deviationPercentage.toFixed(2)}%
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSave();
-          }}
-        >
-          <div className="row">
-            <div className="formFields">
-              {/* Category / Department */}
-              <div className="formField">
-                <label htmlFor="dept">Category</label>
-                <select
-                  id="dept"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                >
-                  <option value="Others">Other Expenses</option>
-                </select>
-              </div>
-
-              {/* Description */}
-              <div className="formField">
-                <label htmlFor="desc">Category</label>
-                <input
-                  type="text"
-                  id="desc"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Expense category"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Item list (re-usable component, editable) */}
-          <div className="itemList">
-            <ItemList items={items} setItems={setItems} />
-          </div>
-
-          {/* action buttons */}
-          <div className="buttonRow">
-            <div className="buttonContainer">
-              <button type="button" className="cancelButton" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="addButton">
-                Save
-              </button>
-            </div>
-          </div>
-        </form>
+        <div className="modalButtons">
+          <button onClick={onClose} className="cancelBtn">Cancel</button>
+          <button onClick={handleSave} className="saveBtn">Save</button>
+        </div>
       </div>
     </div>
   );

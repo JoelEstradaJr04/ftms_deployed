@@ -33,7 +33,7 @@ export async function GET() {
           date_assigned: new Date(assignment.date_assigned),
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
-          is_recorded: assignment.is_recorded,
+          is_revenue_recorded: assignment.is_revenue_recorded,
           assignment_type: assignment.assignment_type
         }))
       });
@@ -78,7 +78,7 @@ export async function POST() {
           date_assigned: new Date(assignment.date_assigned),
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
-          is_recorded: assignment.is_recorded,
+          is_revenue_recorded: assignment.is_revenue_recorded,
           assignment_type: assignment.assignment_type
         }))
       });

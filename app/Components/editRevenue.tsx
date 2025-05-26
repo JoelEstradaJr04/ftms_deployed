@@ -7,7 +7,7 @@ import { formatDate } from '../utility/dateFormatter';
 type EditProps = {
   record: {
     revenue_id: string;
-    date: string;
+    collection_date: string;
     category: string;
     source: string;
     amount: number;
@@ -17,14 +17,14 @@ type EditProps = {
   onClose: () => void;
   onSave: (updatedRecord: {
     revenue_id: string;
-    date: string;
+    collection_date: string;
     total_amount: number;
     other_source?: string;
   }) => void;
 };
 
 const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
-  const [date, setDate] = useState(record.date);
+  const [collection_date, setDate] = useState(record.collection_date);
   const [amount, setAmount] = useState(record.amount);
   const [otherSource, setOtherSource] = useState(record.other_source || '');
   const [originalTripRevenue, setOriginalTripRevenue] = useState<number | null>(null);
@@ -82,7 +82,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     if (result.isConfirmed) {
       onSave({
         revenue_id: record.revenue_id,
-        date,
+        collection_date,
         total_amount: amount,
         other_source: record.category === 'Other' ? otherSource : undefined
       });
@@ -95,14 +95,14 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
         <div className="modalHeader">
           <h2>Edit Revenue</h2>
           <p><strong>Category:</strong> {record.category}</p>
-          <p><strong>Collection Date:</strong> {formatDate(record.date)}</p>
+          <p><strong>Collection Date:</strong> {formatDate(record.collection_date)}</p>
         </div>
 
         <div className="formGroup">
           <label>Collection Date</label>
           <input
             type="date"
-            value={date}
+            value={collection_date}
             onChange={(e) => setDate(e.target.value)}
           />
         </div>

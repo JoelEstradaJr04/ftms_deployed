@@ -1,0 +1,88 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+  margin-bottom: 1.5rem;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  color: #333;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.amountInputGroup {
+  position: relative;
+}
+
+.tripRevenueReference {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.deviationWarning {
+  color: #dc3545;
+  font-weight: bold;
+  margin-top: 0.25rem;
+}
+
+.modalButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.cancelBtn, .saveBtn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancelBtn {
+  background-color: #961C1E;
+  color: white;
+}
+
+.saveBtn {
+  background-color: #13CE66;
+  color: white;
+} 

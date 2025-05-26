@@ -20,7 +20,7 @@ type AddRevenueProps = {
     category: string;
     assignment_id?: string;
     total_amount: number;
-    date: string;
+    collection_date: string;
     created_by: string;
     other_source?: string;
   }) => void;
@@ -34,7 +34,7 @@ type AddRevenueProps = {
     date_assigned: string;
     trip_revenue: number;
     assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
-    is_recorded: boolean;
+    is_revenue_recorded: boolean;
   }[];
   currentUser: string;
 };
@@ -47,13 +47,13 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [filteredAssignments, setFilteredAssignments] = useState(assignments.filter(a => !a.is_recorded));
+  const [filteredAssignments, setFilteredAssignments] = useState(assignments.filter(a => !a.is_revenue_recorded));
   
   const [formData, setFormData] = useState({
     category: 'Boundary',
     assignment_id: '',
     total_amount: 0,
-    date: new Date().toISOString().split('T')[0],
+    collection_date: new Date().toISOString().split('T')[0],
     created_by: currentUser,
     other_source: '',
   });
@@ -79,7 +79,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
       }));
     } else {
       const filtered = assignments.filter(a => {
-        if (a.is_recorded) return false;
+        if (a.is_revenue_recorded) return false;
         if (formData.category === 'Boundary') return a.assignment_type === 'Boundary';
         if (formData.category === 'Percentage') return a.assignment_type === 'Percentage';
         if (formData.category === 'Bus_Rental') return a.assignment_type === 'Bus_Rental';
@@ -127,9 +127,9 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { category, assignment_id, total_amount, date, other_source } = formData;
+    const { category, assignment_id, total_amount, collection_date, other_source } = formData;
 
-    if (!category || !date || !currentUser ) {
+    if (!category || !collection_date || !currentUser ) {
       await showEmptyFieldWarning();
       return;
     }
@@ -156,15 +156,15 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         await onAddRevenue({
           category,
           total_amount,
-          date,
+          collection_date,
           created_by: currentUser,
           ...(category !== 'Other' ? { assignment_id } : { other_source })
         });
 
-        // Update is_recorded in Supabase if assignment is used
+        // Update is_revenue_recorded in Supabase if assignment is used
         if (assignment_id) {
           await axios.put(`/api/assignments/${assignment_id}`, {
-            is_recorded: true
+            is_revenue_recorded: true
           });
         }
 
@@ -295,7 +295,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                   type="date"
                   id="date"
                   name="date"
-                  value={formData.date}
+                  value={formData.collection_date}
                   onChange={handleInputChange}
                   required
                   className="formInput"

@@ -38,17 +38,17 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { is_recorded } = body
+    const { is_revenue_recorded } = body
 
-    if (typeof is_recorded !== 'boolean') {
-      return NextResponse.json({ error: 'Invalid value for is_recorded' }, { status: 400 })
+    if (typeof is_revenue_recorded !== 'boolean') {
+      return NextResponse.json({ error: 'Invalid value for is_revenue_recorded' }, { status: 400 })
     }
 
-    const updated = await updateAssignmentIsRecorded(id, is_recorded)
+    const updated = await updateAssignmentIsRecorded(id, is_revenue_recorded)
 
     return NextResponse.json({ success: true, updated })
   } catch (error: unknown) {
-    console.error('Failed to update assignment is_recorded:', error)
+    console.error('Failed to update assignment is_revenue_recorded:', error)
 
     const errorMessage = error instanceof Error
       ? error.message

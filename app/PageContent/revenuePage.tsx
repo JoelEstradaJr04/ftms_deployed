@@ -16,15 +16,15 @@ interface RevenueRecord {
   assignment_id?: string;    
   category: 'Boundary' | 'Percentage' | 'Bus_Rental' | 'Other'; 
   total_amount: number;      
-  date: string;              
+  collection_date: string;              
   created_by: string;        
   created_at: string;        
   updated_at?: string;       
-  isDeleted: boolean;
+  is_deleted: boolean;
   other_source?: string; // Add this line
 }
 
-// Updated Assignment interface to include assignment_type and is_recorded
+// Updated Assignment interface to include assignment_type and is_revenue_recorded
 // Update the Assignment interface
 interface Assignment {
   assignment_id: string;
@@ -37,7 +37,7 @@ interface Assignment {
   date_assigned: string;
   trip_fuel_expense: number;
   trip_revenue: number;
-  is_recorded: boolean;
+  is_revenue_recorded: boolean;
   assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
 }
 
@@ -46,7 +46,7 @@ type RevenueData = {
   revenue_id: string;       
   category: string;         
   total_amount: number;     
-  date: string;             
+  collection_date: string;             
   created_by: string;       
   assignment_id?: string;   
   other_source?: string;
@@ -120,7 +120,7 @@ const RevenuePage = () => {
         const { data: assignmentsData } = await assignmentsResponse.json();
         
         // Filter out recorded assignments for the AddRevenue modal
-        const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_recorded);
+        const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
         setAssignments(unrecordedAssignments);
         
         // Store all assignments for table display
@@ -136,7 +136,7 @@ const RevenuePage = () => {
           revenue_id: revenue.revenue_id,
           category: revenue.category,
           total_amount: Number(revenue.total_amount),
-          date: new Date(revenue.date).toISOString().split('T')[0],
+          collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
           created_by: revenue.created_by,
           assignment_id: revenue.assignment_id,
           other_source: revenue.other_source || undefined
@@ -171,8 +171,8 @@ const RevenuePage = () => {
   const filteredData = data.filter((item: RevenueData) => {
     const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase());
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
-    const matchesDate = (!dateFrom || item.date >= dateFrom) && 
-                      (!dateTo || item.date <= dateTo);
+    const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
+                      (!dateTo || item.collection_date <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
   });
 
@@ -185,7 +185,7 @@ const RevenuePage = () => {
     category: string;
     assignment_id?: string;
     total_amount: number;
-    date: string;
+    collection_date: string;
     created_by: string;
     other_source?: string;
   }) => {
@@ -201,7 +201,7 @@ const RevenuePage = () => {
         if (!assignment || !itemAssignment) return false;
 
         return (
-          new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.date &&
+          new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
           assignment.bus_bodynumber === itemAssignment.bus_bodynumber &&
           item.category === newRevenue.category &&
           assignment.driver_name === itemAssignment.driver_name &&
@@ -222,7 +222,7 @@ const RevenuePage = () => {
       body: JSON.stringify({
         category: newRevenue.category,
         total_amount: newRevenue.total_amount,
-        date: new Date(newRevenue.date).toISOString(),
+        collection_date: new Date(newRevenue.collection_date).toISOString(),
         created_by: newRevenue.created_by,
         assignment_id: newRevenue.assignment_id || null,
         other_source: newRevenue.category === 'Other' ? newRevenue.other_source : null
@@ -238,7 +238,7 @@ const RevenuePage = () => {
       revenue_id: result.revenue_id,
       category: result.category,
       total_amount: Number(result.total_amount),
-      date: new Date(result.date).toISOString().split('T')[0],
+      collection_date: new Date(result.collection_date).toISOString().split('T')[0],
       created_by: result.created_by,
       assignment_id: result.assignment_id,
       other_source: result.other_source || undefined
@@ -249,13 +249,13 @@ const RevenuePage = () => {
       const response = await fetch(`/api/assignments/${newRevenue.assignment_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_recorded: true })
+        body: JSON.stringify({ is_revenue_recorded: true })
       });
 
       if (response.ok) {
         setAssignments(prev => prev.map(assignment => 
           assignment.assignment_id === newRevenue.assignment_id 
-            ? { ...assignment, is_recorded: true }
+            ? { ...assignment, is_revenue_recorded: true }
             : assignment
         ));
       }
@@ -300,7 +300,7 @@ const RevenuePage = () => {
 
   const handleSaveEdit = async (updatedRecord: {
     revenue_id: string;
-    date: string;
+    collection_date: string;
     total_amount: number;
     other_source?: string;
   }) => {
@@ -324,7 +324,7 @@ const RevenuePage = () => {
           revenue_id: result.revenue_id,
           category: result.category,
           total_amount: Number(result.total_amount),
-          date: new Date(result.date).toISOString().split('T')[0],
+          collection_date: new Date(result.collection_date).toISOString().split('T')[0],
           created_by: result.created_by,
           assignment_id: result.assignment_id,
           other_source: result.other_source || undefined
@@ -536,7 +536,7 @@ const RevenuePage = () => {
   };
 
   const performExport = (recordsToExport: RevenueData[], exportId: string) => {
-    // Generate header comment with consistent date formatting
+    // Generate header comment with consistent collection_date formatting
     const generateHeaderComment = () => {
       let comment = '"# Revenue Records Export","","","","","","","","","",""\n';
       comment += `"# Export ID:","${exportId}","","","","","","","","",""\n`; // Keep in CSV if needed
@@ -580,7 +580,7 @@ const RevenuePage = () => {
           columns.forEach(col => {
             switch(col) {
               case "Collection Date":
-                rowData.push(escapeField(formatDate(item.date)));
+                rowData.push(escapeField(formatDate(item.collection_date)));
                 break;
               case "Category":
                 rowData.push(escapeField(item.category));
@@ -646,14 +646,14 @@ const RevenuePage = () => {
         const importPromises = lines
           .filter(line => line.trim())
           .map(async (line: string) => {  // Explicitly type the line parameter
-            const [, date, category, amount] = line.split(",");
+            const [, collection_date, category, amount] = line.split(",");
             const response = await fetch('/api/revenues', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 category,
                 total_amount: parseFloat(amount),
-                date: new Date(date).toISOString(),
+                collection_date: new Date(collection_date).toISOString(),
                 created_by: 'import-job'
               })
             });
@@ -666,7 +666,7 @@ const RevenuePage = () => {
           revenue_id: item.revenue_id,
           category: item.category,
           total_amount: Number(item.total_amount),
-          date: new Date(item.date).toISOString().split('T')[0],
+          collection_date: new Date(item.collection_date).toISOString().split('T')[0],
           created_by: item.created_by,
           assignment_id: item.assignment_id
         }))]);
@@ -767,7 +767,7 @@ const RevenuePage = () => {
               return (
                 <tr key={item.revenue_id}>
                   <td><input type="checkbox" /></td>
-                  <td>{formatDate(item.date)}</td>
+                  <td>{formatDate(item.collection_date)}</td>
                   <td>{source}</td>
                   <td>{item.category}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>
@@ -817,7 +817,7 @@ const RevenuePage = () => {
         <EditRevenueModal
           record={{
             revenue_id: recordToEdit.revenue_id,
-            date: recordToEdit.date,
+            collection_date: recordToEdit.collection_date,
             category: recordToEdit.category,
             source: recordToEdit.assignment_id 
               ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)

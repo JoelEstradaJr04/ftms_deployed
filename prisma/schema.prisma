@@ -8,12 +8,12 @@ datasource db {
 }
 
 enum ExpenseCategory {
-  Fuel          // Diesel, gasoline
-  Vehicle_Parts // Brake pads, hub bolts, filters
-  Tools         // Wrenches, pliers, hand tools
-  Equipment     // Welding machines, compressors, diagnostic devices
-  Supplies      // Consumables like paint, sealant, adhesives, tape
-  Other         // Catch-all for unclassified purchases
+  Fuel
+  Vehicle_Parts
+  Tools
+  Equipment
+  Supplies
+  Other
 }
 
 enum RevenueCategory {
@@ -41,39 +41,38 @@ model Sequence {
 }
 
 model ExpenseRecord {
-  expense_id     String   @id @default(uuid())
+  expense_id     String   @id
   assignment_id  String?
-  request_id     String?
-  category       ExpenseCategory
-  department_from Department?
-  total_amount   Decimal  @db.Decimal(20, 4)
-  date           DateTime
   receipt_id     String?  @unique
   receipt        Receipt? @relation(fields: [receipt_id], references: [receipt_id])
-  recorded_by    String
-  created_at     DateTime @default(now())
-  updated_at     DateTime?
-  isDeleted      Boolean  @default(false)
-  other_source   String?
-}
-
-model RevenueRecord {
-  revenue_id     String   @id @default(uuid())
-  assignment_id  String?
-  category       RevenueCategory
+  category       ExpenseCategory
   total_amount   Decimal  @db.Decimal(20, 4)
-  date           DateTime
+  expense_date   DateTime
   created_by     String
   created_at     DateTime @default(now())
   updated_at     DateTime?
-  isDeleted      Boolean  @default(false)
+  is_deleted      Boolean  @default(false)
+  other_source   String?
+  other_category String?
+}
+
+model RevenueRecord {
+  revenue_id     String   @id
+  assignment_id  String?
+  category       RevenueCategory
+  total_amount   Decimal  @db.Decimal(20, 4)
+  collection_date           DateTime
+  created_by     String
+  created_at     DateTime @default(now())
+  updated_at     DateTime?
+  is_deleted      Boolean  @default(false)
   other_source   String?
 }
 
 model AuditLog {
   log_id         String   @id @default(uuid())
   action         String
-  table_affected String
+  table_affected String   // Can be "ExpenseRecord", "RevenueRecord", "Receipt"
   record_id      String
   performed_by   String
   timestamp      DateTime @default(now())
@@ -91,33 +90,34 @@ model AssignmentCache {
   date_assigned    DateTime
   trip_fuel_expense Decimal  @db.Decimal(20, 4)
   trip_revenue     Decimal  @db.Decimal(20, 4)
-  is_recorded      Boolean  @default(false)
+  is_revenue_recorded      Boolean  @default(false)
   assignment_type  String
   last_updated     DateTime @default(now())
 }
 
 model Receipt {
-  receipt_id          String   @id @default(uuid())
+  receipt_id          String   @id
   supplier           String
-  receipt_date       DateTime
+  transaction_date   DateTime
   vat_reg_tin        String?
   terms              String?
   date_paid          DateTime?
   status             ReceiptStatus
   total_amount       Decimal   @db.Decimal(20, 4)
-  vat_amount        Decimal?  @db.Decimal(20, 4)
-  total_amount_due   Decimal?  @db.Decimal(20, 4)
-  created_at         DateTime  @default(now())
+  vat_amount         Decimal?  @db.Decimal(20, 4)
+  total_amount_due   Decimal   @db.Decimal(20, 4)
+  created_at         DateTime @default(now())
   updated_at         DateTime?
   created_by         String
-  is_deleted         Boolean   @default(false)
+  is_deleted          Boolean   @default(false)
+  is_expense_recorded Boolean @default(false)
   items              ReceiptItem[]
   transactions       ItemTransaction[]
-  expense           ExpenseRecord?
+  expense            ExpenseRecord?
 }
 
 model ReceiptItem {
-  receipt_item_id    String   @id @default(uuid())
+  receipt_item_id    String   @id
   receipt_id        String
   receipt           Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
   item_name         String
@@ -132,7 +132,7 @@ model ReceiptItem {
 }
 
 model Item {
-  item_id       String   @id @default(uuid())
+  item_id       String   @id
   item_name     String   @unique
   unit          String
   created_at    DateTime @default(now())
@@ -142,7 +142,7 @@ model Item {
 }
 
 model ItemTransaction {
-  transaction_id String   @id @default(uuid())
+  transaction_id String   @id
   item_id       String
   item          Item     @relation(fields: [item_id], references: [item_id])
   receipt_id    String?
