@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS op_bus_assignments;
 -- Drop sequence if it exists
 DROP SEQUENCE IF EXISTS assignment_id_seq;
 
--- Drop type if it exists
+-- Drop types if they exist
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'bus_route') THEN
@@ -21,9 +21,17 @@ BEGIN
     END IF;
 END$$;
 
--- Create type
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'assignment_type') THEN
+        DROP TYPE assignment_type;
+    END IF;
+END$$;
+
+-- Create types
 CREATE TYPE bus_route AS ENUM ('S. Palay to PITX', 'S. Palay to Sta. Cruz');
 CREATE TYPE bus_type AS ENUM ('Airconditioned', 'Ordinary');
+CREATE TYPE assignment_type AS ENUM ('Boundary', 'Percentage', 'Bus_Rental');
 
 -- Create sequence
 CREATE SEQUENCE assignment_id_seq START WITH 1 INCREMENT BY 1;
@@ -41,53 +49,24 @@ CREATE TABLE op_bus_assignments (
     trip_fuel_expense NUMERIC,
     trip_revenue NUMERIC,
     is_expense_recorded BOOLEAN NOT NULL DEFAULT FALSE,
-    is_revenue_recorded BOOLEAN NOT NULL DEFAULT FALSE
-
+    is_revenue_recorded BOOLEAN NOT NULL DEFAULT FALSE,
+    assignment_type assignment_type NOT NULL
 );
 
 -- Insert 15 records with dates from January to May 2025
-INSERT INTO op_bus_assignments (bus_bodynumber, bus_platenumber, bus_route, bus_type, driver_name, conductor_name, date_assigned, trip_fuel_expense, trip_revenue) VALUES
-('BODYN1001', 'ABC-1234', 'S. Palay to PITX', 'Airconditioned', 'Juan Dela Cruz', 'Pedro Santos', '2025-01-15', 1500.50, 3000.00),
-('BODYN1002', 'DEF-5678', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Maria Lopez', 'Carlos Reyes', '2025-01-28', 1350.00, 2800.00),
-('BODYN1003', 'GHI-9012', 'S. Palay to PITX', 'Airconditioned', 'Jose Ramos', 'Ana Garcia', '2025-02-05', 1600.75, 3200.00),
-('BODYN1004', 'JKL-3456', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Pedro Cruz', 'Luisa Mendoza', '2025-02-19', 1400.00, 3100.00),
-('BODYN1005', 'MNO-7890', 'S. Palay to PITX', 'Ordinary', 'Rosa Santos', 'Miguel Diaz', '2025-02-27', 1550.30, 2950.00),
-('BODYN1006', 'PQR-2345', 'S. Palay to Sta. Cruz', 'Ordinary', 'Luis Martinez', 'Carmen Flores', '2025-03-08', 1450.20, 3050.00),
-('BODYN1007', 'STU-6789', 'S. Palay to PITX', 'Ordinary', 'Ana Morales', 'Jose Hernandez', '2025-03-17', 1380.00, 2900.00),
-('BODYN1008', 'VWX-1234', 'S. Palay to Sta. Cruz', 'Ordinary', 'Carlos Gomez', 'Isabel Torres', '2025-03-24', 1425.50, 3100.00),
-('BODYN1009', 'YZA-5678', 'S. Palay to PITX', 'Ordinary', 'Martha Diaz', 'Ramon Cruz', '2025-03-30', 1475.00, 2950.00),
-('BODYN1010', 'BCD-9012', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Jorge Reyes', 'Sofia Vargas', '2025-04-05', 1490.25, 3150.00),
-('BODYN1011', 'EFG-3456', 'S. Palay to PITX', 'Airconditioned', 'Elena Fernandez', 'Alberto Navarro', '2025-04-14', 1520.55, 3000.00),
-('BODYN1012', 'HIJ-7890', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Ricardo Mendoza', 'Gloria Santos', '2025-04-22', 1405.75, 3100.00),
-('BODYN1013', 'KLM-2345', 'S. Palay to PITX', 'Airconditioned', 'Sandra Lopez', 'Victor Ramirez', '2025-04-29', 1410.00, 2950.00),
-('BODYN1014', 'NOP-6789', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Daniel Cruz', 'Laura Guerrero', '2025-05-10', 1365.40, 3000.00),
-('BODYN1015', 'QRS-1234', 'S. Palay to PITX', 'Airconditioned', 'Teresa Alvarez', 'Felipe Gonzales', '2025-05-19', 1500.00, 3100.00);
-
--- Add assignment_type enum
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'assignment_type') THEN
-        CREATE TYPE assignment_type AS ENUM ('Boundary', 'Percentage', 'Bus_Rental');
-    END IF;
-END$$;
-
--- Add column to existing table
-ALTER TABLE op_bus_assignments 
-ADD COLUMN assignment_type assignment_type NOT NULL DEFAULT 'Boundary';
-
--- Update existing records with realistic assignment types
-UPDATE op_bus_assignments SET assignment_type = 'Boundary' WHERE assignment_id = 'ASGN-00001';
-UPDATE op_bus_assignments SET assignment_type = 'Percentage' WHERE assignment_id = 'ASGN-00002';
-UPDATE op_bus_assignments SET assignment_type = 'Bus_Rental' WHERE assignment_id = 'ASGN-00003';
-UPDATE op_bus_assignments SET assignment_type = 'Boundary' WHERE assignment_id = 'ASGN-00004';
-UPDATE op_bus_assignments SET assignment_type = 'Percentage' WHERE assignment_id = 'ASGN-00005';
-UPDATE op_bus_assignments SET assignment_type = 'Bus_Rental' WHERE assignment_id = 'ASGN-00006';
-UPDATE op_bus_assignments SET assignment_type = 'Boundary' WHERE assignment_id = 'ASGN-00007';
-UPDATE op_bus_assignments SET assignment_type = 'Percentage' WHERE assignment_id = 'ASGN-00008';
-UPDATE op_bus_assignments SET assignment_type = 'Bus_Rental' WHERE assignment_id = 'ASGN-00009';
-UPDATE op_bus_assignments SET assignment_type = 'Boundary' WHERE assignment_id = 'ASGN-00010';
-UPDATE op_bus_assignments SET assignment_type = 'Percentage' WHERE assignment_id = 'ASGN-00011';
-UPDATE op_bus_assignments SET assignment_type = 'Bus_Rental' WHERE assignment_id = 'ASGN-00012';
-UPDATE op_bus_assignments SET assignment_type = 'Boundary' WHERE assignment_id = 'ASGN-00013';
-UPDATE op_bus_assignments SET assignment_type = 'Percentage' WHERE assignment_id = 'ASGN-00014';
-UPDATE op_bus_assignments SET assignment_type = 'Bus_Rental' WHERE assignment_id = 'ASGN-00015';
+INSERT INTO op_bus_assignments (bus_bodynumber, bus_platenumber, bus_route, bus_type, driver_name, conductor_name, date_assigned, trip_fuel_expense, trip_revenue, assignment_type) VALUES
+('BODYN1001', 'ABC-1234', 'S. Palay to PITX', 'Airconditioned', 'Juan Dela Cruz', 'Pedro Santos', '2025-01-15', 1500.50, 3000.00, 'Boundary'),
+('BODYN1002', 'DEF-5678', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Maria Lopez', 'Carlos Reyes', '2025-01-28', 1350.00, 2800.00, 'Percentage'),
+('BODYN1003', 'GHI-9012', 'S. Palay to PITX', 'Airconditioned', 'Jose Ramos', 'Ana Garcia', '2025-02-05', 1600.75, 3200.00, 'Bus_Rental'),
+('BODYN1004', 'JKL-3456', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Pedro Cruz', 'Luisa Mendoza', '2025-02-19', 1400.00, 3100.00, 'Boundary'),
+('BODYN1005', 'MNO-7890', 'S. Palay to PITX', 'Ordinary', 'Rosa Santos', 'Miguel Diaz', '2025-02-27', 1550.30, 2950.00, 'Percentage'),
+('BODYN1006', 'PQR-2345', 'S. Palay to Sta. Cruz', 'Ordinary', 'Luis Martinez', 'Carmen Flores', '2025-03-08', 1450.20, 3050.00, 'Bus_Rental'),
+('BODYN1007', 'STU-6789', 'S. Palay to PITX', 'Ordinary', 'Ana Morales', 'Jose Hernandez', '2025-03-17', 1380.00, 2900.00, 'Boundary'),
+('BODYN1008', 'VWX-1234', 'S. Palay to Sta. Cruz', 'Ordinary', 'Carlos Gomez', 'Isabel Torres', '2025-03-24', 1425.50, 3100.00, 'Percentage'),
+('BODYN1009', 'YZA-5678', 'S. Palay to PITX', 'Ordinary', 'Martha Diaz', 'Ramon Cruz', '2025-03-30', 1475.00, 2950.00, 'Bus_Rental'),
+('BODYN1010', 'BCD-9012', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Jorge Reyes', 'Sofia Vargas', '2025-04-05', 1490.25, 3150.00, 'Boundary'),
+('BODYN1011', 'EFG-3456', 'S. Palay to PITX', 'Airconditioned', 'Elena Fernandez', 'Alberto Navarro', '2025-04-14', 1520.55, 3000.00, 'Percentage'),
+('BODYN1012', 'HIJ-7890', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Ricardo Mendoza', 'Gloria Santos', '2025-04-22', 1405.75, 3100.00, 'Bus_Rental'),
+('BODYN1013', 'KLM-2345', 'S. Palay to PITX', 'Airconditioned', 'Sandra Lopez', 'Victor Ramirez', '2025-04-29', 1410.00, 2950.00, 'Boundary'),
+('BODYN1014', 'NOP-6789', 'S. Palay to Sta. Cruz', 'Airconditioned', 'Daniel Cruz', 'Laura Guerrero', '2025-05-10', 1365.40, 3000.00, 'Percentage'),
+('BODYN1015', 'QRS-1234', 'S. Palay to PITX', 'Airconditioned', 'Teresa Alvarez', 'Felipe Gonzales', '2025-05-19', 1500.00, 3100.00, 'Bus_Rental');
