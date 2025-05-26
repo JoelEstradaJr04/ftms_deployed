@@ -89,6 +89,7 @@ model AuditLog {
   performed_by   String
   timestamp      DateTime @default(now())
   details        String
+  ip_address     String?
 }
 
 model AssignmentCache {

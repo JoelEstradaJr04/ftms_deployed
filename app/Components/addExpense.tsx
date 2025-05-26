@@ -107,8 +107,12 @@ const AddExpense: React.FC<AddExpenseProps> = ({
         const response = await fetch('/api/receipts');
         if (!response.ok) throw new Error('Failed to fetch receipts');
         const data = await response.json();
-        // Filter out receipts that are already recorded as expenses
-        const unrecordedReceipts = data.filter((receipt: Receipt) => !receipt.is_expense_recorded);
+        // Filter out receipts that are already recorded as expenses and sort by transaction_date
+        const unrecordedReceipts = data
+          .filter((receipt: Receipt) => !receipt.is_expense_recorded)
+          .sort((a: Receipt, b: Receipt) => 
+            new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
+          );
         setReceipts(unrecordedReceipts);
       } catch (error) {
         console.error('Error fetching receipts:', error);
@@ -156,7 +160,9 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   }, [formData.assignment_id, formData.receipt_id, assignments, receipts]);
 
   // Filter assignments based on is_expense_recorded
-  const filteredAssignments = assignments.filter(a => !a.is_expense_recorded);
+  const filteredAssignments = assignments
+    .filter(a => !a.is_expense_recorded)
+    .sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

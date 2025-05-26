@@ -84,7 +84,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         if (formData.category === 'Percentage') return a.assignment_type === 'Percentage';
         if (formData.category === 'Bus_Rental') return a.assignment_type === 'Bus_Rental';
         return false;
-      });
+      }).sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
       setFilteredAssignments(filtered);
     }
   }, [formData.category, assignments]);
