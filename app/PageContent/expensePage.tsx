@@ -294,9 +294,321 @@ const ExpensePage = () => {
     setViewModalOpen(false);
   };
 
+  // Generate the file name helper function
+  const generateFileName = () => {
+    const now = new Date();
+    const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
+    const dateStamp = now.toISOString().split('T')[0];
+    
+    let fileName = 'expense_records';
+    
+    if (categoryFilter) {
+      fileName += `_${categoryFilter.toLowerCase().replace('_', '-')}`;
+    }
+    
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? new Date(dateFrom).toISOString().split('T')[0] : 'all';
+      const to = dateTo ? new Date(dateTo).toISOString().split('T')[0] : 'present';
+      fileName += `_${from}_to_${to}`;
+    }
+    
+    fileName += `_${dateStamp}_${timeStamp}`;
+    
+    return `${fileName}.csv`;
+  };
+
+  const getExportColumns = () => {
+    const baseColumns = [
+      "Expense Date",
+      "Category",
+      "Amount",
+      "Source Type"
+    ];
+
+    if (!categoryFilter) {
+      return [
+        ...baseColumns,
+        "Bus Type",
+        "Body Number",
+        "Route",
+        "Driver Name",
+        "Conductor Name",
+        "Assignment Date",
+        "Receipt Supplier",
+        "Receipt Transaction Date",
+        "Receipt VAT TIN",
+        "Receipt Terms",
+        "Receipt Status",
+        "Receipt VAT Amount",
+        "Receipt Total Due",
+        "Other Source Description",
+        "Other Category"
+      ];
+    }
+
+    if (categoryFilter === 'Other') {
+      return [
+        ...baseColumns,
+        "Other Source Description",
+        "Other Category"
+      ];
+    }
+
+    return [
+      ...baseColumns,
+      "Bus Type",
+      "Body Number",
+      "Route",
+      "Driver Name",
+      "Conductor Name",
+      "Assignment Date",
+      "Receipt Supplier",
+      "Receipt Transaction Date",
+      "Receipt VAT TIN",
+      "Receipt Terms",
+      "Receipt Status",
+      "Receipt VAT Amount",
+      "Receipt Total Due"
+    ];
+  };
+
+  // Generate export details helper function
+  const generateExportDetails = () => {
+    let details = `Export Details:\n`;
+    details += `Category: ${categoryFilter || 'All Categories'}\n`;
+    
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+      const to = dateTo ? formatDate(dateTo) : 'Present';
+      details += `Date Range: ${from} to ${to}\n`;
+    } else {
+      details += `Date Range: All Dates\n`;
+    }
+    
+    details += `Total Records: ${filteredData.length}\n`;
+    details += `Export Time: ${new Date().toISOString()}\n`;
+    details += `Exported Columns: ${getExportColumns().join(', ')}`;
+    
+    return details;
+  };
+
+  // Add a new function to handle audit logging
+  const logExportAudit = async () => {
+    try {
+      // First get the export ID from the API
+      const idResponse = await fetch('/api/generate-export-id');
+      if (!idResponse.ok) {
+        throw new Error('Failed to generate export ID');
+      }
+      const { exportId } = await idResponse.json();
+
+      // Generate details without export ID
+      const details = generateExportDetails();
+
+      const response = await fetch('/api/auditlogs/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'EXPORT',
+          table_affected: 'ExpenseRecord',
+          record_id: exportId,
+          performed_by: 'ftms_user', // Replace with actual user ID
+          details: details
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create audit log');
+      }
+  
+      return exportId;
+    } catch (error) {
+      console.error('Failed to create audit log:', error);
+      throw error;
+    }
+  };
+
+  // Modify the handleExport function
+  const handleExport = () => {
+    // Generate confirmation message helper function
+    const generateConfirmationMessage = () => {
+      let message = `<strong>Expense Records Export</strong><br/><br/>`;
+      
+      if (categoryFilter) {
+        message += `<strong>Category:</strong> ${categoryFilter}<br/>`;
+      } else {
+        message += `<strong>Category:</strong> All Categories<br/>`;
+      }
+      
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+        const to = dateTo ? formatDate(dateTo) : 'Present';
+        message += `<strong>Date Range:</strong> ${from} to ${to}<br/>`;
+      } else {
+        message += `<strong>Date Range:</strong> All Dates<br/>`;
+      }
+      
+      message += `<strong>Total Records:</strong> ${filteredData.length}`;
+      return message;
+    };
+
+    // Show confirmation dialog
+    Swal.fire({
+      title: 'Confirm Export',
+      html: generateConfirmationMessage(),
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#13CE66',
+      cancelButtonColor: '#961C1E',
+      confirmButtonText: 'Export',
+      background: 'white',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const exportId = await logExportAudit();
+          performExport(filteredData, exportId);
+          Swal.fire('Success', 'Export completed successfully', 'success');
+        } catch (error) {
+          console.error('Export error:', error);
+          Swal.fire('Error', 'Failed to export data', 'error');
+        }
+      }
+    });
+  };
+
+  const performExport = (recordsToExport: ExpenseData[], exportId: string) => {
+    // Generate header comment with consistent expense_date formatting
+    const generateHeaderComment = () => {
+      let comment = '"# Expense Records Export","","","","","","","","","","","","","","",""\n';
+      comment += `"# Export ID:","${exportId}","","","","","","","","","","","","","",""\n`;
+      comment += `"# Generated:","${formatDate(new Date())}","","","","","","","","","","","","","",""\n`;
+      
+      if (categoryFilter) {
+        comment += `"# Category:","${categoryFilter}","","","","","","","","","","","","","",""\n`;
+      } else {
+        comment += '"# Category:","All Categories","","","","","","","","","","","","","",""\n';
+      }
+      
+      if (dateFrom || dateTo) {
+        const from = dateFrom ? formatDate(dateFrom) : 'Beginning';
+        const to = dateTo ? formatDate(dateTo) : 'Present';
+        comment += `"# Date Range:","${from} to ${to}","","","","","","","","","","","","","",""\n`;
+      } else {
+        comment += '"# Date Range:","All Dates","","","","","","","","","","","","","",""\n';
+      }
+      
+      comment += `"# Total Records:","${recordsToExport.length}","","","","","","","","","","","","","",""\n\n`;
+      return comment;
+    };
+
+    const columns = getExportColumns();
+    const headers = columns.join(",") + "\n";
+  
+    const rows = recordsToExport.map(item => {
+      const assignment = item.assignment_id 
+        ? allAssignments.find(a => a.assignment_id === item.assignment_id)
+        : null;
+
+      const escapeField = (field: string | undefined | number) => {
+        if (field === undefined || field === null) return '';
+        const stringField = String(field);
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+          return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+      };
+
+      const rowData: string[] = [];
+    
+      columns.forEach(col => {
+        switch(col) {
+          case "Expense Date":
+            rowData.push(escapeField(formatDate(item.expense_date)));
+            break;
+          case "Category":
+            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')));
+            break;
+          case "Amount":
+            rowData.push(escapeField(item.total_amount.toFixed(2)));
+            break;
+          case "Source Type":
+            rowData.push(escapeField(assignment ? 'Assignment' : item.receipt ? 'Receipt' : 'Other'));
+            break;
+          case "Bus Type":
+            rowData.push(escapeField(assignment?.bus_type));
+            break;
+          case "Body Number":
+            rowData.push(escapeField(assignment?.bus_bodynumber));
+            break;
+          case "Route":
+            rowData.push(escapeField(assignment?.bus_route));
+            break;
+          case "Driver Name":
+            rowData.push(escapeField(assignment?.driver_name));
+            break;
+          case "Conductor Name":
+            rowData.push(escapeField(assignment?.conductor_name));
+            break;
+          case "Assignment Date":
+            rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
+            break;
+          case "Receipt Supplier":
+            rowData.push(escapeField(item.receipt?.supplier));
+            break;
+          case "Receipt Transaction Date":
+            rowData.push(escapeField(item.receipt?.transaction_date ? formatDate(item.receipt.transaction_date) : ''));
+            break;
+          case "Receipt VAT TIN":
+            rowData.push(escapeField(item.receipt?.vat_reg_tin));
+            break;
+          case "Receipt Terms":
+            rowData.push(escapeField(item.receipt?.terms));
+            break;
+          case "Receipt Status":
+            rowData.push(escapeField(item.receipt?.status));
+            break;
+          case "Receipt VAT Amount":
+            rowData.push(escapeField(item.receipt?.vat_amount ? Number(item.receipt.vat_amount).toFixed(2) : ''));
+            break;
+          case "Receipt Total Due":
+            rowData.push(escapeField(item.receipt?.total_amount_due ? Number(item.receipt.total_amount_due).toFixed(2) : ''));
+            break;
+          case "Other Source Description":
+            rowData.push(escapeField(item.other_source));
+            break;
+          case "Other Category":
+            rowData.push(escapeField(item.other_category));
+            break;
+          default:
+            rowData.push('');
+        }
+      });
+      return rowData.join(',');
+    }).join("\n");
+  
+    const blob = new Blob([generateHeaderComment() + headers + rows], { 
+      type: "text/csv;charset=utf-8;" 
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = generateFileName();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="expensePage">
       {(loading || assignmentsLoading) && <div className="loading">Loading...</div>}
+
+      <div className="importExport">
+        <button onClick={handleExport}>Export CSV</button>
+      </div>
 
       <div className="settings">
         <input

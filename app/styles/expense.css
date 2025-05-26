@@ -4,7 +4,9 @@ button {
   } 
   
   .expensePage {
-      padding: 2rem;
+      padding: 20px;
+      background-color: #f5f5f5;
+      min-height: calc(100vh - 40px);
       font-family: 'poppins', sans-serif;
       color: black;
     }
@@ -409,5 +411,27 @@ button {
       .itemsSection {
         overflow-x: auto;
       }
+    }
+    
+    .importExport {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .importExport button {
+      padding: 8px 16px;
+      background-color: #13CE66;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .importExport button:hover {
+      background-color: #0FB85A;
     }
     
