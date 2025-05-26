@@ -249,12 +249,12 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   // Format assignment for display
   const formatAssignment = (assignment: typeof assignments[0]) => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    return `₱ ${assignment.trip_fuel_expense} | ${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
   };
 
   // Format receipt for display
   const formatReceipt = (receipt: Receipt) => {
-    return `${receipt.terms || 'N/A'} | ${receipt.supplier} | ${formatDate(receipt.transaction_date)}`;
+    return `₱ ${receipt.total_amount_due} | ${receipt.terms || 'N/A'} | ${receipt.supplier} | ${formatDate(receipt.transaction_date)}`;
   };
 
   return (

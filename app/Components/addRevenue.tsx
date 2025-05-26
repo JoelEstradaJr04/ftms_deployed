@@ -181,7 +181,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   // Format assignment for display
   const formatAssignment = (assignment: typeof assignments[0]) => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    return `₱ ${assignment.trip_revenue} | ${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
   };
 
   return (

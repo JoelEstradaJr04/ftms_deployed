@@ -7,7 +7,7 @@ import AddExpense from "../Components/addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "../Components/editExpense";
 import ViewExpenseModal from "../Components/viewExpense";
-import { getAllAssignments, type Assignment } from '@/lib/supabase/assignments';
+import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../utility/dateFormatter';
 
 // Define interface based on your Prisma ExpenseRecord schema
@@ -112,9 +112,13 @@ const ExpensePage = () => {
   const fetchAssignments = async () => {
     try {
       setAssignmentsLoading(true);
-      const assignmentsData = await getAllAssignments();
-      setAssignments(assignmentsData.filter(a => !a.is_expense_recorded));
-      setAllAssignments(assignmentsData);
+      // Get unrecorded expense assignments for the dropdown
+      const unrecordedAssignments = await getUnrecordedExpenseAssignments();
+      setAssignments(unrecordedAssignments);
+      
+      // Get all assignments for reference (including recorded ones)
+      const allAssignmentsData = await getAllAssignmentsWithRecorded();
+      setAllAssignments(allAssignmentsData);
     } catch (error) {
       console.error('Error fetching assignments:', error);
       Swal.fire('Error', 'Failed to load assignments', 'error');

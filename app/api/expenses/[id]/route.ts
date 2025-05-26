@@ -132,6 +132,7 @@ export async function DELETE(
     // Reset is_expense_recorded flags
     if (expenseToDelete.assignment_id) {
       try {
+        // Update Supabase
         await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/op_bus_assignments?assignment_id=eq.${expenseToDelete.assignment_id}`, {
           method: 'PATCH',
           headers: {
@@ -141,8 +142,17 @@ export async function DELETE(
           },
           body: JSON.stringify({ is_expense_recorded: false })
         });
+
+        // Update AssignmentCache
+        await prisma.assignmentCache.update({
+          where: { assignment_id: expenseToDelete.assignment_id },
+          data: { 
+            is_expense_recorded: false,
+            last_updated: new Date()
+          }
+        });
       } catch (error) {
-        console.error('Failed to update Supabase assignment:', error);
+        console.error('Failed to update assignment status:', error);
       }
     }
 

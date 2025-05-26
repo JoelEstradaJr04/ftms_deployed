@@ -101,12 +101,11 @@ export async function getAssignmentById(id: string): Promise<Assignment | null> 
   }
 }
 
-export async function getAllAssignments(): Promise<Assignment[]> {
+export async function getUnrecordedRevenueAssignments(): Promise<Assignment[]> {
   try {
     // Try cache first
     const cachedAssignments = await getAssignmentsFromCache();
     if (cachedAssignments) {
-      // For UI dropdown, only return unrecorded assignments
       return cachedAssignments.filter(a => !a.is_revenue_recorded);
     }
 
@@ -126,7 +125,107 @@ export async function getAllAssignments(): Promise<Assignment[]> {
     return data.map(assignment => ({
       ...assignment,
       trip_fuel_expense: Number(assignment.trip_fuel_expense),
-      trip_revenue: Number(assignment.trip_revenue)
+      trip_revenue: Number(assignment.trip_revenue),
+      is_revenue_recorded: false
+    })) as Assignment[];
+  } catch (error) {
+    console.error('Error fetching unrecorded revenue assignments:', error);
+    throw error;
+  }
+}
+
+export async function getUnrecordedExpenseAssignments(): Promise<Assignment[]> {
+  try {
+    // Try cache first
+    const cachedAssignments = await getAssignmentsFromCache();
+    if (cachedAssignments) {
+      return cachedAssignments.filter(a => !a.is_expense_recorded);
+    }
+
+    // If cache miss, fetch from Supabase
+    const { data, error } = await supabase
+      .from('op_bus_assignments')
+      .select('*')
+      .eq('is_expense_recorded', false);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Update cache with all assignments
+    await updateCache();
+
+    return data.map(assignment => ({
+      ...assignment,
+      trip_fuel_expense: Number(assignment.trip_fuel_expense),
+      trip_revenue: Number(assignment.trip_revenue),
+      is_expense_recorded: false
+    })) as Assignment[];
+  } catch (error) {
+    console.error('Error fetching unrecorded expense assignments:', error);
+    throw error;
+  }
+}
+
+// Update getAllAssignments to fetch all assignments without filtering
+export async function getAllAssignments(): Promise<Assignment[]> {
+  try {
+    // Try cache first
+    const cachedAssignments = await getAssignmentsFromCache();
+    if (cachedAssignments) {
+      return cachedAssignments;
+    }
+
+    // If cache miss, fetch from Supabase
+    const { data, error } = await supabase
+      .from('op_bus_assignments')
+      .select('*');
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Update cache with all assignments
+    await updateCache();
+
+    return data.map(assignment => ({
+      ...assignment,
+      trip_fuel_expense: Number(assignment.trip_fuel_expense),
+      trip_revenue: Number(assignment.trip_revenue),
+      is_expense_recorded: Boolean(assignment.is_expense_recorded),
+      is_revenue_recorded: Boolean(assignment.is_revenue_recorded)
+    })) as Assignment[];
+  } catch (error) {
+    console.error('Error fetching all assignments:', error);
+    throw error;
+  }
+}
+
+export async function getAllAssignmentsWithRecorded(): Promise<Assignment[]> {
+  try {
+    // Try cache first
+    const cachedAssignments = await getAssignmentsFromCache();
+    if (cachedAssignments) {
+      return cachedAssignments;
+    }
+
+    // If cache miss, fetch from Supabase
+    const { data, error } = await supabase
+      .from('op_bus_assignments')
+      .select('*');
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Update cache with all assignments
+    await updateCache();
+
+    return data.map(assignment => ({
+      ...assignment,
+      trip_fuel_expense: Number(assignment.trip_fuel_expense),
+      trip_revenue: Number(assignment.trip_revenue),
+      is_expense_recorded: Boolean(assignment.is_expense_recorded)
     })) as Assignment[];
   } catch (error) {
     console.error('Error fetching assignments:', error);

@@ -34,6 +34,7 @@ export async function GET() {
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
           is_revenue_recorded: assignment.is_revenue_recorded,
+          is_expense_recorded: assignment.is_expense_recorded,
           assignment_type: assignment.assignment_type
         }))
       });
@@ -79,6 +80,7 @@ export async function POST() {
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
           is_revenue_recorded: assignment.is_revenue_recorded,
+          is_expense_recorded: assignment.is_expense_recorded,
           assignment_type: assignment.assignment_type
         }))
       });

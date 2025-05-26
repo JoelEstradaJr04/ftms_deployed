@@ -7,7 +7,7 @@ import PaginationComponent from "../Components/pagination";
 import AddRevenue from "../Components/addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "../Components/editRevenue";
-import { getAllAssignments } from '@/lib/supabase/assignments';
+import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../utility/dateFormatter';
 
 // Define interface based on your Prisma RevenueRecord schema
@@ -26,31 +26,15 @@ interface RevenueRecord {
 
 // Updated Assignment interface to include assignment_type and is_revenue_recorded
 // Update the Assignment interface
-interface Assignment {
-  assignment_id: string;
-  bus_bodynumber: string;
-  bus_platenumber: string;
-  bus_route: 'S. Palay to PITX' | 'S. Palay to Sta. Cruz';
-  bus_type: 'Airconditioned' | 'Ordinary';
-  driver_name: string;
-  conductor_name: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  trip_revenue: number;
-  is_revenue_recorded: boolean;
-  assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
-}
-
-// UI data type that matches your schema exactly
-type RevenueData = {
-  revenue_id: string;       
-  category: string;         
-  total_amount: number;     
-  collection_date: string;             
-  created_by: string;       
-  assignment_id?: string;   
+interface RevenueData {
+  revenue_id: string;
+  category: string;
+  total_amount: number;
+  collection_date: string;
+  created_by: string;
+  assignment_id?: string;
   other_source?: string;
-};
+}
 
 const RevenuePage = () => {
   const [data, setData] = useState<RevenueData[]>([]);
@@ -78,12 +62,13 @@ const RevenuePage = () => {
   const fetchAssignments = async () => {
     try {
       setAssignmentsLoading(true);
-      const data = await getAllAssignments();
-      if (!data) {
-        console.warn('No assignments data received');
-        return;
-      }
-      setAssignments(data);
+      // Get unrecorded revenue assignments for the dropdown
+      const unrecordedAssignments = await getUnrecordedRevenueAssignments();
+      setAssignments(unrecordedAssignments);
+      
+      // Get all assignments for reference (including recorded ones)
+      const allAssignmentsData = await getAllAssignmentsWithRecorded();
+      setAllAssignments(allAssignmentsData);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       console.error('Error fetching assignments:', errorMessage);
@@ -770,7 +755,7 @@ const RevenuePage = () => {
                   <td><input type="checkbox" /></td>
                   <td>{formatDate(item.collection_date)}</td>
                   <td>{source}</td>
-                  <td>{item.category === 'Other' ? item.other_source || 'Other' : item.category.replace('_', ' ')}</td>
+                  <td>{item.category === 'Other' ? 'Other' : item.category.replace('_', ' ')}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>
                   <td className="actionButtons">
                     <button 

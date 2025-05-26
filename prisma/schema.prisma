@@ -103,6 +103,7 @@ model AssignmentCache {
   trip_fuel_expense Decimal  @db.Decimal(20, 4)
   trip_revenue     Decimal  @db.Decimal(20, 4)
   is_revenue_recorded      Boolean  @default(false)
+  is_expense_recorded      Boolean  @default(false)
   assignment_type  String
   last_updated     DateTime @default(now())
 }
@@ -112,7 +113,7 @@ model Receipt {
   supplier           String
   transaction_date   DateTime
   vat_reg_tin        String?
-  terms              String?
+  terms              String? @default("Cash")
   date_paid          DateTime?
   status             ReceiptStatus
   total_amount       Decimal   @db.Decimal(20, 4)

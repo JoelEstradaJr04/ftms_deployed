@@ -90,20 +90,30 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // If linked to an assignment, update Supabase
+    // If linked to an assignment, update both Supabase and AssignmentCache
     if (assignment_id) {
+      // Update Supabase
       const { error: supabaseError } = await supabase
-        .from('assignments')
+        .from('op_bus_assignments')
         .update({ is_expense_recorded: true })
         .eq('assignment_id', assignment_id)
 
       if (supabaseError) {
         console.error('Supabase update failed:', supabaseError)
         return NextResponse.json(
-          { error: 'Failed to update assignment status in Supabase' },
+          { error: `Failed to update assignment status in Supabase: ${supabaseError.message}` },
           { status: 500 }
         )
       }
+
+      // Update AssignmentCache
+      await prisma.assignmentCache.update({
+        where: { assignment_id },
+        data: { 
+          is_expense_recorded: true,
+          last_updated: new Date()
+        }
+      })
     }
 
     const newExpense = await prisma.expenseRecord.create({
