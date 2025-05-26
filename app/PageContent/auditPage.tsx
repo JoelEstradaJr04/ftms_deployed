@@ -1,153 +1,317 @@
 "use client";
 
-import React, { useState } from "react";
-import "../styles/audit.css"; // External CSS
+import React, { useState, useEffect } from "react";
+import "../styles/audit.css";
 import PaginationComponent from "../Components/pagination";
 import Swal from "sweetalert2";
 
-// ===== Data Type =====
-type AuditData = {
-  id: number;
-  date: string;
-  department: string;
-  description: string;
-  amount: number;
+type AuditLog = {
+  log_id: string;
+  action: string;
+  table_affected: string;
+  record_id: string;
+  performed_by: string;
+  timestamp: string;
+  details: string;
+  ip_address?: string;
+};
+
+const formatDateTime = (timestamp: string) => {
+  return new Date(timestamp).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+type ViewModalProps = {
+  log: AuditLog | null;
+  onClose: () => void;
+};
+
+const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
+  if (!log) return null;
+
+  return (
+    <div className="modalOverlay">
+      <div className="viewDetailsModal">
+        <div className="modalHeader">
+          <h2>Audit Log Details</h2>
+          <button onClick={onClose} className="closeButton">&times;</button>
+        </div>
+        <div className="modalContent">
+          <div className="detailRow">
+            <strong>Date & Time:</strong>
+            <span>{formatDateTime(log.timestamp)}</span>
+          </div>
+          <div className="detailRow">
+            <strong>Action:</strong>
+            <span>{log.action}</span>
+          </div>
+          <div className="detailRow">
+            <strong>Table:</strong>
+            <span>{log.table_affected}</span>
+          </div>
+          <div className="detailRow">
+            <strong>Record ID:</strong>
+            <span>{log.record_id}</span>
+          </div>
+          <div className="detailRow">
+            <strong>Performed By:</strong>
+            <span>{log.performed_by}</span>
+          </div>
+          <div className="detailRow">
+            <strong>IP Address:</strong>
+            <span>{log.ip_address || 'N/A'}</span>
+          </div>
+          <div className="detailRow">
+            <strong>Details:</strong>
+            <span className="fullDetails">{log.details}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AuditPage = () => {
-  // ===== State Management =====
-  const [data, setData] = useState<AuditData[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [moduleFilter, setModuleFilter] = useState("");
+  const [tableFilter, setTableFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [recordToEdit, setRecordToEdit] = useState<AuditData | null>(null);
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      try {
+        const response = await fetch('/api/auditlogs');
+        if (!response.ok) throw new Error('Failed to fetch audit logs');
+        const data = await response.json();
+        setAuditLogs(data);
+      } catch (error) {
+        console.error('Error fetching audit logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const recordsPerPage = pageSize;
+    fetchAuditLogs();
+  }, []);
 
-  // ===== Filtered Data =====
-  const filteredData = data.filter((item) => {
-    const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
-    const matchesModule = moduleFilter ? item.department === moduleFilter : true;
-    const matchesDate = (!dateFrom || item.date >= dateFrom) && (!dateTo || item.date <= dateTo);
-    return matchesSearch && matchesModule && matchesDate;
+  const filteredLogs = auditLogs.filter((log) => {
+    const matchesSearch = 
+      log.details.toLowerCase().includes(search.toLowerCase()) ||
+      log.performed_by.toLowerCase().includes(search.toLowerCase()) ||
+      log.action.toLowerCase().includes(search.toLowerCase());
+    const matchesTable = tableFilter ? log.table_affected === tableFilter : true;
+    const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+    const matchesDate = (!dateFrom || logDate >= dateFrom) && (!dateTo || logDate <= dateTo);
+    return matchesSearch && matchesTable && matchesDate;
   });
 
-  // ===== Pagination =====
-  const indexOfLastRecord = currentPage * recordsPerPage;
-  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
-  const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+  const indexOfLastRecord = currentPage * pageSize;
+  const indexOfFirstRecord = indexOfLastRecord - pageSize;
+  const currentRecords = filteredLogs.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(filteredLogs.length / pageSize);
 
-  // ===== Delete Function =====
-  const handleDelete = async (id: number) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'This will delete the record permanently.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel',
-      background: 'white',
-    });
+  const handleExport = async () => {
+    try {
+      // Check if there are records to export
+      if (filteredLogs.length === 0) {
+        const warningResult = await Swal.fire({
+          title: 'Warning',
+          text: 'No records found with the current filters. Do you want to proceed with exporting an empty dataset?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#13CE66',
+          cancelButtonColor: '#FF4949',
+          confirmButtonText: 'Yes, export empty dataset',
+          cancelButtonText: 'Cancel'
+        });
 
+        if (!warningResult.isConfirmed) {
+          return;
+        }
+      }
+
+      // Show export confirmation with details
+      const confirmResult = await Swal.fire({
+        title: 'Confirm Export',
+        html: `
+          <div class="exportConfirmation">
+            <p><strong>Date Range:</strong> ${dateFrom ? formatDateTime(dateFrom) : 'Start'} to ${dateTo ? formatDateTime(dateTo) : 'End'}</p>
+            <p><strong>Table Filter:</strong> ${tableFilter || 'All Tables'}</p>
+            <p><strong>Search Term:</strong> ${search || 'None'}</p>
+            <p><strong>Number of Records:</strong> ${filteredLogs.length}</p>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#13CE66',
+        cancelButtonColor: '#FF4949',
+        confirmButtonText: 'Export',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (!confirmResult.isConfirmed) {
+        return;
+      }
+
+      // Show loading state
+      Swal.fire({
+        title: 'Exporting...',
+        text: 'Please wait while we prepare your export.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        allowEnterKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Get export ID
+      const exportIdResponse = await fetch('/api/generate-export-id');
+      if (!exportIdResponse.ok) throw new Error('Failed to generate export ID');
+      const { exportId } = await exportIdResponse.json();
+
+      // Create audit log for export action
+      await fetch('/api/auditlogs/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'EXPORT',
+          table_affected: 'AuditLog',
+          record_id: exportId,
+          details: `Exported audit logs with filters - Date Range: ${dateFrom || 'Start'} to ${dateTo || 'End'}, Table: ${tableFilter || 'All'}, Search: ${search || 'None'}, Records: ${filteredLogs.length}`
+        }),
+      });
+
+      // Prepare data for export
+      const exportData = filteredLogs.map(log => ({
+        'Date & Time': formatDateTime(log.timestamp),
+        'Action': log.action,
+        'Table': log.table_affected,
+        'Record ID': log.record_id,
+        'Performed By': log.performed_by,
+        'IP Address': log.ip_address || 'N/A',
+        'Details': log.details
+      }));
+
+      // Convert to CSV
+      const headers = ['Date & Time', 'Action', 'Table', 'Record ID', 'Performed By', 'IP Address', 'Details'];
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => 
+            JSON.stringify(row[header as keyof typeof row] || '')
+          ).join(',')
+        )
+      ].join('\n');
+
+      // Create and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `audit_logs_${exportId}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show success message
+      await Swal.fire({
+        title: 'Export Complete!',
+        text: `Successfully exported ${filteredLogs.length} records`,
+        icon: 'success',
+        confirmButtonColor: '#13CE66'
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      await Swal.fire({
+        title: 'Export Failed',
+        text: 'An error occurred while exporting the audit logs',
+        icon: 'error',
+        confirmButtonColor: '#FF4949'
+      });
+    }
   };
+
+  if (loading) {
+    return <div className="loading">Loading audit logs...</div>;
+  }
 
   return (
     <div className="auditPage">
-
-      {/* Filter/Search Controls */}
       <div className="settings">
         <input
           type="text"
-          placeholder="Search Name"
+          placeholder="Search logs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="searchInput"
         />
-
         <div className="filters">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
+            className="dateInput"
           />
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
+            className="dateInput"
           />
-
           <select
-            value={moduleFilter}
-            id="categoryFilter"
-            onChange={(e) => setModuleFilter(e.target.value)}
+            value={tableFilter}
+            onChange={(e) => setTableFilter(e.target.value)}
+            className="tableFilter"
           >
-            <option value="">All</option>
-            <option value="Dashboard">Dashboard</option>
-            <option value="Revenue Mgmt">Revenue Mgmt</option>
-            <option value="Expense Mgmt">Expense Mgmt</option>
-            <option value="Receipt Mgmtr">Receipt Mgmt</option>
-            <option value="Emp Financial Mgmt">Emp Financial Mgmt</option>
-            <option value="Financial Request">Financial Request</option>
-            <option value="Financial Report">Financial Report</option>
+            <option value="">All Tables</option>
+            <option value="ExpenseRecord">Expense Records</option>
+            <option value="RevenueRecord">Revenue Records</option>
+            <option value="Receipt">Receipts</option>
           </select>
+          <button 
+            onClick={handleExport}
+            className="exportButton"
+          >
+            Export Logs
+          </button>
         </div>
       </div>
 
-      {/* Audit Table */}
       <div className="tableContainer">
-        <table>
-          <thead>
-            <tr>
-              <th><input type="checkbox" /></th>
-              <th>Date | Time</th>
-              <th>Username</th>
-              <th>Module</th>
-              <th>Action</th>
-              <th>Description</th>
-              <th>IP Address</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentRecords.map((item) => (
-              <tr key={item.id}>
-                <td><input type="checkbox" /></td>
-                <td>{item.date}</td>
-                <td>{item.department}</td>
-                <td>{item.description}</td>
-                <td>${item.amount.toFixed(2)}</td>
-                <td className="actionButtons">
-                  <button className="viewBtn">👁️</button>
-                  <button
-                    className="editBtn"
-                    onClick={() => {
-                      setRecordToEdit(item);
-                      setEditModalOpen(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="deleteBtn"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {currentRecords.length === 0 && <p>No records found.</p>}
+        <table><thead><tr>
+          <th>Date & Time</th>
+          <th>Action</th>
+          <th>Table</th>
+          <th>Record ID</th>
+          <th>Performed By</th>
+          <th>IP Address</th>
+          <th>View Details</th>
+        </tr></thead>
+        <tbody>{currentRecords.map((log) => (<tr key={log.log_id}>
+          <td>{formatDateTime(log.timestamp)}</td>
+          <td>{log.action}</td>
+          <td>{log.table_affected}</td>
+          <td>{log.record_id}</td>
+          <td>{log.performed_by}</td>
+          <td>{log.ip_address || 'N/A'}</td>
+          <td><button onClick={() => setSelectedLog(log)} className="viewButton">View</button></td>
+        </tr>))}</tbody></table>
+        {currentRecords.length === 0 && <p className="noRecords">No audit logs found.</p>}
       </div>
 
-      {/* Pagination */}
       <PaginationComponent
         currentPage={currentPage}
         totalPages={totalPages}
@@ -156,6 +320,12 @@ const AuditPage = () => {
         onPageSizeChange={setPageSize}
       />
 
+      {selectedLog && (
+        <ViewDetailsModal
+          log={selectedLog}
+          onClose={() => setSelectedLog(null)}
+        />
+      )}
     </div>
   );
 };

@@ -156,4 +156,106 @@ button {
       font-weight: bold;
   }
   
+    .modalOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .viewDetailsModal {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modalHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modalHeader h2 {
+      margin: 0;
+      color: #333;
+    }
+
+    .closeButton {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .closeButton:hover {
+      color: #333;
+    }
+
+    .modalContent {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .detailRow {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .detailRow strong {
+      min-width: 120px;
+      color: #555;
+    }
+
+    .fullDetails {
+      white-space: pre-wrap;
+      color: #333;
+    }
+
+    .viewButton {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .viewButton:hover {
+      background-color: #357abd;
+    }
+
+    .exportButton {
+      background-color: #13CE66;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      outline: none;
+    }
+
+    .exportButton:hover {
+      background-color: #0FB85C;
+    }
+  
     
