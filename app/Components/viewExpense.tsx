@@ -197,9 +197,8 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         {record.receipt && renderReceiptDetails()}
         {!record.assignment && !record.receipt && (
           <div className="otherDetails">
-            <h3>Other Expense Details</h3>
+            <h3>Expense Source Details</h3>
             <div className="detailRow">
-              <span className="label">Source Description:</span>
               <span className="value">{record.other_source || 'N/A'}</span>
             </div>
           </div>

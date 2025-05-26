@@ -29,6 +29,7 @@ type Receipt = {
   vat_amount?: number;
   total_amount_due: number;
   items: ReceiptItem[];
+  is_expense_recorded: boolean;
 };
 
 // type ExpenseData = {
@@ -60,6 +61,7 @@ type AddExpenseProps = {
     conductor_name: string;
     date_assigned: string;
     trip_fuel_expense: number;
+    is_expense_recorded: boolean;
   }[];
   currentUser: string;
 };
@@ -105,7 +107,9 @@ const AddExpense: React.FC<AddExpenseProps> = ({
         const response = await fetch('/api/receipts');
         if (!response.ok) throw new Error('Failed to fetch receipts');
         const data = await response.json();
-        setReceipts(data);
+        // Filter out receipts that are already recorded as expenses
+        const unrecordedReceipts = data.filter((receipt: Receipt) => !receipt.is_expense_recorded);
+        setReceipts(unrecordedReceipts);
       } catch (error) {
         console.error('Error fetching receipts:', error);
         Swal.fire('Error', 'Failed to load receipts', 'error');
@@ -151,6 +155,9 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     }
   }, [formData.assignment_id, formData.receipt_id, assignments, receipts]);
 
+  // Filter assignments based on is_expense_recorded
+  const filteredAssignments = assignments.filter(a => !a.is_expense_recorded);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -160,6 +167,12 @@ const AddExpense: React.FC<AddExpenseProps> = ({
       setFormData(prev => ({
         ...prev,
         [name]: parseFloat(value) || 0
+      }));
+    } else if (name === 'category' && value === 'Other') {
+      setFormData(prev => ({
+        ...prev,
+        category: value,
+        other_category: ''  // Reset other_category when switching to Other
       }));
     } else {
       setFormData(prev => ({
@@ -172,7 +185,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { category, assignment_id, receipt_id, total_amount, expense_date, other_source } = formData;
+    const { category, assignment_id, receipt_id, total_amount, expense_date, other_source, other_category } = formData;
 
     if (!category || !expense_date || !currentUser) {
       Swal.fire('Error', 'Please fill in all required fields', 'error');
@@ -191,6 +204,11 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
     if (source === 'other' && !other_source) {
       Swal.fire('Error', 'Please specify the source', 'error');
+      return;
+    }
+
+    if (category === 'Other' && !other_category) {
+      Swal.fire('Error', 'Please specify the category', 'error');
       return;
     }
 
@@ -214,7 +232,8 @@ const AddExpense: React.FC<AddExpenseProps> = ({
           created_by: currentUser,
           ...(source === 'operations' ? { assignment_id } : {}),
           ...(source === 'receipt' ? { receipt_id } : {}),
-          ...(source === 'other' ? { other_source } : {})
+          ...(source === 'other' ? { other_source } : {}),
+          ...(category === 'Other' ? { other_category } : {})
         });
 
         Swal.fire('Success', 'Expense added successfully', 'success');
@@ -286,7 +305,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                     className="formSelect"
                   >
                     <option value="">Select Assignment</option>
-                    {assignments.map((assignment) => (
+                    {filteredAssignments.map((assignment) => (
                       <option 
                         key={assignment.assignment_id} 
                         value={assignment.assignment_id}
@@ -338,7 +357,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                     <input
                       type="text"
                       name="other_category"
-                      value={formData.other_category}
+                      value={formData.other_category || ''}
                       onChange={handleInputChange}
                       placeholder="Specify category"
                       required

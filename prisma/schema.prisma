@@ -54,6 +54,13 @@ model ExpenseRecord {
   is_deleted      Boolean  @default(false)
   other_source   String?
   other_category String?
+
+  // Constraint for assignment-based records
+  @@unique([category, assignment_id, expense_date], name: "unique_expense_assignment")
+  // Constraint for receipt-based records
+  @@unique([category, receipt_id, expense_date], name: "unique_expense_receipt")
+  // Constraint for other-source records
+  @@unique([category, other_source, other_category, total_amount, expense_date], name: "unique_expense_other")
 }
 
 model RevenueRecord {
@@ -67,6 +74,11 @@ model RevenueRecord {
   updated_at     DateTime?
   is_deleted      Boolean  @default(false)
   other_source   String?
+
+  // Constraint for assignment-based records
+  @@unique([category, assignment_id, collection_date], name: "unique_revenue_assignment")
+  // Constraint for other-source records
+  @@unique([category, other_source, total_amount, collection_date], name: "unique_revenue_other")
 }
 
 model AuditLog {

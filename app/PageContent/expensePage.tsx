@@ -365,7 +365,7 @@ const ExpensePage = () => {
                 <tr key={item.expense_id}>
                   <td>{formatDate(item.expense_date)}</td>
                   <td>{source}</td>
-                  <td>{item.category}</td>
+                  <td>{item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>
                   <td className="actionButtons">
                     <button 

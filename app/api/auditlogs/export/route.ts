@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, table_affected, record_id, performed_by, details } = body;
+    const { action, table_affected, record_id, details } = body;
 
     const log = await prisma.auditLog.create({
       data: {
@@ -13,8 +13,8 @@ export async function POST(request: Request) {
         action,
         table_affected,
         record_id,
-        performed_by,
-        details, // Use details as is, without adding export ID
+        performed_by: 'ftms_user',
+        details,
       },
     });
 

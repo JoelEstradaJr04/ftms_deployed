@@ -169,7 +169,8 @@ const RevenuePage = () => {
 
   // Filter and pagination logic
   const filteredData = data.filter((item: RevenueData) => {
-    const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase());
+    const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase()) ||
+                         (item.category === 'Other' && (item.other_source?.toLowerCase() || '').includes(search.toLowerCase()));
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
                       (!dateTo || item.collection_date <= dateTo);
@@ -769,7 +770,7 @@ const RevenuePage = () => {
                   <td><input type="checkbox" /></td>
                   <td>{formatDate(item.collection_date)}</td>
                   <td>{source}</td>
-                  <td>{item.category}</td>
+                  <td>{item.category === 'Other' ? item.other_source || 'Other' : item.category.replace('_', ' ')}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>
                   <td className="actionButtons">
                     <button 

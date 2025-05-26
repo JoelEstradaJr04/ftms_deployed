@@ -33,7 +33,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const data = await req.json();
-    const { total_amount, expense_date, other_source, other_category, created_by } = data;
+    const { total_amount, expense_date, other_source, other_category } = data;
 
     // Get the original record for comparison
     const originalRecord = await prisma.expenseRecord.findUnique({
@@ -99,7 +99,7 @@ export async function PUT(
       action: 'UPDATE',
       table_affected: 'ExpenseRecord',
       record_id: id,
-      performed_by: created_by,
+      performed_by: 'ftms_user',
       details: auditDetails,
     });
 
@@ -165,7 +165,7 @@ export async function DELETE(
       action: 'DELETE',
       table_affected: 'ExpenseRecord',
       record_id: id,
-      performed_by: req.headers.get('user-id') ?? 'system',
+      performed_by: 'ftms_user',
       details: `Soft-deleted expense record. Details: ${JSON.stringify({
         category: expenseToDelete.category,
         amount: expenseToDelete.total_amount,

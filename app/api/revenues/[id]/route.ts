@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       action: 'CREATE',
       table_affected: 'RevenueRecord',
       record_id: newRevenue.revenue_id,
-      performed_by: created_by,
+      performed_by: 'ftms_user',
       details: `Created revenue record with amount ₱${finalAmount}`,
     });
 
@@ -142,7 +142,7 @@ export async function PUT(
       action: 'UPDATE',
       table_affected: 'RevenueRecord',
       record_id: revenue_id,
-      performed_by: originalRecord.created_by, // Using original creator as the updater
+      performed_by: 'ftms_user',
       details: auditDetails,
     });
 
@@ -191,7 +191,7 @@ export async function DELETE(
       action: 'DELETE',
       table_affected: 'RevenueRecord',
       record_id: revenue_id,
-      performed_by: record.created_by,
+      performed_by: 'ftms_user',
       details: `Soft deleted revenue record with amount ₱${record.total_amount}`,
     });
 

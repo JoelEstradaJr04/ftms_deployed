@@ -19,12 +19,50 @@ export async function POST(req: NextRequest) {
       category,
       total_amount,
       expense_date,
-      created_by,
       other_source,
       other_category
     } = data
 
     let finalAmount = Number(total_amount)
+
+    // Check for duplicates based on category
+    if (category === 'Other') {
+      // For 'Other' category, check if a record with same details exists
+      const existingRecord = await prisma.expenseRecord.findFirst({
+        where: {
+          category,
+          other_source: other_source || null,
+          other_category: other_category || null,
+          total_amount: finalAmount,
+          expense_date: new Date(expense_date),
+          is_deleted: false
+        }
+      })
+
+      if (existingRecord) {
+        return NextResponse.json(
+          { error: 'Duplicate expense record found' },
+          { status: 409 }
+        )
+      }
+    } else if (assignment_id) {
+      // For assignment-based records
+      const existingRecord = await prisma.expenseRecord.findFirst({
+        where: {
+          category,
+          assignment_id,
+          expense_date: new Date(expense_date),
+          is_deleted: false
+        }
+      })
+
+      if (existingRecord) {
+        return NextResponse.json(
+          { error: 'Duplicate expense record found for this assignment' },
+          { status: 409 }
+        )
+      }
+    }
 
     // If linked to a receipt, validate and get total_amount_due
     if (receipt_id) {
@@ -76,12 +114,12 @@ export async function POST(req: NextRequest) {
         category,
         total_amount: finalAmount,
         expense_date: new Date(expense_date),
-        created_by,
+        created_by: 'ftms_user',
         created_at: new Date(),
         updated_at: null,
         is_deleted: false,
-        other_source: other_source,
-        other_category: category === 'Other' ? other_category : null
+        other_source: other_source || null,
+        other_category: category === 'Other' ? (other_category || null) : null
       },
       include: {
         receipt: {
@@ -96,7 +134,7 @@ export async function POST(req: NextRequest) {
       action: 'CREATE',
       table_affected: 'ExpenseRecord',
       record_id: newExpense.expense_id,
-      performed_by: created_by,
+      performed_by: 'ftms_user',
       details: `Created expense record with amount ₱${finalAmount}${receipt_id ? ' with receipt' : ''}${assignment_id ? ' from assignment' : ''}`
     })
 
