@@ -32,6 +32,7 @@ type Receipt = {
   updated_by?: string;
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
   category: string;
+  other_category?: string;
   remarks?: string;
   ocr_confidence?: number;
   ocr_file_path?: string;
@@ -71,32 +72,35 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) 
     );
   };
 
-  return (
-    <div className="viewReceipt__modalOverlay">
-      <div className="viewReceipt__modalContent">
-        <div className="viewReceipt__modalHeader">
-          <h2>View Receipt</h2>
-          <button className="closeButton" onClick={onClose}>&times;</button>
-        </div>
+    return (
+      <div className="viewReceipt__modalOverlay">
+        <div className="viewReceipt__modalContent">
+          <div className="viewReceipt__modalHeader">
+            <h2>View Receipt</h2>
+            <button className="closeButton" onClick={onClose}>&times;</button>
+          </div>
 
-        <div className="mainDetails">
-          <div className="detailRow">
-            <span className="label">Receipt ID:</span>
-            <span className="value">{record.receipt_id}</span>
+          <div className="mainDetails">
+            {/* Remove the Receipt ID div */}
+            <div className="detailRow">
+              <span className="label">Supplier:</span>
+              <span className="value">{record.supplier}</span>
+            </div>
+            <div className="detailRow">
+              <span className="label">Category:</span>
+              <span className="value">
+                {record.category === 'Other' 
+                  ? record.other_category 
+                  : record.category.replace('_', ' ')}
+              </span>
+            </div>
+            <div className="detailRow">
+              <span className="label">Status:</span>
+              <span className={getStatusBadgeClass(record.payment_status)}>
+                {record.payment_status}
+              </span>
+            </div>
           </div>
-          <div className="detailRow">
-            <span className="label">Supplier:</span>
-            <span className="value">{record.supplier}</span>
-          </div>
-          <div className="detailRow">
-            <span className="label">Category:</span>
-            <span className="value">{record.category.replace('_', ' ')}</span>
-          </div>
-          <div className="detailRow">
-            <span className="label">Status:</span>
-            <span className={getStatusBadgeClass(record.payment_status)}>{record.payment_status}</span>
-          </div>
-        </div>
 
         <div className="receiptDetails">
           <h3>Receipt Details</h3>

@@ -33,6 +33,7 @@ interface Receipt {
   deleted_at?: string;
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
   category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+  other_category?: string;
   remarks?: string;
   ocr_confidence?: number;
   ocr_file_path?: string;
@@ -342,6 +343,11 @@ const ReceiptPage = () => {
     }
   };
 
+  // Helper function to get badge class for payment status
+  const getStatusBadgeClass = (status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued') => {
+    return `statusBadge ${status.toLowerCase()}`;
+  };
+
   return (
     <div className="card">
       <div className="title">
@@ -414,24 +420,28 @@ const ReceiptPage = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Receipt ID</th>
-                <th>Date</th>
+                <th>Transaction Date</th>
                 <th>Supplier</th>
                 <th>Category</th>
-                <th>Status</th>
-                <th>Total Amount</th>
+                <th>Terms</th>
+                <th>Total Amount Due</th>
+                <th>Payment Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {currentRecords.map(item => (
                 <tr key={item.receipt_id}>
-                  <td>{item.receipt_id}</td>
                   <td>{formatDate(item.transaction_date)}</td>
                   <td>{item.supplier}</td>
-                  <td>{item.category.replace('_', ' ')}</td>
-                  <td>{item.payment_status}</td>
+                  <td>{item.category === 'Other' ? item.other_category : item.category.replace('_', ' ')}</td>
+                  <td>{item.terms?.replace('_', ' ') || 'Cash'}</td>
                   <td>₱{item.total_amount_due.toLocaleString()}</td>
+                  <td>
+                    <span className={getStatusBadgeClass(item.payment_status)}>
+                      {item.payment_status}
+                    </span>
+                  </td>
                   <td className="actionButtons">
                     <div className="actionButtonsContainer">
                       <button className="viewBtn" onClick={() => {setRecordToView(item);setViewModalOpen(true);}} title="View Receipt">

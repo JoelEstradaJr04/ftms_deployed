@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';  // Add useEffect here
 import Swal from 'sweetalert2';
 import '../../styles/editReceipt.css';
 
@@ -28,9 +28,11 @@ type EditReceiptModalProps = {
     vat_amount?: number;
     total_amount_due: number;
     category: string;
+    other_category?: string;
     remarks?: string;
     items: ReceiptItem[];
   };
+
   onClose: () => void;
   onSave: (updatedRecord: {
     receipt_id: string;
@@ -44,6 +46,7 @@ type EditReceiptModalProps = {
     vat_amount?: number;
     total_amount_due: number;
     category: string;
+    other_category?: string;
     remarks?: string;
     items: ReceiptItem[];
   }) => void;
@@ -66,6 +69,28 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   const [category, setCategory] = useState(record.category);
   const [remarks, setRemarks] = useState(record.remarks || '');
   const [items, setItems] = useState<ReceiptItem[]>(record.items);
+  const [isOtherCategory, setIsOtherCategory] = useState(record.category === 'Other');
+  const [otherCategory, setOtherCategory] = useState(record.other_category || '');
+
+
+  useEffect(() => {
+    if (record) {
+      setSupplier(record.supplier);
+      setTransactionDate(record.transaction_date);
+      setVatRegTin(record.vat_reg_tin || '');
+      setTerms(record.terms || '');  // Ensure empty string as fallback
+      setDatePaid(record.date_paid || '');
+      setPaymentStatus(record.payment_status);
+      setTotalAmount(record.total_amount);
+      setVatAmount(record.vat_amount || 0);
+      setTotalAmountDue(record.total_amount_due);
+      setCategory(record.category);
+      setRemarks(record.remarks || '');
+      setItems(record.items);
+      setIsOtherCategory(record.category === 'Other');
+      setOtherCategory(record.other_category || '');
+    }
+  }, [record]);
 
   const handleSave = () => {
     if (!supplier || !transactionDate || !paymentStatus || !category) {
@@ -86,7 +111,8 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       total_amount_due: totalAmountDue,
       category,
       remarks: remarks || undefined,
-      items
+      items,
+      other_category: isOtherCategory ? otherCategory : undefined
     });
   };
 
@@ -188,21 +214,32 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
           <div className="formGroup">
             <label>Terms</label>
-            <input
-              type="text"
+            <select
               value={terms}
               onChange={(e) => setTerms(e.target.value)}
-              placeholder="Optional"
-            />
+              className="formSelect"
+            >
+              <option value="Cash">Cash</option>
+              <option value="Net_15">Net 15</option>
+              <option value="Net_30">Net 30</option>
+              <option value="Net_60">Net 60</option>
+              <option value="Net_90">Net 90</option>
+            </select>
           </div>
         </div>
 
         <div className="formRow">
-          <div className="formGroup">
-            <label>Category</label>
+        <div className="formGroup">
+          <label>Category</label>
+          {!isOtherCategory ? (
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === 'Other') {
+                  setIsOtherCategory(true);
+                }
+                setCategory(e.target.value);
+              }}
               required
             >
               <option value="">Select Category</option>
@@ -213,7 +250,29 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <option value="Supplies">Supplies</option>
               <option value="Other">Other</option>
             </select>
-          </div>
+          ) : (
+            <div className="otherCategoryInput">
+              <input
+                type="text"
+                value={otherCategory}
+                onChange={(e) => setOtherCategory(e.target.value)}
+                placeholder="Enter category"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOtherCategory(false);
+                  setOtherCategory('');
+                  setCategory('Fuel');
+                }}
+                className="clearCategoryBtn"
+              >
+                <i className="ri-close-line" />
+              </button>
+            </div>
+          )}
+        </div>
 
           <div className="formGroup">
             <label>Payment Status</label>

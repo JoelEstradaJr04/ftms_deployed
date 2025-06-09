@@ -118,11 +118,13 @@ export async function POST(req: NextRequest) {
       transaction_date,
       vat_reg_tin,
       terms,
+      date_paid,
       payment_status,
       total_amount,
       vat_amount,
       total_amount_due,
       category,
+      other_category, // Add this line
       remarks,
       source,
       ocr_confidence,
@@ -144,12 +146,14 @@ export async function POST(req: NextRequest) {
           transaction_date: new Date(transaction_date),
           vat_reg_tin,
           terms,
+          date_paid: date_paid ? new Date(date_paid) : null,  // Add this line
           payment_status,
           record_status: 'Active',
           total_amount,
           vat_amount,
           total_amount_due,
           category,
+          other_category: category === 'Other' ? other_category : undefined, // Add this line
           remarks,
           source: source || 'Manual_Entry',
           ocr_confidence,

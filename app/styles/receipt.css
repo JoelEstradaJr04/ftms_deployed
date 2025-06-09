@@ -168,9 +168,9 @@
 
 /* ---------- Receipt-specific styles ---------- */
 .statusBadge {
-  padding: 0.25rem 0.5rem;
+  padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.875rem;
+  font-size: 0.9em;
   font-weight: 500;
 }
 
@@ -181,7 +181,7 @@
 
 .statusBadge.pending {
   background-color: #FFC82C;
-  color: black;
+  color: #333;
 }
 
 .statusBadge.cancelled {
@@ -192,6 +192,31 @@
 .statusBadge.dued {
   background-color: #FF4949;
   color: white;
+}
+
+.otherCategoryInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.otherCategoryInput input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.clearCategoryBtn {
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+}
+
+.clearCategoryBtn:hover {
+  color: #961C1E;
 }
 
 /* OCR confidence indicator */

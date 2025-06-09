@@ -59,6 +59,14 @@ enum RecordStatus {
   Inactive
 }
 
+enum Terms {
+  Net_15
+  Net_30
+  Net_60
+  Net_90
+  Cash
+}
+
 model Sequence {
   name  String @id
   value Int    @default(1)
@@ -138,7 +146,7 @@ model Receipt {
   supplier           String
   transaction_date   DateTime
   vat_reg_tin        String?
-  terms              String?
+  terms              Terms     @default(Cash)
   date_paid          DateTime?
   payment_status     PaymentStatus @default(Pending)
   record_status      RecordStatus @default(Active)
@@ -155,6 +163,7 @@ model Receipt {
   deleted_at         DateTime?
   source             ReceiptSource @default(Manual_Entry)
   category           ExpenseCategory
+  other_category     String?
   remarks            String?
   ocr_confidence     Float?    // Overall OCR confidence score
   ocr_file_path      String?   // Path to stored receipt image/file

@@ -42,6 +42,8 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
 }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [isOtherCategory, setIsOtherCategory] = useState(false);
+  const [otherCategory, setOtherCategory] = useState('');
   
   const [formData, setFormData] = useState({
     supplier: '',
@@ -232,25 +234,56 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
                     />
                   </div>
 
-                  <div className="formField">
-                    <label htmlFor="category">Category</label>
-                    <select
-                      id="category"
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      required
-                      className="formSelect"
-                    >
-                      <option value="">Select Category</option>
-                      <option value="Fuel">Fuel</option>
-                      <option value="Vehicle_Parts">Vehicle Parts</option>
-                      <option value="Tools">Tools</option>
-                      <option value="Equipment">Equipment</option>
-                      <option value="Supplies">Supplies</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+                    <div className="formField">
+                      <label htmlFor="category">Category</label>
+                      {!isOtherCategory ? (
+                        <select
+                          id="category"
+                          name="category"
+                          value={formData.category}
+                          onChange={(e) => {
+                            if (e.target.value === 'Other') {
+                              setIsOtherCategory(true);
+                            }
+                            handleInputChange(e);
+                          }}
+                          required
+                          className="formSelect"
+                        >
+                          <option value="">Select Category</option>
+                          <option value="Fuel">Fuel</option>
+                          <option value="Vehicle_Parts">Vehicle Parts</option>
+                          <option value="Tools">Tools</option>
+                          <option value="Equipment">Equipment</option>
+                          <option value="Supplies">Supplies</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      ) : (
+                        <div className="otherCategoryInput">
+                          <input
+                            type="text"
+                            value={otherCategory}
+                            onChange={(e) => setOtherCategory(e.target.value)}
+                            placeholder="Enter category"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsOtherCategory(false);
+                              setOtherCategory('');
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                category: 'Fuel' // Set to a default valid category instead of empty string
+                              }));
+                            }}
+                            className="clearCategoryBtn"
+                          >
+                            <i className="ri-close-line" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                 <div className="formRow">
@@ -275,6 +308,7 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
                       name="date_paid"
                       value={formData.date_paid}
                       onChange={handleInputChange}
+                      disabled={formData.payment_status === 'Cancelled' || formData.payment_status === 'Pending'}
                       className="formInput"
                     />
                   </div>
@@ -293,21 +327,24 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
                       className="formInput"
                     />
                   </div>
-
-                  <div className="formField">
-                    <label htmlFor="terms">Terms</label>
-                    <input
-                      type="text"
-                      id="terms"
-                      name="terms"
-                      value={formData.terms}
-                      onChange={handleInputChange}
-                      placeholder="Optional"
-                      className="formInput"
-                    />
-                  </div>
+                    <div className="formField">
+                      <label htmlFor="terms">Terms</label>
+                      <select
+                        id="terms"
+                        name="terms"
+                        value={formData.terms}
+                        onChange={handleInputChange}
+                        required
+                        className="formSelect"
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="Net_15">Net 15</option>
+                        <option value="Net_30">Net 30</option>
+                        <option value="Net_60">Net 60</option>
+                        <option value="Net_90">Net 90</option>
+                      </select>
+                    </div>
                 </div>
-
                 <div className="formRow">
                   <div className="formField">
                     <label htmlFor="payment_status">Payment Status</label>
@@ -332,8 +369,9 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
                       type="number"
                       id="vat_amount"
                       name="vat_amount"
-                      value={formData.vat_amount}
+                      value={formData.vat_amount || ''} // Use empty string when 0
                       onChange={handleInputChange}
+                      placeholder="0"  // Add placeholder
                       min="0"
                       step="0.01"
                       className="formInput"
