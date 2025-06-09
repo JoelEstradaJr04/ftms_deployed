@@ -1,0 +1,343 @@
+/* ============================================================
+   report.css – Financial Report page
+   All hard-coded values replaced with tokens from global.css
+   ============================================================ */
+
+/* ---------- Base ---------- */
+button {
+  border-radius: 5px;
+  font-family: var(--font-sans);
+}
+
+.reportPage {
+  padding: 20px;
+  font-family: var(--font-sans);
+  color: var(--primary-text-color);
+}
+
+/* ---------- Settings Block ---------- */
+.settings {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 0px;
+  justify-content: space-between;
+}
+
+.settings input[type="date"],
+.settings select {
+  font-size: var(--page-button-font-size);  
+  border-radius: 4px;
+  background-color: var(--foreground-color);
+  color: var(--primary-text-color);
+  width: 125px;
+  height: var(--search-input-height);
+}
+
+/* Search bar */
+.searchBar {
+  display: flex;
+  align-items: center;
+  width: auto;
+  padding: var(--search-input-padding-right);
+  height: var(--search-input-height) !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--search-input-border-radius);
+  background-color: var(--foreground-color);
+  box-shadow: var(--box-shadow);
+}
+
+.searchBar input[type="text"] {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--primary-text-color);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Buttons inside .settings */
+.settings button {
+  padding: 8px 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-color);
+  color: var(--button-font-color);
+  transition: background-color 0.2s;
+}
+.settings button:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+/* ---------- Import / Export ---------- */
+
+ #export{
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  font-size: var(--page-button-font-size);
+  border-radius: var(--page-button-border-radius)!important;
+  cursor: pointer;
+  border: none;
+  background-color: var(--secondary-color) !important;
+  color: var(--button-font-color);
+  transition: background-color 0.3s;
+}
+
+ #export:hover {
+  background-color: var(--secondary-hover-color)!important;
+}
+
+/* Date Range / Filtering */
+
+.filterDate,
+.dateRangePicker {
+  display: flex;
+  gap: 0.5rem;
+}
+.date, .filter {
+  display: flex;
+  flex-direction: column;
+}
+.date label, .filter label {
+  font-size: var(--input-label-font-size);
+  color: var(--secondary-text-color);
+  margin-right: 0.5rem;
+}
+
+/* ---------- Filter Inputs ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dateFilter,
+#categoryFilter {
+  padding: 0 8px;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  box-shadow: var(--box-shadow) !important;
+}
+
+#categoryFilter {
+  max-width: max-content;
+}
+
+/* ========== tab bar ============= */
+.tabBar-wrapper {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  background-color: none;
+  padding: 0.5rem;
+}
+
+.tabBar {
+  position: relative; /* Needed for ::after underline */
+  display: flex;
+  flex-direction: row;
+  justify-content: stretch;
+  align-content: center;
+  gap: 1rem;
+  width: 50%;
+  box-shadow: var(--box-shadow);
+  border-radius: var(--page-button-border-radius);
+  background-color: transparent;
+  padding: 0.5rem;
+  outline: none;
+}
+
+/* Sliding underline */
+.tabBar::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: calc(100% / 3); /* 3 tabs */
+  background-color: var(--primary-color);
+  transition: transform 0.3s ease;
+  transform: translateX(0%);
+}
+
+.tabBar button {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 16px;
+    border: none !important;
+    outline: none !important;
+    border-radius: var(--page-button-border-radius);
+    background-color: none;
+    color: black;
+    cursor: pointer;
+    transition: 
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-bottom 0.3s ease,
+        font-weight 0.3s ease;
+}
+
+.tabBar button:hover {
+    background-color: none !important;
+    border: 1px solid var(--primary-color)!important;
+    color: var(--primary-color);
+}
+
+.tabBar .active {
+    border-radius: var(--page-button-border-radius);
+    border: 1px solid var(--primary-color) !important;
+    color: var(--primary-color);
+    font-weight: bold;
+    background-color: none;
+}
+
+.tabBar.tab-1::after {
+  transform: translateX(0%);
+}
+.tabBar.tab-2::after {
+  transform: translateX(100%);
+}
+.tabBar.tab-3::after {
+  transform: translateX(200%);
+}
+
+
+.tabContent {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    padding: 0rem;
+    background-color: var(--background-color);
+    border-radius: var(--page-button-border-radius);
+    gap: 1rem;
+}
+
+/* ============ Profit/Loss Content ============ */
+
+.profitTabContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  height: 100% !important;
+  padding: 1rem;
+  background-color: none;
+  border-radius: var(--page-button-border-radius);
+  gap: 1rem;
+}
+
+.totalPieChart {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  background-color: none;
+  border-radius: var(--page-button-border-radius);
+  gap: 1rem;
+}
+
+.total {
+    display: flex;
+    flex-direction: column;
+    width: 40%;
+    background-color: none;
+    border-radius: var(--page-button-border-radius);
+    gap: 1rem;
+}
+
+.totalExpense, .totalRevenue, .totalNetProfit {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 1rem;
+  background-color: var(--foreground-color);
+  border-radius: var(--page-button-border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.totalExpense h2, .totalRevenue h2, .totalNetProfit h2 {
+  font-size: 14px;
+  font-weight: var(--title-font-weight);
+  margin-bottom: 0.5rem;
+
+}
+
+.pieChartContainer {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: var(--foreground-color);
+  box-shadow: var(--box-shadow);
+  border-radius: var(--page-button-border-radius);
+}
+
+.expenseRevenueGraph {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex: 1;
+    padding: 1rem;
+    background-color: var(--foreground-color);
+    border-radius: var(--page-button-border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+
+
+/* ============ Expense Content ============ */
+.expenseTabContent, .revenueTabContent {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  padding: 1rem;
+  justify-content: space-between;
+}
+
+.expenseTable, .revenueTable {
+  flex: 1;
+  background-color: none;
+  height: 100%;
+  border-radius: var(--page-button-border-radius);
+  box-shadow: none;
+}
+
+#expenseTabPieChart, #revenueTabPieChart {
+  display: flex;
+  width: 30%;
+  height: auto;
+  background-color: var(--foreground-color);
+  border-radius: var(--page-button-border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .reportPage {
+    padding: 1rem;
+  }
+
+  .settings {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filters input[type="date"],
+  .filters select{
+    width: 100%;
+  }
+}

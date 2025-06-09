@@ -1,8 +1,8 @@
 /* ============================================================
-   editExpense.css – Edit Expense Modal (matches editRevenue.css)
+   receipt.css – Receipt Management styles
    ============================================================ */
 
-/* ---------- Overlay ---------- */
+/* Reuse the same styles as expense.css but with receipt-specific names */
 .modalOverlay {
   position: fixed !important;
   inset: 0 !important;
@@ -17,12 +17,13 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
+
 .modalOverlay::-webkit-scrollbar {
   display: none !important;
 }
 
 /* ---------- Modal Box ---------- */
-.editExpenseModal {
+.receiptModal {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -40,16 +41,18 @@
   color: var(--primary-text-color) !important;
 }
 
-.editExpenseModal form {
+.receiptModal form {
   width: 100% !important;
   overflow-y: auto !important;
   max-height: calc(80vh - 100px) !important;
   scrollbar-width: thin !important;
 }
-.editExpenseModal form::-webkit-scrollbar {
+
+.receiptModal form::-webkit-scrollbar {
   width: 6px !important;
 }
-.editExpenseModal form::-webkit-scrollbar-thumb {
+
+.receiptModal form::-webkit-scrollbar-thumb {
   background: var(--border-color) !important;
   border-radius: 6px !important;
 }
@@ -70,22 +73,6 @@
   font-weight: var(--title-font-weight) !important;
   color: var(--primary-text-color) !important;
   margin: 0 !important;
-}
-
-/* Date / Time stamp */
-.timeDate {
-  display: flex !important;
-  gap: 1rem !important;
-  font-size: var(--modal-timedate-font-size) !important;
-  font-style: italic !important;
-  color: var(--secondary-text-color) !important;
-  margin-top: 10px !important;
-}
-
-.currTime,
-.currDate {
-  margin: 0 !important;
-  align-self: flex-end !important;
 }
 
 /* ---------- Content ---------- */
@@ -138,102 +125,12 @@
 .formField select {
   width: 100% !important;
   padding: 0.5rem 0.75rem !important;
-  border: none !important;
+  border: none!important;
   outline: none !important;
   border-radius: 4px !important;
   font-family: var(--font-sans) !important;
   background-color: var(--modal-input-select-background-color);
   box-shadow: var(--box-shadow) !important;
-}
-
-.formInput {
-  width: 100% !important;
-  padding: 0.5rem 0.75rem !important;
-  border: none !important;
-  outline: none !important;
-  border-radius: 4px !important;
-  font-family: var(--font-sans) !important;
-  background-color: var(--modal-input-select-background-color);
-  box-shadow: var(--box-shadow) !important;
-}
-
-/* ---------- Original Expense Section ---------- */
-.originalExpenseSection {
-  width: 100%;
-  margin: 1rem 0;
-}
-
-.originalExpenseBox {
-  background: white !important;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: var(--box-shadow);
-}
-
-.originalExpenseLabel {
-  font-size: 0.9rem;
-  color: var(--secondary-text-color);
-  font-weight: 500;
-}
-
-.originalExpenseAmount {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: var(--primary-text-color);
-}
-
-.deviationWarning {
-  color: #dc3545;
-  font-weight: bold;
-  margin-top: 0.25rem;
-}
-
-/* ---------- Legacy styles for backward compatibility ---------- */
-.originalAmountSection {
-  width: 100%;
-  margin: 1rem 0;
-}
-
-.originalAmountBox {
-  background: white !important;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: var(--box-shadow);
-}
-
-.originalAmountLabel {
-  font-size: 0.9rem;
-  color: var(--secondary-text-color);
-  font-weight: 500;
-}
-
-.originalAmountValue {
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: var(--primary-text-color);
-}
-
-/* ---------- Amount Input Group ---------- */
-.amountInputGroup {
-  position: relative;
-}
-
-.amountReference {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--secondary-text-color);
-  padding: 0.5rem;
-  background: var(--modal-content-background-color);
-  border-radius: 4px;
-  box-shadow: var(--box-shadow);
 }
 
 /* ---------- Button Area ---------- */
@@ -261,57 +158,61 @@
   align-items: center !important;
 }
 
-.cancelButton {
-  background: var(--secondary-color) !important;
-}
-.cancelButton:hover {
-  background: var(--secondary-hover-color) !important;
-}
-
-.saveButton {
+.addButton {
   background: var(--primary-color) !important;
 }
-.saveButton:hover {
+
+.addButton:hover {
   background: var(--primary-hover-color) !important;
 }
 
-/* Legacy button classes for backward compatibility */
-.cancelBtn {
-  background: var(--secondary-color) !important;
-}
-.cancelBtn:hover {
-  background: var(--secondary-hover-color) !important;
-}
-
-.saveBtn {
-  background: var(--primary-color) !important;
-}
-.saveBtn:hover {
-  background: var(--primary-hover-color) !important;
+/* ---------- Receipt-specific styles ---------- */
+.statusBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-/* ---------- Close Button ---------- */
-.closeButton {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--secondary-text-color);
-  z-index: 1;
+.statusBadge.paid {
+  background-color: #13CE66;
+  color: white;
 }
 
-.closeButton:hover {
-  color: var(--primary-text-color);
+.statusBadge.pending {
+  background-color: #FFC82C;
+  color: black;
 }
 
-/* ---------- Utility Rows ---------- */
-.row,
-.buttonRow {
-  width: 100% !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
+.statusBadge.cancelled {
+  background-color: #961C1E;
+  color: white;
 }
+
+.statusBadge.dued {
+  background-color: #FF4949;
+  color: white;
+}
+
+/* OCR confidence indicator */
+.ocrConfidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background-color: #f8f9fa;
+}
+
+.ocrConfidence.high {
+  color: #13CE66;
+}
+
+.ocrConfidence.medium {
+  color: #FFC82C;
+}
+
+.ocrConfidence.low {
+  color: #FF4949;
+} 

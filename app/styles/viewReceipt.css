@@ -1,5 +1,5 @@
-/* ---------- viewExpense.css ---------- */
-.viewExpense__modalOverlay {
+/* ---------- viewReceipt.css ---------- */
+.viewReceipt__modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,13 +12,13 @@
   z-index: 1000;
 }
 
-.viewExpense__modalContent {
+.viewReceipt__modalContent {
   background: white;
   padding: 2rem;
   border-radius: 8px;
   width: 80%; 
-  max-width: 900px; /* Increased from 600px */
-  min-width: 700px; /* Added minimum width */
+  max-width: 900px;
+  min-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -26,7 +26,7 @@
   box-sizing: border-box;
 }
 
-.viewExpense__modalHeader {
+.viewReceipt__modalHeader {
   display: block; 
   margin-bottom: 2rem;
   padding-bottom: 1rem;
@@ -34,7 +34,7 @@
   position: relative;
 }
 
-.viewExpense__modalHeader h2 {
+.viewReceipt__modalHeader h2 {
   font-size: var(--title-font-size);
   font-weight: var(--title-font-weight);
   margin: 0; 
@@ -60,32 +60,30 @@
   color: var(--primary-text-color);
 }
 
-.viewExpense__modalContent .mainDetails {
+.viewReceipt__modalContent .mainDetails {
   margin-bottom: 2rem;
 }
 
-.viewExpense__modalContent .operationsDetails,
-.viewExpense__modalContent .receiptDetails,
-.viewExpense__modalContent .otherDetails {
+.viewReceipt__modalContent .receiptDetails {
   margin-bottom: 2rem;
 }
 
-.viewExpense__modalContent .operationsDetails h3,
-.viewExpense__modalContent .receiptDetails h3,
-.viewExpense__modalContent .otherDetails h3 {
+.viewReceipt__modalContent .receiptDetails h3,
+.viewReceipt__modalContent .otherDetails h3 {
   color: #333;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #eee;
 }
 
-.viewExpense__modalContent .detailRow {
+.viewReceipt__modalContent .detailRow {
   display: flex;
   margin-bottom: 0.5rem;
   word-break: break-word;
+  align-items: center;
 }
 
-.viewExpense__modalContent .label {
+.viewReceipt__modalContent .label {
   font-weight: 500;
   color: #666;
   width: 150px;
@@ -93,46 +91,46 @@
   margin-right: 1rem;
 }
 
-.viewExpense__modalContent .value {
+.viewReceipt__modalContent .value {
   color: #333;
   flex: 1;
 }
 
-.viewExpense__modalContent .itemsSection {
+.viewReceipt__modalContent .itemsSection {
   margin-top: 2rem;
   overflow-x: auto;
 }
 
-.viewExpense__modalContent .itemsSection h4 {
+.viewReceipt__modalContent .itemsSection h4 {
   color: #333;
   margin-bottom: 1rem;
 }
 
-.viewExpense__modalContent .itemsSection table {
+.viewReceipt__modalContent .itemsSection table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
   min-width: 650px; 
 }
 
-.viewExpense__modalContent .itemsSection table th,
-.viewExpense__modalContent .itemsSection table td {
+.viewReceipt__modalContent .itemsSection table th,
+.viewReceipt__modalContent .itemsSection table td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid #eee;
 }
 
-.viewExpense__modalContent .itemsSection table th {
+.viewReceipt__modalContent .itemsSection table th {
   background-color: #f8f9fa;
   font-weight: 500;
   color: #666;
 }
 
-.viewExpense__modalContent .itemsSection table tr:hover {
+.viewReceipt__modalContent .itemsSection table tr:hover {
   background-color: #f8f9fa;
 }
 
-.viewExpense__modalContent .modalFooter {
+.viewReceipt__modalContent .modalFooter {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid #eee;
@@ -140,7 +138,7 @@
   justify-content: flex-end;
 }
 
-.viewExpense__modalContent .closeBtn {
+.viewReceipt__modalContent .closeBtn {
   padding: 0.5rem 1.5rem;
   background-color: #f8f9fa;
   border: 1px solid #ddd;
@@ -150,15 +148,72 @@
   font-weight: 500;
 }
 
-.viewExpense__modalContent .closeBtn:hover {
+.viewReceipt__modalContent .closeBtn:hover {
   background-color: #e9ecef;
   color: #4b4b4b;
+}
+
+/* Status badges */
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.statusBadge.paid {
+  background-color: #13CE66;
+  color: white;
+}
+
+.statusBadge.pending {
+  background-color: #FFC82C;
+  color: black;
+}
+
+.statusBadge.cancelled {
+  background-color: #961C1E;
+  color: white;
+}
+
+.statusBadge.dued {
+  background-color: #FF4949;
+  color: white;
+}
+
+/* OCR confidence indicator */
+.ocrConfidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background-color: #f8f9fa;
+  margin-left: 0.5rem;
+}
+
+.ocrConfidence i {
+  font-size: 1rem;
+}
+
+.ocrConfidence.high {
+  color: #13CE66;
+}
+
+.ocrConfidence.medium {
+  color: #FFC82C;
+}
+
+.ocrConfidence.low {
+  color: #FF4949;
 }
 
 /* ---------- Responsive Styles ---------- */
 
 @media (max-width: 768px) {
-  .viewExpense__modalContent {
+  .viewReceipt__modalContent {
     width: 95%;
     max-width: none;
     min-width: auto; 
@@ -166,30 +221,30 @@
     margin: 1rem;
   }
 
-  .viewExpense__modalHeader {
+  .viewReceipt__modalHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
 
-  .viewExpense__modalContent .closeButton {
+  .viewReceipt__modalContent .closeButton {
     position: absolute;
     top: 0.5rem; 
     right: 0.5rem;
     margin: 0;
   }
 
-  .viewExpense__modalContent .detailRow {
+  .viewReceipt__modalContent .detailRow {
     flex-direction: column;
     gap: 0.25rem;
   }
 
-  .viewExpense__modalContent .label {
+  .viewReceipt__modalContent .label {
     width: auto;
     margin-right: 0;
   }
 
-  .viewExpense__modalContent .itemsSection table {
+  .viewReceipt__modalContent .itemsSection table {
     min-width: auto; 
   }
-}
+} 

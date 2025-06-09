@@ -58,8 +58,9 @@ button {
   gap: 10px;
 }
 
+.filterSelect,
 .dateFilter,
-#categoryFilter {
+#statusFilter {
   padding: 0 8px;
   gap: var(--page-button-gap);
   font-size: var(--page-button-font-size);
@@ -69,14 +70,15 @@ button {
   box-shadow: var(--box-shadow) !important;
 }
 
-#categoryFilter {
+#statusFilter,
+.filterSelect {
   max-width: max-content;
 }
 
 /* ---------- Add Expense button ---------- */
-#addExpense {
+.releaseAllBtn {
   padding:0;
-  background-color: var(--primary-color);
+  background-color: var(--success-color);
   color: var(--foreground-color);
   border: none !important;
   outline: none !important;
@@ -89,8 +91,8 @@ button {
   font-size: var(--page-button-font-size) !important;
   gap: var(--page-button-gap) !important;
 }
-#addExpense:hover {
-  background-color: var(--primary-hover-color);
+.releaseAllBtn:hover {
+  background-color: var(--success-hover-color);
 }
 
 /* ---------- Loading indicator ---------- */
@@ -248,6 +250,21 @@ button {
   color: var(--secondary-text-color);
 }
 
+.salary {
+    font-weight: var(--font-weight-bold);
+    color: var(--success-color) !important;
+}
+
+.deduction {
+    font-weight: var(--font-weight-bold);
+    color: var(--error-color) !important;
+}
+
+.netPay {
+    font-weight: var(--font-weight-bold);
+    color: var(--info-color) !important;
+}
+
 /* ---------- Modal footer ---------- */
 .modalFooter {
   margin-top: 2rem;
@@ -301,7 +318,7 @@ button {
 
   .filters input[type="date"],
   .filters select,
-  #addExpense {
+  #addBalance {
     width: 100%;
   }
 

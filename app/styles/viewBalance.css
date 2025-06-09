@@ -1,0 +1,174 @@
+/* Overlay */
+.modalOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1050 !important;
+  overflow: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.modalOverlay::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Modal Box */
+.viewBalanceModal {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  background: var(--foreground-color) !important;
+  padding: var(--modal-padding) !important;
+  border-radius: var(--modal-border-radius) !important;
+  width: 80% !important;
+  max-width: 1000px !important;
+  max-height: 80vh !important;
+  overflow: hidden !important;
+  box-shadow: var(--box-shadow) !important;
+  position: relative !important;
+  font-family: var(--font-sans) !important;
+  color: var(--primary-text-color) !important;
+}
+
+.viewBalanceModal form {
+  width: 100% !important;
+  overflow-y: auto !important;
+  max-height: calc(80vh - 100px) !important;
+  scrollbar-width: thin !important;
+}
+.viewBalanceModal form::-webkit-scrollbar {
+  width: 6px !important;
+}
+.viewBalanceModal form::-webkit-scrollbar-thumb {
+  background: var(--border-color) !important;
+  border-radius: 6px !important;
+}
+
+/* Header */
+.modalHeader {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: var(--modal-header-margin-bottom) !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.modalHeader h1 {
+  font-size: var(--title-font-size) !important;
+  font-weight: var(--title-font-weight) !important;
+  color: var(--primary-text-color) !important;
+  margin: 0 !important;
+}
+
+/* Content */
+.modalContent {
+  width: var(--modal-content-width) !important;
+  max-width: 100% !important;
+  height: var(--modal-content-height) !important;
+  background-color: var(--modal-content-background-color) !important;
+  padding: var(--modal-content-padding) !important;
+  border-radius: var(--modal-content-border-radius) !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+}
+
+/* Field Grid */
+.formFieldsVertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem !important;
+}
+
+.formField {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+  background-color: none;
+}
+
+.formField label {
+  font-size: var(--input-label-font-size) !important;
+  font-weight: var(--input-label-font-weight) !important;
+  margin-bottom: 0.25rem !important;
+  color: var(--secondary-text-color) !important;
+}
+
+.viewField {
+  padding: 0.5rem 0.75rem;
+  background: var(--modal-input-select-background-color, #f5f5f5);
+  border-radius: 4px;
+  font-size: 1rem;
+  color: var(--primary-text-color);
+  min-height: 36px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+/* Close Button */
+.closeButton {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 2rem !important;
+  color: var(--secondary-text-color) !important;
+  cursor: pointer !important;
+  z-index: 2 !important;
+  transition: color 0.15s;
+}
+.closeButton:hover {
+  color: var(--primary-color) !important;
+}
+
+/* Utility Rows */
+.row,
+.buttonRow {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .viewBalanceModal {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    padding: 1rem !important;
+  }
+  .modalContent {
+    width: 100% !important;
+    padding: 0.5rem !important;
+  }
+  .formRow {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  .formField {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}

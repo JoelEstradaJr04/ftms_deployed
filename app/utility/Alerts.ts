@@ -64,8 +64,8 @@ export const showAddConfirmation = () => {
     confirmButtonText: 'Confirm',
     cancelButtonText: 'Cancel',
     background: 'white',
-    confirmButtonColor: '#13CE66',
-    cancelButtonColor: '#961C1E',
+    confirmButtonColor: '#961C1E',
+    cancelButtonColor: '#ECECEC',
     backdrop: false,
     customClass: {
     popup: 'swal-custom-popup'
@@ -88,17 +88,17 @@ export const showAddSuccess = () => {
 };
 
 
-//-----------------------ADD EXPENSE RECORD---------------------//
-
-export const showSuccess = (message: string) => {
+//-----------------------ADD RECORD---------------------//
+//SUCCESS
+export const showSuccess = (message: string, title:string) => {
   Swal.fire({
     icon: 'success',
-    title: 'Success',
+    title: title,
     text: message,
     confirmButtonColor: '#961C1E',
     background: 'white',
     backdrop: false,
-    timer: 3000,
+    timer: 2000,
     timerProgressBar: true,
     showConfirmButton: false,
     customClass: {
@@ -107,17 +107,71 @@ export const showSuccess = (message: string) => {
   });
 };
 
-export const showError = (message: string) => {
+//FAILED/ERROR
+
+export const showError = (message: string, title: string) => {
   Swal.fire({
     icon: 'error',
-    title: 'Error',
+    title: title,
     text: message,
     confirmButtonColor: '#961C1E',
     background: 'white',
-    timer: 3000,
+    timer: 2000,
     backdrop: false,
     timerProgressBar: true,
     showConfirmButton: false,
+    customClass: {
+    popup: 'swal-custom-popup'
+  }
+  });
+};
+
+//WARNING
+export const showWarning = (message: string) => {
+  return Swal.fire({
+    icon: 'warning',
+    text: message,
+    confirmButtonColor: '#961C1E',
+    background: 'white',
+    backdrop: false,
+    timer: 2000,
+    timerProgressBar: true,
+    customClass: {
+    popup: 'swal-custom-popup'
+  }
+  });
+};
+
+//Information
+export const showInformation = (message: string, title: string) => {
+  return Swal.fire({
+    icon: 'info',
+    title: title,
+    text: message,
+    confirmButtonColor: '#961C1E',
+    background: 'white',
+    backdrop: false,
+    timer: 2000,
+    timerProgressBar: true,
+    customClass: {
+    popup: 'swal-custom-popup'
+  }
+  });
+};
+
+//confirmation
+export const showConfirmation = (message: string, title: string) => {
+  return Swal.fire({
+    icon: 'question',
+    title: title,
+    html: message,
+    showCancelButton: true,
+    confirmButtonText: 'Confirm',
+    cancelButtonText: 'Cancel',
+    background: 'white',
+    confirmButtonColor: '#961C1E',
+    cancelButtonColor: '#ECECEC',
+    backdrop: false,
     customClass: {
     popup: 'swal-custom-popup'
   }

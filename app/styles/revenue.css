@@ -1,214 +1,145 @@
-button {
-  outline: 1px solid black;
-  border-radius: 5px;
-} 
+/* ============================================================
+   revenue.css – Revenue Management page
+   All hard-coded values replaced with tokens from global.css
+   ============================================================ */
 
-.revenuePage {
-    padding: 20px;
-    font-family: 'poppins', sans-serif;
-    color: black;
+/* ---------- Base ---------- */
+button {
+  border-radius: 5px;
+  font-family: var(--font-sans);
+}
+
+/* ---------- Settings Block ---------- */
+.settings {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 0px;
+  justify-content: space-between;
+}
+
+.settings input[type="date"],
+.settings select {
+  font-size: var(--page-button-font-size);  
+  border-radius: 4px;
+  background-color: var(--foreground-color);
+  color: var(--primary-text-color);
+  width: 125px;
+  height: var(--search-input-height);
+}
+
+/* Search bar */
+.searchBar {
+  display: flex;
+  align-items: center;
+  width: auto;
+  padding: var(--search-input-padding-right);
+  height: var(--search-input-height) !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--search-input-border-radius);
+  background-color: var(--foreground-color);
+  box-shadow: var(--box-shadow);
+}
+
+.searchBar input[type="text"] {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--primary-text-color);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Buttons inside .settings */
+.settings button {
+  padding: 8px 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-color);
+  color: var(--button-font-color);
+  transition: background-color 0.2s;
+}
+.settings button:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+/* ---------- Import / Export ---------- */
+
+ #export{
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  font-size: var(--page-button-font-size);
+  border-radius: var(--page-button-border-radius)!important;
+  cursor: pointer;
+  border: none;
+  background-color: var(--secondary-color) !important;
+  color: var(--button-font-color);
+  transition: background-color 0.3s;
+}
+
+ #export:hover {
+  background-color: var(--secondary-hover-color)!important;
+}
+
+/* ---------- Filter Inputs ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dateFilter,
+#categoryFilter {
+  padding: 0 8px;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  box-shadow: var(--box-shadow) !important;
+}
+
+#categoryFilter {
+  max-width: max-content;
+}
+
+/* ---------- Add Revenue Button ---------- */
+#addRevenue {
+  background-color: var(--primary-color);
+  color: var(--button-font-color);
+  border: none;
+  cursor: pointer;
+  border-radius: var(--page-button-border-radius)!important;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+}
+#addRevenue:hover {
+  background-color: var(--primary-hover-color);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .revenuePage {
+    padding: 1rem;
   }
 
   .settings {
-    display: flex;
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 0px;
-    margin-bottom: 20px;
-    justify-content: space-between;
-    background-color: none;
-  }
-  
-  .settings input[type="text"],
-  .settings input[type="date"],
-  .settings select {
-    padding: 8px;
-    font-size: 1rem;
+    flex-direction: column;
+    gap: 1rem;
   }
 
-  .settings input {
-    outline: 1px solid black;
-    border-radius: 5px;
-  }
-  
-  .settings button{
-    padding: 8px 12px;
-    font-size: 1rem;
-    cursor: pointer;
-    outline: 1px solid black;
-    border-radius: 5px;
-    width: fit-content;
-  }
-  
-  .importExport {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 1rem;
-    justify-content: flex-end;
-  }
-  
-  .importExport button, .importLabel {
-    padding: 8px 12px;
-    font-size: 1rem;
-    cursor: pointer;
-    outline: 1px solid black;
-    border-radius: 5px;
-    width: fit-content;
-  }
-  
-  .importLabel {
-    background-color: #ddd;
-    padding: 8px 12px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  
-  
-  .filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  
-  .searchBar,
-  .datePicker,
-  .categoryDropdown,
-  .addRevenueBtn {
-    padding: 8px;
-    font-size: 14px;
-  }
-
-  #categoryFilter {
-    max-width: max-content;
-  }
-  
+  .filters input[type="date"],
+  .filters select,
   #addRevenue {
-    background-color: #961C1E;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .tableContainer {
-    overflow-x: auto;
-  }
-  
-  .revenueTable {
     width: 100%;
-    border-collapse: collapse;
   }
-  
-  .revenueTable th,
-  .revenueTable td {
-    padding: 15px;
-    border: 1px solid #ddd;
-    text-align: center;
-  }
-
-  .actionButtons {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-  }
-  
-  .viewBtn,
-    .editBtn,
-    .deleteBtn {
-      padding: 6px 12px;
-      gap: 0px;
-      cursor: pointer;
-      outline: none;
-      font-weight: Normal !important;
-      font-size: 16px;
-      transition: 0.3 ease;
-    }
-
-    .viewBtn:hover,
-    .editBtn:hover,
-    .deleteBtn:hover {
-      transform: scale(1.05);
-      transition: 0.3s ease;
-    }
-
-    .viewBtn {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      outline: none;
-    }
-    
-    .editBtn {
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      outline: none;
-    }
-    
-    .deleteBtn {
-      background-color: #f44336;
-      color: white !important;
-      border: none;
-      outline: none;
-    }
-  
-  .pagination button {
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    background-color: white;
-    cursor: pointer;
-  }
-  
-  .pagination button:hover {
-    background-color: #eee;
-  }
-  
-  .pagination .active {
-    background-color: #4CAF50;
-    color: white;
-    font-weight: bold;
-  }
-  
-  .pagination button:disabled {
-    background-color: #f0f0f0;
-    color: #aaa;
-    cursor: not-allowed;
-  }
-  
-  
-  .tableContainer {
-    overflow: scroll;
-  }
-
-  .tableContainer table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  
-  .tableContainer th,
-    .tableContainer td {
-      border: none;
-      padding: 10px;
-      text-align: center;
-      word-wrap: break-word;
-    }
-    
-    .tableContainer th {
-      background-color: #961C1E;
-      color: white;
-    }
-
-    tr {
-        transition: 0.3s ease;
-    }
-
-    tbody tr:hover {
-      background-color: #FFCC3D;
-      color: white;
-      transform: scale(1.02);
-      font-weight: bold;
-  }
-  
+}

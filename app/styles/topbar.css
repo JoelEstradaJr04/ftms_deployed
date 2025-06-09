@@ -1,65 +1,41 @@
-i {
-    height: 100%;
-    width: auto;
-    align-items: center;
-    justify-content: center;
-    font-size: 110%;
-    font-family: 'poppins', sans-serif;
-}
-
-.topBar {
+/* ----- TOP BAR STYLING ----- */
+.top-bar {
     width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Center the inner content horizontally */
-    text-align: center;
-    box-shadow: none;
+    height: calc(100vh * 2 / 21);
+    background-color: var(--foreground-color);
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
 }
 
-.topBarItems {
-    width:80%;
-    height: 100%;
+.top-links {
     display: flex;
-    flex-direction: row;
-    align-items: center;
     justify-content: center;
-    background-color: None;
-    font-size: 1rem;
-  }
-  
-
-.topBarItem {
-    width: min-content;
-    flex:1;
-    text-align: center; /* Center-align text */
-    padding: 10px 20px; /* Adjust padding */
-    display: flex;
-    align-items: center;
-    justify-content: center; /* Center content within each item */
-    white-space: nowrap; /* Prevent text wrapping */
-    overflow: hidden; /* Prevent overflow */
-    font-size: 1rem; /* Match font size with topBarItems */
-    color: #000;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.3s ease;
-    gap: 10px; /* Space between icon and text */
+    gap: 70px;
+    position: relative;
 }
 
-.topBarItem:hover {
-    color: #FFCC3D;
+.top-link {
+    padding: 8px;
+    position: relative;
+    text-decoration: none;
+    transition: all 0.3s ease-in-out;
 }
 
-.topBarItem.active {
-    color: #d32f2f;
-    font-weight: bold;
-    border-bottom: 4px solid #d32f2f;
-    width: 100%;
-    padding: 10px 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 100%;
-    transition: all 0.3s ease;
+.top-link:hover {
+    color: var(--secondary-color);
+}
+
+.top-link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.link-underline {
+    position: absolute;
+    bottom: 0;
+    height: 4px;
+    border-radius: 4px;
+    background-color: #9F0F19;
+    transition: all 0.5s ease-in-out;
 }

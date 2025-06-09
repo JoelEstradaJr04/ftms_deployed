@@ -1,14 +1,5 @@
 /* layout.css */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden; /* Prevent scrolling */
-  font-family: var(--font-inter);
-
-}
 
 .mainContainer{
   display: flex;
@@ -31,6 +22,7 @@ html, body {
 }
 
 .navBarContainer {
+  position: 200 !important;
   flex-shrink: 0;
   background-color: #fafafa;
   display: flex;
@@ -38,7 +30,7 @@ html, body {
   justify-content: center;
   color: white;
   height: 100%; /* Ensure it fills the full height */
-  box-shadow: 50px 50px 10px rgb(250, 0, 0, 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: calc(100% * 8 / 34); 
 }
 

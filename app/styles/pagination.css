@@ -1,101 +1,136 @@
+:root {
+  /* Main pagination theme color */
+  --pagination-color: #b3b3b3;
+  --pagination-active-bg: #961C1E;
+  --pagination-active-text: #fff;
+
+  /* Font size and spacing */
+  --pagination-font-size: 14px;
+  --pagination-radius: 0.3rem;
+  --pagination-button-size: 2em;
+  --pagination-padding: 0.3rem;
+}
+
 .demo-pagination-block + .demo-pagination-block {
-    margin-top: 10px;
-  }
-  .demo-pagination-block .demonstration {
-    margin-bottom: 16px;
-  }
+  margin-top: 10px;
+}
 
-  #recordsPerPage {
-    max-width: max-content;
-    padding: 0.2rem;
-    border-radius: 0.0rem;
-  }
+.demo-pagination-block .demonstration {
+  margin-bottom: 16px;
+}
 
-  /* Container for the pagination */
+#recordsPerPage {
+  max-width: max-content;
+  padding: var(--pagination-padding);
+  border-radius: 0;
+}
+
+/* Container for the pagination */
 .pagination-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0rem;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  
-  /* Dropdown for page size */
-  .pagination-dropdown {
-    max-width: max-content;
-    padding: 0.2rem;
-    border-radius: 0.2rem;
-  }
-  
-  /* Buttons for pagination */
-  .pagination-button-container {
-    display: flex;
-    width: 40%;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-  .pagination-button {
-    padding: 0.2rem 0.5rem;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    cursor: pointer;
-    border-radius: 0.2rem;
-  }
-  
-  .pagination-button.active {
-    background-color: #961C1E;
-    color: #fff;
-    border-color: #961C1E;
-  }
-  
-  .pagination-button:disabled {
-    background-color: #e9ecef;
-    color: #6c757d;
-    cursor: not-allowed;
-  }
-  
-  /* Ellipsis for skipped pages */
-  .pagination-ellipsis {
-    padding: 0 0.5rem;
-    color: #6c757d;
-  }
-  
-  /* Go To Section */
-  .pagination-go-to {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-  }
+/* Dropdown for page size */
+.pagination-dropdown {
+  max-width: max-content;
+  padding: var(--pagination-padding) !important;
+  border-radius: var(--pagination-radius) !important;
+  font-size: var(--pagination-font-size);
+  color: var(--pagination-color) !important;
+  box-shadow: var(--box-shadow);
+}
 
-  .pagination-goto-container {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-  }
-  
-  .pagination-input {
-    width: min-content;
-    max-width: 6rem;
-    padding: 0.3rem;
-    border: 1px solid #ccc;
-    border-radius: 0.2rem;
-  }
-  
-  .pagination-go-button {
-    padding: 0.5rem 1rem;
-    border: 1px solid #961C1E;
-    background-color: #961C1E;
-    color: #fff;
-    cursor: pointer;
-    border-radius: 0.2rem;
-  }
-  
-  .pagination-go-button:hover {
-    background-color: #0056b3;
-  }
+/* Buttons for pagination */
+.pagination-button-container {
+  display: flex;
+  width: 40%;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.pagination-button,
+.pagination-button-prevnext {
+  outline: none !important;
+  border: none !important;
+  background-color: transparent;
+  cursor: pointer;
+  border-radius: var(--pagination-radius);
+  font-size: var(--pagination-font-size);
+  color: var(--pagination-color);
+}
+
+.pagination-button {
+  width: var(--pagination-button-size);
+  height: var(--pagination-button-size);
+  padding: 0;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-button.active {
+  background-color: var(--pagination-active-bg);
+  color: var(--pagination-active-text);
+  border-color: var(--pagination-active-bg);
+}
+
+.pagination-button:disabled {
+  background-color: transparent;
+  color: gray;
+  cursor: not-allowed;
+}
+
+/* Ellipsis for skipped pages */
+.pagination-ellipsis {
+  padding: 0 0.5rem;
+  color: #6c757d;
+}
+
+/* ======Go To Section====== */
+.pagination-go-to {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--pagination-font-size);
+  color: var(--pagination-color) !important;
+}
+
+.pagination-goto-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.pagination-input {
+  width: min-content;
+  max-width: 70px !important;
+  padding: var(--pagination-padding);
+  border: 1px solid #ccc;
+  border-radius: var(--pagination-radius);
+  color: var(--pagination-color) !important;
+}
+
+.pagination-go-button {
+  outline: none !important;
+  border: none !important;
+  padding: var(--pagination-padding) 0.5rem !important;
+  background-color: var(--pagination-color) !important;
+  color: white !important;
+  cursor: pointer;
+  border-radius: var(--pagination-radius);
+  font-size: var(--pagination-font-size);
+}
+
+.pagination-go-button:hover {
+  background-color: var(--pagination-active-bg) !important;
+}
