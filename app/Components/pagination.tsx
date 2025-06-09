@@ -53,25 +53,25 @@ const PaginationComponent: React.FC<PaginationProps> = ({
             className="pagination-dropdown"
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
         >
-            {[5, 10, 20, 50].map((size) => (
+            {[10, 20, 50].map((size) => (
             <option key={size} value={size}>
-                {size} items per page
+                {size} /page
             </option>
             ))}
         </select>
       </div>
 
-      {/* Previous Button */}
+      {/* ========Previous Button======= */}
       <div className="pagination-button-container">
       <button
-        className="pagination-button"
+        className="pagination-button-prevnext"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        Previous
+        <i className="ri-arrow-left-s-line"></i>
       </button>
 
-      {/* First Page */}
+      {/* ========First Page========= */}
       <button
         className={`pagination-button ${currentPage === 1 ? 'active' : ''}`}
         onClick={() => onPageChange(1)}
@@ -110,17 +110,17 @@ const PaginationComponent: React.FC<PaginationProps> = ({
         </button>
       )}
 
-      {/* Next Button */}
+      {/* =========Next Button========== */}
       <button
-        className="pagination-button"
+        className="pagination-button-prevnext"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
       >
-        Next
+        <i className="ri-arrow-right-s-line"></i>
       </button>
     </div>
 
-      {/* Go To Input */}
+      {/* =======Go To Input====== */}
     <div className="pagination-goto-container">
         <label className="pagination-go-to">
             Go to:

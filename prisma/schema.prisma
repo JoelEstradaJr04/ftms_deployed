@@ -33,6 +33,30 @@ enum ReceiptStatus {
   Paid
   Pending
   Cancelled
+  Dued
+}
+
+enum ReceiptSource {
+  Manual_Entry
+  OCR_Camera
+  OCR_File
+}
+
+enum ExportFormat {
+  CSV
+  PDF
+}
+
+enum PaymentStatus {
+  Paid
+  Pending
+  Cancelled
+  Dued
+}
+
+enum RecordStatus {
+  Active
+  Inactive
 }
 
 model Sequence {
@@ -51,7 +75,7 @@ model ExpenseRecord {
   created_by     String
   created_at     DateTime @default(now())
   updated_at     DateTime?
-  is_deleted      Boolean  @default(false)
+  is_deleted     Boolean  @default(false)
   other_source   String?
   other_category String?
 
@@ -68,11 +92,11 @@ model RevenueRecord {
   assignment_id  String?
   category       RevenueCategory
   total_amount   Decimal  @db.Decimal(20, 4)
-  collection_date           DateTime
+  collection_date DateTime
   created_by     String
   created_at     DateTime @default(now())
   updated_at     DateTime?
-  is_deleted      Boolean  @default(false)
+  is_deleted     Boolean  @default(false)
   other_source   String?
 
   // Constraint for assignment-based records
@@ -84,11 +108,11 @@ model RevenueRecord {
 model AuditLog {
   log_id         String   @id @default(uuid())
   action         String
-  table_affected String   // Can be "ExpenseRecord", "RevenueRecord", "Receipt"
+  table_affected String   // Can be "ExpenseRecord", "RevenueRecord", "Receipt", etc.
   record_id      String
   performed_by   String
   timestamp      DateTime @default(now())
-  details        String
+  details        Json?    // Store old_values, new_values, and other metadata
   ip_address     String?
 }
 
@@ -114,20 +138,33 @@ model Receipt {
   supplier           String
   transaction_date   DateTime
   vat_reg_tin        String?
-  terms              String? @default("Cash")
+  terms              String?
   date_paid          DateTime?
-  status             ReceiptStatus
+  payment_status     PaymentStatus @default(Pending)
+  record_status      RecordStatus @default(Active)
   total_amount       Decimal   @db.Decimal(20, 4)
   vat_amount         Decimal?  @db.Decimal(20, 4)
   total_amount_due   Decimal   @db.Decimal(20, 4)
   created_at         DateTime @default(now())
   updated_at         DateTime?
   created_by         String
-  is_deleted          Boolean   @default(false)
-  is_expense_recorded Boolean @default(false)
+  updated_by         String?
+  is_deleted         Boolean   @default(false)
+  deletion_reason    String?
+  deleted_by         String?
+  deleted_at         DateTime?
+  source             ReceiptSource @default(Manual_Entry)
+  category           ExpenseCategory
+  remarks            String?
+  ocr_confidence     Float?    // Overall OCR confidence score
+  ocr_file_path      String?   // Path to stored receipt image/file
   items              ReceiptItem[]
   transactions       ItemTransaction[]
   expense            ExpenseRecord?
+  exports            ReceiptExport[]
+  ocr_fields         ReceiptOCRField[]
+  keywords           ReceiptKeyword[]
+  storage_size_bytes BigInt?   // Size of associated files in bytes
 }
 
 model ReceiptItem {
@@ -142,7 +179,9 @@ model ReceiptItem {
   created_at        DateTime  @default(now())
   updated_at        DateTime?
   created_by        String
+  updated_by        String?
   is_deleted        Boolean   @default(false)
+  ocr_confidence    Float?    // OCR confidence score for this item
 }
 
 model Item {
@@ -168,4 +207,61 @@ model ItemTransaction {
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
+}
+
+model ReceiptExport {
+  export_id     String   @id
+  receipt_id    String
+  receipt       Receipt  @relation(fields: [receipt_id], references: [receipt_id])
+  format        ExportFormat
+  exported_by   String
+  exported_at   DateTime @default(now())
+  filters_used  Json?    // Store the filters used during export
+  file_path     String?  // Path to exported file
+}
+
+model ReceiptStorageConfig {
+  config_id           String   @id
+  auto_archive_months Int      @default(6)    // Archive receipts older than X months
+  last_cleanup        DateTime @default(now()) // Last storage cleanup timestamp
+  updated_by         String
+  updated_at         DateTime @default(now())
+}
+
+model ReceiptOCRField {
+  field_id           String   @id
+  receipt_id         String
+  receipt            Receipt  @relation(fields: [receipt_id], references: [receipt_id])
+  field_name         String   // e.g., "supplier", "amount", "date"
+  extracted_value    String
+  confidence_score   Float
+  is_verified        Boolean  @default(false)
+  verified_by        String?
+  verified_at        DateTime?
+  original_image_coords Json?    // Store coordinates where field was found in image
+  created_at         DateTime @default(now())
+  updated_at         DateTime?
+
+  @@unique([receipt_id, field_name])
+}
+
+model ReceiptKeyword {
+  keyword_id     String   @id
+  receipt_id     String
+  receipt        Receipt  @relation(fields: [receipt_id], references: [receipt_id])
+  keyword        String
+  source         String   // "ocr" or "manual"
+  confidence     Float?
+  created_at     DateTime @default(now())
+
+  @@index([keyword])
+}
+
+model ReceiptStorageMetrics {
+  metric_id           String   @id
+  total_receipts      Int      @default(0)
+  storage_used_bytes  BigInt   @default(0)
+  last_updated        DateTime @default(now())
+  created_by          String
+  updated_by          String?
 }

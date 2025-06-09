@@ -1,0 +1,333 @@
+/* ============================================================
+   expense.css – Expense Management page
+   Uses tokens defined in global.css (:root variables)
+   ============================================================ */
+
+/* ---------- Base ---------- */
+button {
+  border-radius: var(--page-button-border-radius) !important;
+}
+
+.expensePage {
+  padding: 20px;
+  background-color: var(--background-color);
+  min-height: calc(100vh - 40px);
+  font-family: var(--font-sans);
+  color: var(--primary-text-color);
+}
+
+/* ---------- Settings (filters) ---------- */
+.settings {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 0px;
+  justify-content: space-between;
+  background-color: none;
+}
+
+/* Search bar */
+.searchBar {
+  display: flex;
+  align-items: center;
+  width: auto;
+  padding: var(--search-input-padding-right);
+  height: var(--search-input-height) !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--search-input-border-radius);
+  background-color: var(--foreground-color);
+  box-shadow: var(--box-shadow);
+}
+
+.searchBar input[type="text"] {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--primary-text-color);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Filter Inputs ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dateFilter,
+#statusFilter {
+  padding: 0 8px;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  box-shadow: var(--box-shadow) !important;
+}
+
+#statusFilter {
+  max-width: max-content;
+}
+
+/* ---------- Add Expense button ---------- */
+#addBalance {
+  padding:0;
+  background-color: var(--primary-color);
+  color: var(--foreground-color);
+  border: none !important;
+  outline: none !important;
+  border-radius: var(--search-input-border-radius);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  font-size: var(--page-button-font-size) !important;
+  gap: var(--page-button-gap) !important;
+}
+#addBalance:hover {
+  background-color: var(--primary-hover-color);
+}
+
+/* ---------- Loading indicator ---------- */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: var(--secondary-text-color);
+}
+
+/* ---------- Category Input w/ clear button ---------- */
+.categoryInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.categoryInputWrapper input {
+  width: 100%;
+  padding-right: 30px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.categoryInputWrapper input:focus {
+  outline: none;
+  border-color: var(--info-color);
+  box-shadow: 0 0 0 2px rgba(45, 142, 255, 0.2);
+}
+
+.clearCategoryBtn {
+  position: absolute;
+  right: 5px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.clearCategoryBtn:hover {
+  color: var(--primary-text-color);
+}
+
+/* ---------- View Modal ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background-color: var(--foreground-color);
+  padding: 2rem;
+  border-radius: var(--modal-border-radius);
+  max-width: 1200px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--primary-text-color);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--secondary-text-color);
+}
+.closeButton:hover {
+  color: var(--primary-text-color);
+}
+
+/* ---------- Detail sections ---------- */
+.mainDetails,
+.operationsDetails,
+.receiptDetails,
+.otherDetails {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.mainDetails h3,
+.operationsDetails h3,
+.receiptDetails h3,
+.otherDetails h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--primary-text-color);
+}
+
+.detailRow {
+  display: flex;
+  margin-bottom: 0.75rem;
+  align-items: baseline;
+}
+.detailRow .label {
+  min-width: 150px;
+  font-weight: 500;
+  color: var(--secondary-text-color);
+}
+.detailRow .value {
+  flex: 1;
+  color: var(--primary-text-color);
+}
+
+/* ---------- Items (receipt list) ---------- */
+.itemsSection {
+  margin-top: 1.5rem;
+}
+.itemsSection h4 {
+  margin-bottom: 1rem;
+  color: var(--primary-text-color);
+}
+.itemsSection table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+.itemsSection th,
+.itemsSection td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.itemsSection th {
+  background-color: var(--table-header-color);
+  font-weight: 500;
+  color: var(--secondary-text-color);
+}
+
+/* ---------- Modal footer ---------- */
+.modalFooter {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.closeBtn {
+  padding: 0.5rem 1rem;
+  background-color: var(--secondary-text-color);
+  color: var(--foreground-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+.closeBtn:hover {
+  background-color: var(--primary-hover-color);
+}
+
+/* ---------- Import / Export ---------- */
+
+ #export{
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  font-size: var(--page-button-font-size) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  cursor: pointer;
+  border: none !important;
+  outline: none !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--button-font-color);
+  transition: background-color 0.3s;
+}
+
+ #export:hover {
+  background-color: var(--secondary-hover-color)!important;
+}
+
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .expensePage {
+    padding: 1rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters input[type="date"],
+  .filters select,
+  #addBalance {
+    width: 100%;
+  }
+
+  th,
+  td {
+    padding: 0.75rem;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+  }
+
+  .modalContent {
+    width: 95%;
+    padding: 1rem;
+  }
+
+  .detailRow {
+    flex-direction: column;
+    margin-bottom: 1rem;
+  }
+  .detailRow .label {
+    margin-bottom: 0.25rem;
+  }
+
+  .itemsSection {
+    overflow-x: auto;
+  }
+}

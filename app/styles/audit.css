@@ -1,261 +1,243 @@
-button {
-    outline: 1px solid black;
-    border-radius: 5px;
-  } 
-  
+/* ============================================================
+   audit.css – Audit Logs page
+   All styles reference tokens defined in global.css
+   ============================================================ */
+
+/* ---------- Base ---------- */
+.auditPage {
+  padding: 20px;
+  font-family: var(--font-sans);
+  color: var(--primary-text-color);
+}
+
+/* ---------- Settings / Filter Bar ---------- */
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 0px;
+  justify-content: space-between;
+}
+
+.settings input[type="date"],
+.settings select {
+  padding: 0 8px;
+  font-size: var(--page-button-font-size);  
+  border: none;
+  border-radius: 4px;
+  background-color: var(--foreground-color);
+  color: var(--primary-text-color);
+  box-shadow: var(--box-shadow);
+  transition: border-color 0.2s;
+  width: 125px;
+  height: var(--search-input-height);
+}
+
+.settings button {
+  font-size: var(--page-button-font-size);
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--secondary-color);
+  color: var(--button-font-color);
+  transition: background-color 0.2s;
+  box-shadow: var(--box-shadow);
+  width: 125px;
+  height: var(--search-input-height);
+}
+.settings button:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+
+.searchBar {
+  display: flex;
+  flex-direction: row;
+  padding: var(--search-input-padding-right);
+  justify-content: space-between;
+  align-items: center;
+  width: var(--search-input-width);
+  height: var(--search-input-height);
+  border: 1px solid var(--border-color);
+  border-radius: var(--search-input-border-radius) !important;
+}
+
+.searchBar input[type="text"] {
+  flex: 1;
+  padding-right: 0 8px !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: var(--search-bar-border-radius);
+  font-size: 14px;
+  width: var(--search-input-width);
+  height: var(--search-input-height);
+}
+
+
+/* ---------- Filter Inputs ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dateFilter,
+#categoryFilter {
+  padding: 0 8px;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  box-shadow: var(--box-shadow) !important;
+}
+
+#categoryFilter {
+  max-width: max-content;
+}
+
+/* ---------- Import / Export ---------- */
+ #export{
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  font-size: var(--page-button-font-size);
+  border-radius: var(--page-button-border-radius)!important;
+  cursor: pointer;
+  border: none;
+  background-color: var(--secondary-color) !important;
+  color: var(--button-font-color);
+  transition: background-color 0.3s;
+}
+
+ #export:hover {
+  background-color: var(--secondary-hover-color)!important;
+}
+
+/* ---------- View Button (table) ---------- */
+.viewButton {
+  background-color: var(--info-color);
+  color: var(--button-font-color);
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--table-action-button-border-radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.viewButton:hover {
+  background-color: var(--info-hover-color);
+}
+
+/* ---------- Export Button (separate action) ---------- */
+.exportButton {
+  background-color: var(--success-color);
+  color: var(--button-font-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+.exportButton:hover {
+  background-color: var(--success-hover-color);
+}
+
+/* ---------- View Details Modal ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.viewDetailsModal {
+  position: relative;
+  background: var(--foreground-color);
+  padding: var(--modal-padding);
+  border-radius: var(--modal-border-radius);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-color);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: var(--title-font-size);
+  font-weight: var(--title-font-weight);
+  color: var(--primary-text-color);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--secondary-text-color);
+}
+.closeButton:hover {
+  color: var(--primary-text-color);
+}
+
+/* ---------- Modal Content ---------- */
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.detailRow {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.detailRow strong {
+  min-width: 120px;
+  color: var(--secondary-text-color);
+}
+
+.fullDetails {
+  white-space: pre-wrap;
+  color: var(--primary-text-color);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
   .auditPage {
-      padding: 20px;
-      font-family: 'poppins', sans-serif;
-      color: black;
-    }
-  
-    .settings {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-      justify-content: space-between;
-    }
-    
-    .settings input[type="text"],
-    .settings input[type="date"],
-    .settings select {
-      padding: 8px;
-      font-size: 1rem;
-    }
-  
-    .settings input {
-      outline: 1px solid black;
-      border-radius: 5px;
-    }
-    
-    .settings button{
-      padding: 8px 12px;
-      font-size: 1rem;
-      cursor: pointer;
-      outline: 1px solid black;
-      border-radius: 5px;
-      width: fit-content;
-    }
-    
-    .importExport {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 1rem;
-      justify-content: flex-end;
-    }
-    
-    .importExport button {
-      padding: 8px 12px;
-      font-size: 1rem;
-      cursor: pointer;
-      outline: 1px solid black;
-      border-radius: 5px;
-      width: fit-content;
-    }
-    
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    
-    .searchBar,
-    .datePicker,
-    .categoryDropdown {
-      padding: 8px;
-      font-size: 14px;
-    }
-  
-    #categoryFilter {
-      max-width: max-content;
-    }
-    
-    .tableContainer {
-      overflow-x: auto;
-    }
-    
-    .revenueTable {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    .revenueTable th,
-    .revenueTable td {
-      padding: 15px;
-      border: 1px solid #ddd;
-      text-align: center;
-    }
-  
-    .actionButtons {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-    
-
-    
-    .pagination button {
-      padding: 6px 12px;
-      border: 1px solid #ccc;
-      background-color: white;
-      cursor: pointer;
-    }
-    
-    .pagination button:hover {
-      background-color: #eee;
-    }
-    
-    .pagination .active {
-      background-color: #4CAF50;
-      color: white;
-      font-weight: bold;
-    }
-    
-    .pagination button:disabled {
-      background-color: #f0f0f0;
-      color: #aaa;
-      cursor: not-allowed;
-    }
-    
-    
-    .tableContainer {
-      overflow: scroll;
-    }
-  
-    .tableContainer table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-    
-    .tableContainer th,
-    .tableContainer td {
-      border: none;
-      padding: 10px;
-      text-align: center;
-      word-wrap: break-word;
-    }
-    
-    .tableContainer th {
-      background-color: #961C1E;
-      color: white;
-    }
-
-    tr {
-        transition: 0.3s ease;
-    }
-
-    tbody tr:hover {
-      background-color: #FFCC3D;
-      color: white;
-      transform: scale(1.02);
-      font-weight: bold;
+    padding: 1rem;
   }
-  
-    .modalOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
 
-    .viewDetailsModal {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow-y: auto;
-      position: relative;
-    }
+  .settings {
+    flex-direction: column;
+    gap: 1rem;
+  }
 
-    .modalHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #eee;
-    }
+  .filters input[type="date"],
+  .filters select {
+    width: 100%;
+  }
 
-    .modalHeader h2 {
-      margin: 0;
-      color: #333;
-    }
+  .importExport {
+    justify-content: space-between;
+  }
 
-    .closeButton {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #666;
-    }
-
-    .closeButton:hover {
-      color: #333;
-    }
-
-    .modalContent {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .detailRow {
-      display: flex;
-      gap: 10px;
-      padding: 8px 0;
-    }
-
-    .detailRow strong {
-      min-width: 120px;
-      color: #555;
-    }
-
-    .fullDetails {
-      white-space: pre-wrap;
-      color: #333;
-    }
-
-    .viewButton {
-      background-color: #4a90e2;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .viewButton:hover {
-      background-color: #357abd;
-    }
-
-    .exportButton {
-      background-color: #13CE66;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background-color 0.2s;
-      outline: none;
-    }
-
-    .exportButton:hover {
-      background-color: #0FB85C;
-    }
-  
-    
+  .viewDetailsModal {
+    width: 95%;
+    padding: 1rem;
+  }
+}

@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { RevenueCategory, ExpenseCategory } from '@prisma/client';
-import "../styles/pieChart.css";
+
 
 ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
@@ -58,14 +58,32 @@ const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
   };
 
   const options: ChartOptions<"pie"> = {
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: {
+      title: {
+        position: 'top',
+        display: true,
+        text: 'Revenue and Expense Breakdown',
+        font: {
+          size: 18,
+          weight: 'bold',
+        },
+        color: '#000',
+        padding: {
+          top: 10,
+          bottom: 20
+        },
+      },
       legend: {
         position: 'right',
         labels: {
           font: {
             size: 12
           },
-          color: '#000000'
+          color: '#000000',
+          boxWidth: 16,
+          padding: 2
         }
       },
       datalabels: {
@@ -89,14 +107,17 @@ const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
       },
     },
     layout: {
-      padding: 20
+      padding: {
+        left: 10,
+        right: 50,
+        bottom:20,
+        top: 20,
+      }
     }
-  };
+  }
 
   return (
-    <div className="pieChartContainer">
-      <Pie data={pieData} options={options} plugins={[ChartDataLabels]} />
-    </div>
+      <Pie data={pieData} options={options} plugins={[ChartDataLabels]}/>
   );
 };
 

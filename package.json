@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js"
@@ -31,7 +32,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/axios": "^0.9.36",
-    "@types/node": "^20.17.50",
+    "@types/node": "20.17.52",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

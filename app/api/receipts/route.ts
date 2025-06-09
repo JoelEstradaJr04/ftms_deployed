@@ -1,110 +1,261 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { logAudit } from '@/lib/auditLogger'
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { generateId } from '@/lib/idGenerator'
-import { ReceiptStatus } from '@prisma/client'
 
-export async function POST(req: Request) {
+interface ReceiptItem {
+  item_name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  ocr_confidence?: number;
+}
+
+interface OCRField {
+  field_name: string;
+  field_value: string;
+  confidence: number;
+  bounding_box?: string;
+}
+
+interface Keyword {
+  keyword: string;
+  confidence?: number;
+}
+
+const prisma = new PrismaClient()
+
+// GET /api/receipts
+// List all active receipts with pagination and filters
+export async function GET(req: NextRequest) {
   try {
-    const data = await req.json()
-    const {
-      supplier,
-      transaction_date,
-      vat_reg_tin,
-      terms,
-      status,
-      total_amount,
-      vat_amount,
-      total_amount_due,
-      created_by,
-      items // Array of items from the form
-    } = data
+    const searchParams = req.nextUrl.searchParams
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const category = searchParams.get('category') as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | undefined
+    const source = searchParams.get('source') as 'Manual_Entry' | 'OCR_Camera' | 'OCR_File' | undefined
+    const search = searchParams.get('search')
+    const sortBy = searchParams.get('sortBy') || 'transaction_date'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Create the receipt first
-    const receipt = await prisma.receipt.create({
-      data: {
-        receipt_id: await generateId('RCP'),
-        supplier,
-        transaction_date: new Date(transaction_date),
-        vat_reg_tin,
-        terms,
-        status: status as ReceiptStatus,
-        total_amount,
-        vat_amount,
-        total_amount_due,
-        created_by,
-        items: {
-          create: items.map((item: { name: string; unit: string; quantity: number; unitPrice: number }) => ({
-            receipt_item_id: generateId('RCI'),
-            item_name: item.name,
-            unit: item.unit,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.quantity * item.unitPrice,
-            created_by
-          }))
-        }
-      },
-      include: {
-        items: true
-      }
-    })
-
-    // For each item, create or update the master Item record and create ItemTransaction
-    for (const item of items) {
-      // Find or create Item in master list
-      const masterItem = await prisma.item.upsert({
-        where: { item_name: item.name },
-        create: {
-          item_id: await generateId('ITM'),
-          item_name: item.name,
-          unit: item.unit,
-          created_at: new Date()
+    // Build filter conditions
+    const where = {
+      is_deleted: false,
+      ...(startDate && endDate && {
+        transaction_date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
         },
-        update: {
-          updated_at: new Date()
-        }
-      })
-
-      // Create ItemTransaction
-      await prisma.itemTransaction.create({
-        data: {
-          transaction_id: await generateId('ITX'),
-          item_id: masterItem.item_id,
-          receipt_id: receipt.receipt_id,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          created_by,
-          transaction_date: new Date(transaction_date)
-        }
-      })
+      }),
+      ...(category && { category }),
+      ...(source && { source }),
+      ...(search && {
+        OR: [
+          { supplier: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { remarks: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            keywords: {
+              some: {
+                keyword: { contains: search, mode: Prisma.QueryMode.insensitive },
+              },
+            },
+          },
+        ],
+      }),
     }
 
-    await logAudit({
-      action: 'CREATE',
-      table_affected: 'Receipt',
-      record_id: receipt.receipt_id,
-      performed_by: created_by,
-      details: `Created receipt with ${items.length} items, total amount: ${total_amount}`
+    // Get total count for pagination
+    const total = await prisma.receipt.count({ where })
+
+    // Get receipts with relations
+    const receipts = await prisma.receipt.findMany({
+      where,
+      include: {
+        items: {
+          select: {
+            item_name: true,
+            quantity: true,
+            unit: true,
+            unit_price: true,
+            total_price: true,
+          },
+        },
+      },
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
     })
 
-    return NextResponse.json(receipt)
+    return NextResponse.json({
+      receipts,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        current: page,
+        limit,
+      },
+    })
   } catch (error) {
-    console.error('Failed to create receipt:', error)
+    console.error('Error fetching receipts:', error)
     return NextResponse.json(
-      { error: 'Failed to create receipt' },
+      { error: 'Failed to fetch receipts' },
       { status: 500 }
     )
   }
 }
 
-export async function GET() {
-  const receipts = await prisma.receipt.findMany({
-    where: { is_deleted: false },
-    include: {
-      items: true
-    },
-    orderBy: { created_at: 'desc' }
-  })
-  return NextResponse.json(receipts)
+// POST /api/receipts
+// Create a new receipt with items
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const {
+      supplier,
+      transaction_date,
+      vat_reg_tin,
+      terms,
+      payment_status,
+      total_amount,
+      vat_amount,
+      total_amount_due,
+      category,
+      remarks,
+      source,
+      ocr_confidence,
+      ocr_file_path,
+      items,
+      keywords,
+      ocr_fields,
+    } = body
+
+    const receipt_id = await generateId('RCP')
+
+    // Create receipt and related records in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create receipt
+      const receipt = await tx.receipt.create({
+        data: {
+          receipt_id,
+          supplier,
+          transaction_date: new Date(transaction_date),
+          vat_reg_tin,
+          terms,
+          payment_status,
+          record_status: 'Active',
+          total_amount,
+          vat_amount,
+          total_amount_due,
+          category,
+          remarks,
+          source: source || 'Manual_Entry',
+          ocr_confidence,
+          ocr_file_path,
+          created_by: 'ftms_user',
+        },
+      })
+
+      // Create receipt items
+      if (items && items.length > 0) {
+        await Promise.all(
+          items.map(async (item: ReceiptItem) => {
+            const receipt_item_id = await generateId('RCI')
+            await tx.receiptItem.create({
+              data: {
+                receipt_item_id,
+                receipt_id: receipt.receipt_id,
+                item_name: item.item_name,
+                unit: item.unit,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
+                ocr_confidence: item.ocr_confidence,
+                created_by: 'ftms_user',
+              },
+            })
+
+            // Create or update master item
+            await tx.item.upsert({
+              where: { item_name: item.item_name },
+              create: {
+                item_id: await generateId('ITM'),
+                item_name: item.item_name,
+                unit: item.unit,
+              },
+              update: {},
+            })
+          })
+        )
+      }
+
+      // Create OCR fields if present
+      if (ocr_fields && ocr_fields.length > 0) {
+        await Promise.all(
+          ocr_fields.map(async (field: OCRField) => {
+            await tx.receiptOCRField.create({
+              data: {
+                field_id: await generateId('RCI'),
+                receipt_id: receipt.receipt_id,
+                field_name: field.field_name,
+                extracted_value: field.field_value,
+                confidence_score: field.confidence,
+                original_image_coords: field.bounding_box ? JSON.parse(field.bounding_box) : null,
+                is_verified: false,
+              },
+            })
+          })
+        )
+      }
+
+      // Create keywords if present
+      if (keywords && keywords.length > 0) {
+        await Promise.all(
+          keywords.map(async (keyword: Keyword) => {
+            await tx.receiptKeyword.create({
+              data: {
+                keyword_id: await generateId('RCI'),
+                receipt_id: receipt.receipt_id,
+                keyword: keyword.keyword,
+                confidence: keyword.confidence,
+                source: 'manual',
+              },
+            })
+          })
+        )
+      }
+
+      // Create audit log
+      await tx.auditLog.create({
+        data: {
+          log_id: await generateId('LOG'),
+          action: 'ADD',
+          table_affected: 'Receipt',
+          record_id: receipt.receipt_id,
+          performed_by: 'ftms_user',
+          details: {
+            new_values: {
+              ...receipt,
+              storage_size_bytes: receipt.storage_size_bytes?.toString() || null,
+              total_amount: receipt.total_amount.toString(),
+              total_amount_due: receipt.total_amount_due.toString(),
+              vat_amount: receipt.vat_amount?.toString() || null,
+            }
+          },
+        },
+      })
+
+      return receipt
+    })
+
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('Error creating receipt:', error)
+    return NextResponse.json(
+      { error: 'Failed to create receipt' },
+      { status: 500 }
+    )
+  }
 } 

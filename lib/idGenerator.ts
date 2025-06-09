@@ -11,7 +11,10 @@ const TABLE_PREFIXES = {
   ITX: 'ItemTransaction',
   RCP: 'Receipt',
   RCI: 'ReceiptItem',
-  REV: 'RevenueRecord'
+  REV: 'RevenueRecord',
+  RAL: 'ReceiptAuditLog',
+  REX: 'ReceiptExport',
+  RSC: 'ReceiptStorageConfig'
 } as const
 
 type TablePrefix = keyof typeof TABLE_PREFIXES

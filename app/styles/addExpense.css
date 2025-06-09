@@ -1,165 +1,188 @@
+/* ============================================================
+   addExpense.css – Expense Modal (uses tokens from global.css)
+   ============================================================ */
+
+/* ---------- Overlay ---------- */
 .modalOverlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1050  !important;
-  }
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1050 !important;
+  overflow: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.modalOverlay::-webkit-scrollbar {
+  display: none !important;
+}
 
+/* ---------- Modal Box ---------- */
 .addExpenseModal {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: scroll;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 80%;
-    max-width: 1000px;
-    max-height: 80vh;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: relative;
-    font-family: 'open-sans', sans-serif;
-    color: black;
-    overflow-y: scroll; /* still scrollable */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  }
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  background: var(--foreground-color) !important;
+  padding: var(--modal-padding) !important;
+  border-radius: var(--modal-border-radius) !important;
+  width: 80% !important;
+  max-width: 1000px !important;
+  max-height: 80vh !important;
+  overflow: hidden !important;
+  box-shadow: var(--box-shadow) !important;
+  position: relative !important;
+  font-family: var(--font-sans) !important;
+  color: var(--primary-text-color) !important;
+}
 
-  .modalOverlay::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Edge */
-  }
+.addExpenseModal form {
+  width: 100% !important;
+  overflow-y: auto !important;
+  max-height: calc(80vh - 100px) !important;
+  scrollbar-width: thin !important;
+}
+.addExpenseModal form::-webkit-scrollbar {
+  width: 6px !important;
+}
+.addExpenseModal form::-webkit-scrollbar-thumb {
+  background: var(--border-color) !important;
+  border-radius: 6px !important;
+}
 
-  .modalHeader {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-bottom: 10px;
-    margin-bottom: 2rem;
-  }
+/* ---------- Header ---------- */
+.modalHeader {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: var(--modal-header-margin-bottom) !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
 
-  .timeDate {
-    display: flex;
-    flex-direction: row;
-    gap: 1rem;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
+.modalHeader h1 {
+  font-size: var(--title-font-size) !important;
+  font-weight: var(--title-font-weight) !important;
+  color: var(--primary-text-color) !important;
+  margin: 0 !important;
+}
 
-  .currTime, .currDate {
-    font-size: 0.7rem;
-    font-weight: lighter;
-    color: rgb(44, 43, 43);
-    font-style: italic;
-    align-self: start;
-  }
+/* Date / Time stamp */
+.timeDate {
+  display: flex !important;
+  gap: 1rem !important;
+  font-size: var(--modal-timedate-font-size) !important;
+  font-style: italic !important;
+  color: var(--secondary-text-color) !important;
+  margin-top: 10px !important;
+}
 
-  form {
-    width: 100%;
-  }
+.currTime,
+.currDate {
+  margin: 0 !important;
+  align-self: flex-end !important;
+}
 
-  .formFields {
-    display: grid;
-    gap: 1rem;
-    width: 100%;
-    margin: 0 auto;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    margin-bottom: 1rem;
-  }
+/* ---------- Content ---------- */
+.modalContent {
+  width: var(--modal-content-width) !important;
+  max-width: 100% !important;
+  height: var(--modal-content-height) !important;
+  background-color: var(--modal-content-background-color) !important;
+  padding: var(--modal-content-padding) !important;
+  border-radius: var(--modal-content-border-radius) !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+}
 
-    .formField label {
-      width: 100%;
-      padding: 8px 0px;
-    }
+/* ---------- Field Grid ---------- */
+.formRow{
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  align-content: center;
+  gap: 1rem !important;
+}
 
-    .formField input, select {
-        width: 100%;
-        padding: 8px 12px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-    }
+.formInputs {
+  display: flex;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  gap: var(--modal-content-row-gap) !important;
+}
 
-    .formField {
-      display:flex;
-      flex-direction: column;
-      gap: 0rem;
-      background-color: none;
-    }
+.formField {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1;
+  margin: none;
+  width: 50%;
+  max-width: 50%;
+  background-color: none;
+}
 
-    .modalButtons {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        margin-top: 20px;
-    }
+.formField label {
+  font-size: var(--input-label-font-size) !important;
+  font-weight: var(--input-label-font-weight) !important;
+  margin-bottom: 0.25rem !important;
+}
 
-    .row {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      width: 100%;
-      background-color: none;
-    }
+.formField input,
+.formField select {
+  width: 100% !important;
+  padding: 0.5rem 0.75rem !important;
+  border: none!important;
+  outline: none !important;
+  border-radius: 4px !important;
+  font-family: var(--font-sans) !important;
+  background-color: var(--modal-input-select-background-color);
+  box-shadow: var(--box-shadow) !important;
+}
 
-    .buttonRow {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-content: center;
-    }
+/* ---------- Button Area ---------- */
+.modalButtons {
+  width: 100% !important;
+  margin-top: 1.25rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: var(--modal-button-gap) !important;
+}
 
-    .buttonContainer {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        gap: 1rem;
-        width: 50%;
-        flex-wrap: wrap;
-        margin-top: 2rem;
-        background-color: none;
-        }
+.modalButtons button {
+  width: var(--modal-button-width) !important;
+  height: var(--modal-button-height) !important;
+  font-size: var(--modal-button-font-size) !important;
+  border-radius: var(--modal-button-border-radius) !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+  color: var(--button-font-color) !important;
+  box-shadow: var(--box-shadow) !important;
+  transition: transform 0.15s ease, background 0.15s ease !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
 
-    .buttonContainer button:hover {
-      transform: scale(1.05);
-    }
+.addButton {
+  background: var(--primary-color) !important;
+}
+.addButton:hover {
+  background: var(--primary-hover-color) !important;
+}
 
-
-    .cancelButton {
-        flex: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 1rem;
-        width: 50%;
-        background-color: #961C1E;
-        color: white;
-        border: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-
-    .addButton {
-        flex: 1;
-        width:unset;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 50%;
-        background-color: #13CE66;
-        color: white;
-        border: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-
-
-
-
-  
+/* ---------- Utility Rows ---------- */
+.row,
+.buttonRow {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}

@@ -1,5 +1,5 @@
 /* ============================================================
-   addRevenue.css – Revenue Modal (uses tokens from global.css)
+   addBalance.css – Balance Modal (uses tokens from global.css)
    ============================================================ */
 
 /* ---------- Overlay ---------- */
@@ -22,7 +22,7 @@
 }
 
 /* ---------- Modal Box ---------- */
-.addRevenueModal {
+.addBalanceModal {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -40,16 +40,16 @@
   color: var(--primary-text-color) !important;
 }
 
-.addRevenueModal form {
+.addBalanceModal form {
   width: 100% !important;
   overflow-y: auto !important;
   max-height: calc(80vh - 100px) !important;
   scrollbar-width: thin !important;
 }
-.addRevenueModal form::-webkit-scrollbar {
+.addBalanceModal form::-webkit-scrollbar {
   width: 6px !important;
 }
-.addRevenueModal form::-webkit-scrollbar-thumb {
+.addBalanceModal form::-webkit-scrollbar-thumb {
   background: var(--border-color) !important;
   border-radius: 6px !important;
 }
@@ -101,7 +101,7 @@
 }
 
 /* ---------- Field Grid ---------- */
-.formRow {
+.formRow{
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -138,36 +138,12 @@
 .formField select {
   width: 100% !important;
   padding: 0.5rem 0.75rem !important;
-  border: none !important;
+  border: none!important;
   outline: none !important;
   border-radius: 4px !important;
   font-family: var(--font-sans) !important;
   background-color: var(--modal-input-select-background-color);
   box-shadow: var(--box-shadow) !important;
-}
-
-/* Legacy class names for backward compatibility */
-.formSelect, .formInput {
-  width: 100% !important;
-  padding: 0.5rem 0.75rem !important;
-  border: none !important;
-  outline: none !important;
-  border-radius: 4px !important;
-  font-family: var(--font-sans) !important;
-  background-color: var(--modal-input-select-background-color);
-  box-shadow: var(--box-shadow) !important;
-}
-
-/* No assignments message */
-.noAssignments {
-  font-size: 12px;
-  color: var(--secondary-text-color);
-  font-style: italic;
-  margin-top: 4px;
-  padding: 8px;
-  background-color: rgba(255, 0, 0, 0.1);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 0, 0, 0.2);
 }
 
 /* ---------- Button Area ---------- */
@@ -200,31 +176,6 @@
 }
 .addButton:hover {
   background: var(--primary-hover-color) !important;
-}
-
-.cancelButton {
-  background-color: var(--error-color);
-}
-
-.cancelButton:hover {
-  background-color: var(--error-hover-color);
-}
-
-/* Close button */
-.closeButton {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--secondary-text-color);
-  z-index: 1;
-}
-
-.closeButton:hover {
-  color: var(--primary-text-color);
 }
 
 /* ---------- Utility Rows ---------- */

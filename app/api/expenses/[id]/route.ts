@@ -1,12 +1,13 @@
-// app/api/expenses/[id]/route.ts
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { NextRequest } from 'next/server';
+import { logAudit } from '@/lib/auditLogger';
 
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-//import type { NextRequest } from 'next/server'
-import { logAudit } from '@/lib/auditLogger'
-
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
 
   const expense = await prisma.expenseRecord.findUnique({
     where: { expense_id: id },
@@ -27,12 +28,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 export async function PUT(
-  req: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const data = await req.json();
+    const data = await request.json();
     const { total_amount, expense_date, other_source, other_category } = data;
 
     // Get the original record for comparison
@@ -114,7 +115,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
