@@ -1,6 +1,8 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/api/receipts/route": "app/api/receipts/route.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/receipts/[id]/route": "app/api/receipts/[id]/route.js",
+  "/(pages)/expense/page": "app/(pages)/expense/page.js",
+  "/(pages)/dashboard/page": "app/(pages)/dashboard/page.js",
+  "/(pages)/revenue/page": "app/(pages)/revenue/page.js",
   "/(pages)/receipt/page": "app/(pages)/receipt/page.js"
 }

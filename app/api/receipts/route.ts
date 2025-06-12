@@ -11,17 +11,17 @@ interface ReceiptItem {
   ocr_confidence?: number;
 }
 
-interface OCRField {
-  field_name: string;
-  field_value: string;
-  confidence: number;
-  bounding_box?: string;
-}
+// interface OCRField {
+//   field_name: string;
+//   field_value: string;
+//   confidence: number;
+//   bounding_box?: string;
+// }
 
-interface Keyword {
-  keyword: string;
-  confidence?: number;
-}
+// interface Keyword {
+//   keyword: string;
+//   confidence?: number;
+// }
 
 const prisma = new PrismaClient()
 
@@ -127,16 +127,16 @@ export async function POST(req: NextRequest) {
       other_category, // Add this line
       remarks,
       source,
-      ocr_confidence,
-      ocr_file_path,
+      //ocr_confidence,
+      //ocr_file_path,
       items,
-      keywords,
-      ocr_fields,
+      //keywords,
+      //ocr_fields,
     } = body
 
     const receipt_id = await generateId('RCP')
 
-    // Create receipt and related records in a transaction
+    // Replace the existing transaction with this new one
     const result = await prisma.$transaction(async (tx) => {
       // Create receipt
       const receipt = await tx.receipt.create({
@@ -146,27 +146,37 @@ export async function POST(req: NextRequest) {
           transaction_date: new Date(transaction_date),
           vat_reg_tin,
           terms,
-          date_paid: date_paid ? new Date(date_paid) : null,  // Add this line
+          date_paid: date_paid ? new Date(date_paid) : null,
           payment_status,
           record_status: 'Active',
           total_amount,
           vat_amount,
           total_amount_due,
           category,
-          other_category: category === 'Other' ? other_category : undefined, // Add this line
+          other_category: category === 'Other' ? other_category : null,
           remarks,
           source: source || 'Manual_Entry',
-          ocr_confidence,
-          ocr_file_path,
-          created_by: 'ftms_user',
+          created_by: 'ftms_user'
         },
       })
 
-      // Create receipt items
+      // Handle items with proper inventory tracking
       if (items && items.length > 0) {
         await Promise.all(
           items.map(async (item: ReceiptItem) => {
-            const receipt_item_id = await generateId('RCI')
+            // 1. First, ensure the master item exists
+            const masterItem = await tx.item.upsert({
+              where: { item_name: item.item_name },
+              create: {
+                item_id: await generateId('ITM'),
+                item_name: item.item_name,
+                unit: item.unit,
+              },
+              update: {} // Don't update existing items
+            });
+
+            // 2. Create receipt item record with RCI prefix
+            const receipt_item_id = await generateId('RCI');
             await tx.receiptItem.create({
               data: {
                 receipt_item_id,
@@ -176,62 +186,27 @@ export async function POST(req: NextRequest) {
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 total_price: item.total_price,
-                ocr_confidence: item.ocr_confidence,
                 created_by: 'ftms_user',
               },
-            })
+            });
 
-            // Create or update master item
-            await tx.item.upsert({
-              where: { item_name: item.item_name },
-              create: {
-                item_id: await generateId('ITM'),
-                item_name: item.item_name,
-                unit: item.unit,
-              },
-              update: {},
-            })
-          })
-        )
-      }
-
-      // Create OCR fields if present
-      if (ocr_fields && ocr_fields.length > 0) {
-        await Promise.all(
-          ocr_fields.map(async (field: OCRField) => {
-            await tx.receiptOCRField.create({
+            // 3. Create item transaction record with ITX prefix
+            await tx.itemTransaction.create({
               data: {
-                field_id: await generateId('RCI'),
+                transaction_id: await generateId('ITX'), // Changed from 'TRX' to 'ITX'
+                item_id: masterItem.item_id,
                 receipt_id: receipt.receipt_id,
-                field_name: field.field_name,
-                extracted_value: field.field_value,
-                confidence_score: field.confidence,
-                original_image_coords: field.bounding_box ? JSON.parse(field.bounding_box) : null,
-                is_verified: false,
-              },
-            })
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                transaction_date: new Date(transaction_date),
+                created_by: 'ftms_user'
+              }
+            });
           })
         )
       }
 
-      // Create keywords if present
-      if (keywords && keywords.length > 0) {
-        await Promise.all(
-          keywords.map(async (keyword: Keyword) => {
-            await tx.receiptKeyword.create({
-              data: {
-                keyword_id: await generateId('RCI'),
-                receipt_id: receipt.receipt_id,
-                keyword: keyword.keyword,
-                confidence: keyword.confidence,
-                source: 'manual',
-              },
-            })
-          })
-        )
-      }
-
-      // Create audit log
+      // Create audit log (keep existing audit log creation)
       await tx.auditLog.create({
         data: {
           log_id: await generateId('LOG'),
@@ -262,4 +237,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

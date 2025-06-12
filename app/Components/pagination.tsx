@@ -37,10 +37,16 @@ const PaginationComponent: React.FC<PaginationProps> = ({
 
   const handleJumpToPage = () => {
     const page = Number(jumpToPage);
-    if (page >= 1 && page <= totalPages) {
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
       onPageChange(page);
+      setJumpToPage('');
     }
-    setJumpToPage(''); // Clear the input after jumping
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleJumpToPage();
+    }
   };
 
   return (
@@ -124,13 +130,16 @@ const PaginationComponent: React.FC<PaginationProps> = ({
     <div className="pagination-goto-container">
         <label className="pagination-go-to">
             Go to:
-            <input
-            type="number"
-            value={jumpToPage}
-            onChange={(e) => setJumpToPage(e.target.value)}
-            placeholder="Page #"
-            className="pagination-input"
-            />
+        <input
+          type="number"
+          value={jumpToPage}
+          onChange={(e) => setJumpToPage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          min="1"
+          max={totalPages}
+          placeholder="Page #"
+          className="pagination-input"
+        />
         </label>
         <button className="pagination-go-button" onClick={handleJumpToPage}> Go </button>
     </div>

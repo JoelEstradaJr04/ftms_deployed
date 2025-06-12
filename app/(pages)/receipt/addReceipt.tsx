@@ -14,7 +14,7 @@ type ReceiptItem = {
   total_price: number;
 };
 
-type AddReceiptProps = {
+type AddReceiptFormData = {
   onClose: () => void;
   onAddReceipt: (formData: {
     supplier: string;
@@ -27,6 +27,7 @@ type AddReceiptProps = {
     vat_amount?: number;
     total_amount_due: number;
     category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+    other_category?: string;
     remarks?: string;
     source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
     items: ReceiptItem[];
@@ -35,7 +36,7 @@ type AddReceiptProps = {
   currentUser: string;
 };
 
-const AddReceipt: React.FC<AddReceiptProps> = ({ 
+const AddReceipt: React.FC<AddReceiptFormData> = ({ 
   onClose, 
   onAddReceipt,
   currentUser 
@@ -49,7 +50,7 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
     supplier: '',
     transaction_date: new Date().toISOString().split('T')[0],
     vat_reg_tin: '',
-    terms: '',
+    terms: 'Cash' as const,
     date_paid: '',
     payment_status: 'Pending' as 'Paid' | 'Pending' | 'Cancelled' | 'Dued',
     total_amount: 0,
@@ -151,6 +152,7 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
     }
   };
 
+  // Inside the handleSubmit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -161,6 +163,11 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
       return;
     }
 
+    if (formData.category === 'Other' && !otherCategory) {
+      Swal.fire('Error', 'Please specify the category name', 'error');
+      return;
+    }
+    
     // Filter out empty items
     const validItems = items.filter(item => 
       item.item_name && item.unit && item.quantity > 0 && item.unit_price > 0
@@ -186,6 +193,7 @@ const AddReceipt: React.FC<AddReceiptProps> = ({
       try {
         await onAddReceipt({
           ...formData,
+          other_category: formData.category === 'Other' ? otherCategory : undefined,
           items: validItems
         });
 

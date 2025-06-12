@@ -81,7 +81,6 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) 
           </div>
 
           <div className="mainDetails">
-            {/* Remove the Receipt ID div */}
             <div className="detailRow">
               <span className="label">Supplier:</span>
               <span className="value">{record.supplier}</span>
