@@ -2,3 +2,4 @@ node_modules
 .qodo
 .env
 .next
+backup_ftms\ocr_service\venv
