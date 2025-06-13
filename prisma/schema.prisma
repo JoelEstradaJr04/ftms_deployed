@@ -14,6 +14,7 @@ enum ExpenseCategory {
   Equipment
   Supplies
   Other
+  Multiple_Categories
 }
 
 enum RevenueCategory {
@@ -66,6 +67,25 @@ enum Terms {
   Net_90
   Cash
 }
+
+enum ItemUnit {
+  piece
+  box
+  pack
+  liter
+  gallon
+  milliliter
+  kilogram
+  gram
+  meter
+  foot
+  roll
+  set
+  pair
+  Other
+}
+
+
 
 model Sequence {
   name  String @id
@@ -182,9 +202,12 @@ model ReceiptItem {
   receipt           Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
   item_name         String
   unit              String
+  other_unit        String?
   quantity          Decimal   @db.Decimal(10, 2)
   unit_price        Decimal   @db.Decimal(20, 4)
   total_price       Decimal   @db.Decimal(20, 4)
+  category          ExpenseCategory
+  other_category    String?
   created_at        DateTime  @default(now())
   updated_at        DateTime?
   created_by        String

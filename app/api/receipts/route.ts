@@ -9,6 +9,9 @@ interface ReceiptItem {
   unit_price: number;
   total_price: number;
   ocr_confidence?: number;
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+  other_category?: string;
+  other_unit?: string;
 }
 
 // interface OCRField {
@@ -73,15 +76,7 @@ export async function GET(req: NextRequest) {
     const receipts = await prisma.receipt.findMany({
       where,
       include: {
-        items: {
-          select: {
-            item_name: true,
-            quantity: true,
-            unit: true,
-            unit_price: true,
-            total_price: true,
-          },
-        },
+        items: true
       },
       orderBy: {
         [sortBy]: sortOrder,
@@ -123,22 +118,16 @@ export async function POST(req: NextRequest) {
       total_amount,
       vat_amount,
       total_amount_due,
-      category,
-      other_category, // Add this line
+      category: manualCategory,
+      other_category,
       remarks,
       source,
-      //ocr_confidence,
-      //ocr_file_path,
       items,
-      //keywords,
-      //ocr_fields,
     } = body
 
     const receipt_id = await generateId('RCP')
 
-    // Replace the existing transaction with this new one
     const result = await prisma.$transaction(async (tx) => {
-      // Create receipt
       const receipt = await tx.receipt.create({
         data: {
           receipt_id,
@@ -152,19 +141,17 @@ export async function POST(req: NextRequest) {
           total_amount,
           vat_amount,
           total_amount_due,
-          category,
-          other_category: category === 'Other' ? other_category : null,
+          category: manualCategory || 'Other',
+          other_category: manualCategory === 'Other' ? other_category : null,
           remarks,
           source: source || 'Manual_Entry',
           created_by: 'ftms_user'
         },
       })
 
-      // Handle items with proper inventory tracking
       if (items && items.length > 0) {
         await Promise.all(
           items.map(async (item: ReceiptItem) => {
-            // 1. First, ensure the master item exists
             const masterItem = await tx.item.upsert({
               where: { item_name: item.item_name },
               create: {
@@ -172,10 +159,9 @@ export async function POST(req: NextRequest) {
                 item_name: item.item_name,
                 unit: item.unit,
               },
-              update: {} // Don't update existing items
+              update: {}
             });
 
-            // 2. Create receipt item record with RCI prefix
             const receipt_item_id = await generateId('RCI');
             await tx.receiptItem.create({
               data: {
@@ -186,14 +172,18 @@ export async function POST(req: NextRequest) {
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 total_price: item.total_price,
+                category: item.category,
                 created_by: 'ftms_user',
-              },
+                other_unit: item.unit === 'Other' ? item.other_unit : null,
+                other_category: item.category === 'Other' ? item.other_category : null,
+                created_at: new Date(),
+                is_deleted: false
+              } as unknown as Prisma.ReceiptItemUncheckedCreateInput
             });
 
-            // 3. Create item transaction record with ITX prefix
             await tx.itemTransaction.create({
               data: {
-                transaction_id: await generateId('ITX'), // Changed from 'TRX' to 'ITX'
+                transaction_id: await generateId('ITX'),
                 item_id: masterItem.item_id,
                 receipt_id: receipt.receipt_id,
                 quantity: item.quantity,

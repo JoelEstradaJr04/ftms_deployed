@@ -17,6 +17,9 @@ interface ReceiptItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  category: string;
+  other_unit?: string;
+  other_category?: string;
 }
 
 interface DbReceiptItem {
@@ -32,8 +35,8 @@ interface DbReceiptItem {
   updated_by: string | null;
   is_deleted: boolean;
   ocr_confidence: number | null;
+  category: string;
 }
-
 
 type AuditValues = {
   [key: string]: Prisma.JsonValue;
@@ -85,13 +88,28 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       total_amount,
       vat_amount,
       total_amount_due,
-      category,
+      category: manualCategory,
       other_category,
       remarks,
       items
     } = body;
 
     const { id: receipt_id } = await params;
+
+    // Compute summary category from items if not manually provided
+    let summaryCategory = manualCategory;
+    if (!manualCategory && items && items.length > 0) {
+      // Tally total by category
+      const categoryTotals = items.reduce((acc: Record<string, number>, item: ReceiptItem) => {
+        if (item.category) {
+          acc[item.category] = (acc[item.category] || 0) + Number(item.total_price || 0);
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Find category with highest total
+      summaryCategory = (Object.entries(categoryTotals) as [string, number][]).sort((a, b) => b[1] - a[1])[0][0];
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       // Get existing receipt for audit
@@ -117,8 +135,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           total_amount,
           vat_amount,
           total_amount_due,
-          category,
-          other_category: category === 'Other' ? other_category : null,
+          category: summaryCategory,
+          other_category: summaryCategory === 'Other' ? other_category : null,
           remarks,
           updated_at: new Date(),
           updated_by: 'ftms_user'
@@ -159,9 +177,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 total_price: item.total_price,
+                category: item.category as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other'  | 'Multiple_Categories',
                 created_by: 'ftms_user',
-                created_at: new Date()
-              },
+                created_at: new Date(),
+                is_deleted: false,
+                other_unit: item.unit === 'Other' ? item.other_unit : null,
+                other_category: item.category === 'Other' ? item.other_category : null
+              } as Prisma.ReceiptItemUncheckedCreateInput,
             });
 
             // Create item transaction record

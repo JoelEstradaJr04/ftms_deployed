@@ -251,4 +251,121 @@
 
 .ocrConfidence.low {
   color: #FF4949;
+}
+
+.categoryField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readOnlyCategory {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryTooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #666;
+  cursor: help;
+}
+
+.categoryTooltip i {
+  font-size: 1.2em;
+}
+
+.tooltipText {
+  visibility: hidden;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  white-space: nowrap;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  width: max-content;
+  max-width: 300px;
+}
+
+.categoryTooltip:hover .tooltipText {
+  visibility: visible;
+  opacity: 1;
+}
+
+.categoryNote {
+  display: block;
+  margin-top: 4px;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.overrideBtn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.overrideBtn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.customInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.customInputWrapper input {
+  flex: 1;
+}
+
+.clearCustomBtn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.clearCustomBtn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* Add styles for the category field when it's showing multiple categories */
+.readOnlyCategory input[value="Multiple Categories"] {
+  color: #666;
+  font-style: italic;
+}
+
+/* Add styles for the category field when it's showing a custom category */
+.readOnlyCategory input[value]:not([value="Multiple Categories"]) {
+  color: #333;
+  font-weight: 500;
+}
+
+/* Ensure consistent spacing in the table */
+.itemsSection table td {
+  padding: 8px;
+  vertical-align: middle;
 } 

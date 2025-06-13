@@ -32,7 +32,7 @@ interface Receipt {
   deleted_by?: string;
   deleted_at?: string;
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
-  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
   other_category?: string;
   remarks?: string;
   ocr_confidence?: number;
@@ -47,6 +47,7 @@ interface ReceiptItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  category?: string;
 }
 
 interface ReceiptResponse {
@@ -78,7 +79,7 @@ interface AddReceiptFormData {
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
-  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
   remarks?: string;
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
   items: NewReceiptItem[];
@@ -145,17 +146,23 @@ const ReceiptPage = () => {
   }, [search, categoryFilter, statusFilter, dateFrom, dateTo, pageSize]);
 
   // Filter and pagination logic
-  const filteredData = data.filter((item: Receipt) => {
-    const matchesSearch = (
-      item.supplier.toLowerCase().includes(search.toLowerCase()) ||
-      item.receipt_id.toLowerCase().includes(search.toLowerCase())
-    );
-    const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
-    const matchesStatus = statusFilter ? item.payment_status === statusFilter : true;
-    const matchesDate = (!dateFrom || item.transaction_date >= dateFrom) && 
-                      (!dateTo || item.transaction_date <= dateTo);
-    return matchesSearch && matchesCategory && matchesStatus && matchesDate;
-  });
+  const filteredData = data
+    .filter((item: Receipt) => {
+      const matchesSearch = (
+        item.supplier.toLowerCase().includes(search.toLowerCase()) ||
+        item.receipt_id.toLowerCase().includes(search.toLowerCase())
+      );
+      const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
+      const matchesStatus = statusFilter ? item.payment_status === statusFilter : true;
+      const matchesDate = (!dateFrom || item.transaction_date >= dateFrom) && 
+                        (!dateTo || item.transaction_date <= dateTo);
+      return matchesSearch && matchesCategory && matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.updated_at || a.created_at);
+      const dateB = new Date(b.updated_at || b.created_at);
+      return dateB.getTime() - dateA.getTime(); // Sort by latest first
+    });
 
   const indexOfLastRecord = currentPage * pageSize;
   const indexOfFirstRecord = indexOfLastRecord - pageSize;
@@ -374,6 +381,22 @@ const ReceiptPage = () => {
     return `statusBadge ${status.toLowerCase()}`;
   };
 
+  // Helper to get display category for a receipt
+  const getDisplayCategory = (receipt: Receipt) => {
+    // If category is 'Other', display the other_category value
+    if (receipt.category === 'Other' && receipt.other_category) {
+      return receipt.other_category;
+    }
+    
+    // For Multiple_Categories, display as "Multiple Categories"
+    if (receipt.category === 'Multiple_Categories') {
+      return 'Multiple Categories';
+    }
+    
+    // For all other categories, replace all underscores with spaces
+    return receipt.category.replace(/_/g, ' ');
+  };
+
   return (
     <div className="card receiptPage">
       <div className="elements">
@@ -420,6 +443,7 @@ const ReceiptPage = () => {
               <option value="Equipment">Equipment</option>
               <option value="Supplies">Supplies</option>
               <option value="Other">Other</option>
+              <option value="Multiple_Categories">Multiple Categories</option>
             </select>
 
             <select
@@ -462,11 +486,7 @@ const ReceiptPage = () => {
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>{formatDate(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
-                    <td>
-                      {item.category === 'Other' 
-                        ? (item.other_category || 'Other') 
-                        : item.category.replace('_', ' ')}
-                    </td>
+                    <td>{getDisplayCategory(item)}</td>
                     <td>{item.terms?.replace('_', ' ') || 'Cash'}</td>
                     <td>₱{Number(item.total_amount_due).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
@@ -548,7 +568,7 @@ const ReceiptPage = () => {
                       ...item, 
                       ...updatedRecord, 
                       payment_status: updatedRecord.payment_status as 'Paid' | 'Pending' | 'Cancelled' | 'Dued',
-                      category: updatedRecord.category as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other'
+                      category: updatedRecord.category as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories'
                     } 
                     : item
                 ));

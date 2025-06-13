@@ -11,6 +11,9 @@ type ReceiptItem = {
   unit_price: number;
   total_price: number;
   ocr_confidence?: number;
+  category?: string;
+  other_category?: string;
+  other_unit?: string;
 };
 
 type EditReceiptModalProps = {
@@ -50,6 +53,16 @@ type EditReceiptModalProps = {
   }) => void;
 };
 
+const EXPENSE_CATEGORIES = [
+  'Fuel',
+  'Vehicle_Parts',
+  'Tools',
+  'Equipment',
+  'Supplies',
+  'Other',
+  'Multiple_Categories',
+];
+
 const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   record,
   onClose,
@@ -87,6 +100,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   });
   const [isOtherCategory, setIsOtherCategory] = useState(record.category === 'Other');
   const [otherCategory, setOtherCategory] = useState(record.other_category || '');
+  const [categoryOverride, setCategoryOverride] = useState(false);
 
   // Add useEffect to update state when record changes
   useEffect(() => {
@@ -111,6 +125,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       })));
       setIsOtherCategory(record.category === 'Other');
       setOtherCategory(record.other_category || '');
+      setCategoryOverride(false);
     }
   }, [record]);
 
@@ -155,9 +170,70 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     }
   };
 
+  const computeSummaryCategory = (items: ReceiptItem[]): string => {
+    if (items.length === 0) return 'Fuel';
+    
+    // Get unique categories and their totals
+    const categoryTotals: Record<string, number> = {};
+    
+    items.forEach(item => {
+      // Resolve the actual category value
+      const resolvedCategory = item.category === 'Other' && item.other_category 
+        ? item.other_category 
+        : item.category;
+      
+      if (resolvedCategory) {
+        categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + Number(item.total_price);
+      }
+    });
+
+    // Get unique resolved categories
+    const uniqueCategories = Object.keys(categoryTotals);
+    
+    if (uniqueCategories.length === 0) return 'Fuel';
+    if (uniqueCategories.length === 1) {
+      const singleCategory = uniqueCategories[0];
+      // If the single category is a standard category, return it
+      if (EXPENSE_CATEGORIES.includes(singleCategory)) {
+        return singleCategory;
+      }
+      // If it's a custom category, return it directly
+      return singleCategory;
+    }
+    
+    // Multiple different categories
+    return 'Multiple_Categories';
+  };
+
+  const isCategoryEditable = (items: ReceiptItem[]) => {
+    if (categoryOverride) return true;
+    if (items.length === 0) return true;
+    return false;
+  };
+
+  const getDisplayCategory = (category: string, otherCategory?: string) => {
+    if (category === 'Other' && otherCategory) {
+      return otherCategory;
+    }
+    if (category === 'Multiple_Categories') {
+      return 'Multiple Categories';
+    }
+    return category.replace('_', ' ');
+  };
+
+  useEffect(() => {
+    if (!categoryOverride) {
+      const summaryCategory = computeSummaryCategory(items);
+      setCategory(summaryCategory);
+      if (summaryCategory === 'Other') {
+        setOtherCategory(otherCategory || '');
+      }
+    }
+  }, [items, categoryOverride, otherCategory]);
+
   const handleItemChange = (
     index: number, 
-    field: keyof Omit<ReceiptItem, 'receipt_item_id' | 'total_price' | 'ocr_confidence'>, 
+    field: keyof Omit<ReceiptItem, 'receipt_item_id' | 'total_price' | 'ocr_confidence'> | 'category', 
     value: string | number
   ) => {
     setItems(prevItems => {
@@ -166,23 +242,48 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       if (field === 'quantity' || field === 'unit_price') {
         let numValue: number;
         if (typeof value === 'string') {
-          // Remove leading zeros from string
           const cleaned = value.replace(/^0+(?!\.|$)/, '');
           numValue = Number(cleaned) || 0;
         } else {
           numValue = value;
         }
         item[field] = numValue;
-        // Calculate total_price as number
         item.total_price = Number(item.quantity || 0) * Number(item.unit_price || 0);
         updatedItems[index] = item;
-        // Update total amount as number
         const newTotalAmount = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.total_price || 0), 0);
         setTotalAmount(newTotalAmount);
         setTotalAmountDue(Number(newTotalAmount) + Number(vatAmount || 0));
-      } else {
-        item[field] = value as string;
+      } else if (field === 'category') {
+        if (value === 'Other') {
+          item.category = 'Other';
+          item.other_category = '';
+        } else {
+          item.category = value as string;
+          item.other_category = undefined;
+        }
         updatedItems[index] = item;
+      } else if (field === 'other_category') {
+        item.other_category = value as string;
+        updatedItems[index] = item;
+      } else if (field === 'unit') {
+        if (value === 'Other') {
+          item.unit = 'Other';
+          item.other_unit = '';
+        } else {
+          item.unit = value as string;
+          item.other_unit = undefined;
+        }
+        updatedItems[index] = item;
+      } else if (field === 'other_unit') {
+        item.other_unit = value as string;
+        updatedItems[index] = item;
+      } else {
+        (item[field as keyof ReceiptItem] as string) = value.toString();
+        updatedItems[index] = item;
+      }
+      // Only auto-set summary category if not overridden
+      if (!categoryOverride) {
+        setCategory(computeSummaryCategory(updatedItems));
       }
       return updatedItems;
     });
@@ -248,6 +349,8 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               type="date"
               value={datePaid}
               onChange={(e) => setDatePaid(e.target.value)}
+              disabled={paymentStatus === 'Pending' || paymentStatus === 'Cancelled'}
+              className="formInput"
             />
           </div>
         </div>
@@ -281,46 +384,80 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         <div className="formRow">
           <div className="formGroup">
             <label>Category</label>
-            {!isOtherCategory ? (
-              <select
-                value={category}
-                onChange={(e) => {
-                  if (e.target.value === 'Other') {
-                    setIsOtherCategory(true);
-                  }
-                  setCategory(e.target.value);
-                }}
-                required
-              >
-                <option value="">Select Category</option>
-                <option value="Fuel">Fuel</option>
-                <option value="Vehicle_Parts">Vehicle Parts</option>
-                <option value="Tools">Tools</option>
-                <option value="Equipment">Equipment</option>
-                <option value="Supplies">Supplies</option>
-                <option value="Other">Other</option>
-              </select>
+            {isCategoryEditable(items) ? (
+              !isOtherCategory ? (
+                <div className="categoryField">
+                  <select
+                    value={category}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setIsOtherCategory(true);
+                      }
+                      setCategory(e.target.value);
+                    }}
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {EXPENSE_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                    ))}
+                  </select>
+                  {items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCategoryOverride(!categoryOverride)}
+                      className="overrideBtn"
+                      title={categoryOverride ? "Disable manual override" : "Enable manual override"}
+                    >
+                      <i className={categoryOverride ? "ri-lock-line" : "ri-lock-unlock-line"} />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="otherCategoryInput">
+                  <input
+                    type="text"
+                    value={otherCategory}
+                    onChange={(e) => setOtherCategory(e.target.value)}
+                    placeholder="Enter category"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtherCategory(false);
+                      setOtherCategory('');
+                      setCategory('Fuel');
+                    }}
+                    className="clearCategoryBtn"
+                  >
+                    <i className="ri-close-line" />
+                  </button>
+                </div>
+              )
             ) : (
-              <div className="otherCategoryInput">
+              <div className="readOnlyCategory">
                 <input
                   type="text"
-                  value={otherCategory}
-                  onChange={(e) => setOtherCategory(e.target.value)}
-                  placeholder="Enter category"
-                  required
+                  value={getDisplayCategory(category, otherCategory)}
+                  readOnly
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOtherCategory(false);
-                    setOtherCategory('');
-                    setCategory('Fuel');
-                  }}
-                  className="clearCategoryBtn"
-                >
-                  <i className="ri-close-line" />
-                </button>
+                <div className="categoryTooltip">
+                  <i className="ri-information-line" />
+                  <span className="tooltipText">
+                    {category === 'Multiple_Categories' 
+                      ? "Multiple categories detected in items. Click the lock icon to override."
+                      : "Category is automatically determined by item categories. Click the lock icon to override."}
+                  </span>
+                </div>
               </div>
+            )}
+            {!isCategoryEditable(items) && (
+              <small className="categoryNote">
+                {category === 'Multiple_Categories'
+                  ? "Items have different categories. Use the lock icon to override if needed."
+                  : "Category is automatically determined by item categories. Use the lock icon to override if needed."}
+              </small>
             )}
           </div>
           <div className="formGroup">
@@ -364,6 +501,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                 <th>Quantity</th>
                 <th>Unit Price</th>
                 <th>Total Price</th>
+                <th>Category</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -423,6 +561,19 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                     />
                   </td>
                   <td>₱{formatMoney(item.total_price)}</td>
+                  <td>
+                    <select
+                      value={item.category || ''}
+                      onChange={e => handleItemChange(index, 'category', e.target.value)}
+                      required
+                      className="formSelect"
+                    >
+                      <option value="">Select</option>
+                      {EXPENSE_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <button
                       type="button"

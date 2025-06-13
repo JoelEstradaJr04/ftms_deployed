@@ -5,13 +5,45 @@ import Swal from 'sweetalert2';
 import '../../styles/receipt.css';
 import { formatDate } from '../../utility/dateFormatter';
 
+const EXPENSE_CATEGORIES = [
+  'Fuel',
+  'Vehicle_Parts',
+  'Tools',
+  'Equipment',
+  'Supplies',
+  'Other'
+];
+
+const ITEM_UNITS = [
+  'piece(s)',
+  'box(es)',
+  'pack(s)',
+  'gallon(s)',
+  'liter(s)',
+  'milliliter(s)',
+  'kilogram(s)',
+  'gram(s)',
+  'pound(s)',
+  'meter(s)',
+  'foot/feet',
+  'roll(s)',
+  'set(s)',
+  'pair(s)',
+  'Other'
+];
+
+type ExpenseCategory = 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+
 type ReceiptItem = {
   receipt_item_id?: string;
   item_name: string;
   unit: string;
+  other_unit?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  category: ExpenseCategory;
+  other_category?: string;
 };
 
 type AddReceiptFormData = {
@@ -26,7 +58,7 @@ type AddReceiptFormData = {
     total_amount: number;
     vat_amount?: number;
     total_amount_due: number;
-    category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+    category: ExpenseCategory;
     other_category?: string;
     remarks?: string;
     source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
@@ -45,6 +77,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   const [currentDate, setCurrentDate] = useState('');
   const [isOtherCategory, setIsOtherCategory] = useState(false);
   const [otherCategory, setOtherCategory] = useState('');
+  const [categoryOverride, setCategoryOverride] = useState(false);
   
   const [formData, setFormData] = useState({
     supplier: '',
@@ -56,7 +89,8 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     total_amount: 0,
     vat_amount: 0,
     total_amount_due: 0,
-    category: '' as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other',
+    category: 'Fuel' as ExpenseCategory,
+    other_category: undefined as string | undefined,
     remarks: '',
     source: 'Manual_Entry' as const,
     created_by: currentUser,
@@ -65,9 +99,12 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   const [items, setItems] = useState<ReceiptItem[]>([{
     item_name: '',
     unit: '',
+    other_unit: '',
     quantity: 0,
     unit_price: 0,
-    total_price: 0
+    total_price: 0,
+    category: 'Fuel',
+    other_category: ''
   }]);
 
   useEffect(() => {
@@ -99,6 +136,68 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
+  const computeSummaryCategory = (items: ReceiptItem[]): ExpenseCategory => {
+    if (items.length === 0) return 'Fuel';
+    
+    // Get unique categories and their totals
+    const categoryTotals: Record<string, number> = {};
+    
+    items.forEach(item => {
+      // Resolve the actual category value
+      const resolvedCategory = item.category === 'Other' && item.other_category 
+        ? item.other_category 
+        : item.category;
+      
+      if (resolvedCategory) {
+        categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + item.total_price;
+      }
+    });
+
+    // Get unique resolved categories
+    const uniqueCategories = Object.keys(categoryTotals);
+    
+    if (uniqueCategories.length === 0) return 'Fuel';
+    if (uniqueCategories.length === 1) {
+      const singleCategory = uniqueCategories[0];
+      // If the single category is a standard category, return it
+      if (EXPENSE_CATEGORIES.includes(singleCategory as ExpenseCategory)) {
+        return singleCategory as ExpenseCategory;
+      }
+      // If it's a custom category, return it directly
+      return singleCategory as ExpenseCategory;
+    }
+    
+    // Multiple different categories
+    return 'Multiple_Categories';
+  };
+
+  const isCategoryEditable = (items: ReceiptItem[]) => {
+    if (categoryOverride) return true;
+    if (items.length === 0) return true;
+    return false;
+  };
+
+  const getDisplayCategory = (category: ExpenseCategory, otherCategory?: string) => {
+    if (category === 'Other' && otherCategory) {
+      return otherCategory;
+    }
+    if (category === 'Multiple_Categories') {
+      return 'Multiple Categories';
+    }
+    return category.replace('_', ' ');
+  };
+
+  useEffect(() => {
+    if (!categoryOverride) {
+      const summaryCategory = computeSummaryCategory(items);
+      setFormData(prev => ({
+        ...prev,
+        category: summaryCategory,
+        other_category: summaryCategory === 'Other' ? otherCategory : undefined
+      }));
+    }
+  }, [items, categoryOverride, otherCategory]);
+
   const handleItemChange = (index: number, field: keyof ReceiptItem, value: string | number) => {
     const updatedItems = [...items];
     const item = { ...updatedItems[index] };
@@ -107,8 +206,28 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       const numValue = Number(value);
       item[field] = numValue;
       item.total_price = item.quantity * item.unit_price;
-    } else if (field === 'item_name' || field === 'unit') {
-      item[field] = value as string;
+    } else if (field === 'unit') {
+      if (value === 'Other') {
+        item.unit = 'Other';
+        item.other_unit = '';
+      } else {
+        item.unit = value as string;
+        item.other_unit = undefined;
+      }
+    } else if (field === 'other_unit') {
+      item.other_unit = value as string;
+    } else if (field === 'category') {
+      if (value === 'Other') {
+        item.category = 'Other';
+        item.other_category = '';
+      } else {
+        item.category = value as ExpenseCategory;
+        item.other_category = undefined;
+      }
+    } else if (field === 'other_category') {
+      item.other_category = value as string;
+    } else if (field === 'item_name') {
+      item.item_name = value as string;
     }
 
     updatedItems[index] = item;
@@ -119,7 +238,8 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     setFormData(prev => ({
       ...prev,
       total_amount: newTotalAmount,
-      total_amount_due: newTotalAmount + (prev.vat_amount || 0)
+      total_amount_due: newTotalAmount + (prev.vat_amount || 0),
+      category: categoryOverride ? prev.category : (computeSummaryCategory(updatedItems) as ExpenseCategory),
     }));
 
     // Add a new row if it's the last row and not empty
@@ -130,9 +250,12 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       setItems([...updatedItems, {
         item_name: '',
         unit: '',
+        other_unit: '',
         quantity: 0,
         unit_price: 0,
-        total_price: 0
+        total_price: 0,
+        category: 'Fuel' as ExpenseCategory,
+        other_category: ''
       }]);
     }
   };
@@ -152,22 +275,16 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
-  // Inside the handleSubmit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { supplier, transaction_date, category, payment_status } = formData;
+    const { supplier, transaction_date, payment_status } = formData;
 
-    if (!supplier || !transaction_date || !category || !payment_status) {
+    if (!supplier || !transaction_date || !payment_status) {
       Swal.fire('Error', 'Please fill in all required fields', 'error');
       return;
     }
 
-    if (formData.category === 'Other' && !otherCategory) {
-      Swal.fire('Error', 'Please specify the category name', 'error');
-      return;
-    }
-    
     // Filter out empty items
     const validItems = items.filter(item => 
       item.item_name && item.unit && item.quantity > 0 && item.unit_price > 0
@@ -175,6 +292,16 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
     if (validItems.length === 0) {
       Swal.fire('Error', 'Please add at least one item', 'error');
+      return;
+    }
+
+    // Validate that all items have a valid category
+    const invalidItems = validItems.filter(item => 
+      !item.category || (item.category === 'Other' && !item.other_category)
+    );
+
+    if (invalidItems.length > 0) {
+      Swal.fire('Error', 'Please specify a category for all items', 'error');
       return;
     }
 
@@ -191,12 +318,32 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
     if (result.isConfirmed) {
       try {
-        await onAddReceipt({
+        // Prepare the data with proper category handling
+        const submitData = {
           ...formData,
-          other_category: formData.category === 'Other' ? otherCategory : undefined,
-          items: validItems
-        });
+          // If the category is not a standard one, use 'Other' and store the custom value
+          category: EXPENSE_CATEGORIES.includes(formData.category as ExpenseCategory) 
+            ? formData.category 
+            : 'Other',
+          other_category: EXPENSE_CATEGORIES.includes(formData.category as ExpenseCategory)
+            ? undefined
+            : formData.category,
+          items: validItems.map(item => ({
+            ...item,
+            // For items, if the category is not a standard one, use 'Other' and store the custom value
+            category: EXPENSE_CATEGORIES.includes(item.category as ExpenseCategory)
+              ? item.category
+              : 'Other',
+            other_category: item.category === 'Other' ? item.other_category : undefined,
+            // For units, if it's 'Other', store the custom value
+            unit: ITEM_UNITS.includes(item.unit)
+              ? item.unit
+              : 'Other',
+            other_unit: item.unit === 'Other' ? item.other_unit : undefined
+          }))
+        };
 
+        await onAddReceipt(submitData);
         Swal.fire('Success', 'Receipt added successfully', 'success');
         onClose();
       } catch (error: unknown) {
@@ -204,6 +351,27 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         Swal.fire('Error', 'Failed to add receipt: ' + errorMessage, 'error');
       }
+    }
+  };
+
+  // Add a button to toggle category override
+  const toggleCategoryOverride = () => {
+    setCategoryOverride(!categoryOverride);
+    if (!categoryOverride) {
+      // When enabling override, keep the current category
+      setFormData(prev => ({
+        ...prev,
+        category: prev.category || 'Fuel',
+        other_category: prev.category === 'Other' ? otherCategory : undefined
+      }));
+    } else {
+      // When disabling override, recompute from items
+      const summaryCategory = computeSummaryCategory(items);
+      setFormData(prev => ({
+        ...prev,
+        category: summaryCategory,
+        other_category: summaryCategory === 'Other' ? otherCategory : undefined
+      }));
     }
   };
 
@@ -244,52 +412,91 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
                     <div className="formField">
                       <label htmlFor="category">Category</label>
-                      {!isOtherCategory ? (
-                        <select
-                          id="category"
-                          name="category"
-                          value={formData.category}
-                          onChange={(e) => {
-                            if (e.target.value === 'Other') {
-                              setIsOtherCategory(true);
-                            }
-                            handleInputChange(e);
-                          }}
-                          required
-                          className="formSelect"
-                        >
-                          <option value="">Select Category</option>
-                          <option value="Fuel">Fuel</option>
-                          <option value="Vehicle_Parts">Vehicle Parts</option>
-                          <option value="Tools">Tools</option>
-                          <option value="Equipment">Equipment</option>
-                          <option value="Supplies">Supplies</option>
-                          <option value="Other">Other</option>
-                        </select>
+                      {isCategoryEditable(items) ? (
+                        !isOtherCategory ? (
+                          <div className="categoryField">
+                            <select
+                              id="category"
+                              name="category"
+                              value={formData.category || 'Fuel'}
+                              onChange={(e) => {
+                                if (e.target.value === 'Other') {
+                                  setIsOtherCategory(true);
+                                }
+                                handleInputChange(e);
+                              }}
+                              required
+                              className="formSelect"
+                            >
+                              <option value="Fuel">Fuel</option>
+                              <option value="Vehicle_Parts">Vehicle Parts</option>
+                              <option value="Tools">Tools</option>
+                              <option value="Equipment">Equipment</option>
+                              <option value="Supplies">Supplies</option>
+                              <option value="Other">Other</option>
+                              <option value="Multiple_Categories">Multiple Categories</option>
+                            </select>
+                            {items.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={toggleCategoryOverride}
+                                className="overrideBtn"
+                                title={categoryOverride ? "Disable manual override" : "Enable manual override"}
+                              >
+                                <i className={categoryOverride ? "ri-lock-line" : "ri-lock-unlock-line"} />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="customInputWrapper">
+                            <input
+                              type="text"
+                              value={otherCategory}
+                              onChange={(e) => setOtherCategory(e.target.value)}
+                              placeholder="Enter custom category"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsOtherCategory(false);
+                                setOtherCategory('');
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  category: 'Fuel'
+                                }));
+                              }}
+                              className="clearCustomBtn"
+                              title="Clear custom category"
+                            >
+                              <i className="ri-close-line" />
+                            </button>
+                          </div>
+                        )
                       ) : (
-                        <div className="otherCategoryInput">
+                        <div className="readOnlyCategory">
                           <input
                             type="text"
-                            value={otherCategory}
-                            onChange={(e) => setOtherCategory(e.target.value)}
-                            placeholder="Enter category"
-                            required
+                            value={getDisplayCategory(formData.category || 'Fuel', formData.other_category)}
+                            readOnly
+                            className="formInput"
                           />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsOtherCategory(false);
-                              setOtherCategory('');
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                category: 'Fuel' // Set to a default valid category instead of empty string
-                              }));
-                            }}
-                            className="clearCategoryBtn"
-                          >
-                            <i className="ri-close-line" />
-                          </button>
+                          <div className="categoryTooltip">
+                            <i className="ri-information-line" />
+                            <span className="tooltipText">
+                              {formData.category === 'Multiple_Categories' 
+                                ? "Multiple categories detected in items. Click the lock icon to override."
+                                : "Category is automatically determined by item categories. Click the lock icon to override."}
+                            </span>
+                          </div>
                         </div>
+                      )}
+                      {!isCategoryEditable(items) && (
+                        <small className="categoryNote">
+                          {formData.category === 'Multiple_Categories'
+                            ? "Items have different categories. Use the lock icon to override if needed."
+                            : "Category is automatically determined by item categories. Use the lock icon to override if needed."}
+                        </small>
                       )}
                     </div>
                 </div>
@@ -410,6 +617,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Total Price</th>
+                        <th>Category</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -425,12 +633,36 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                             />
                           </td>
                           <td>
-                            <input
-                              type="text"
-                              value={item.unit}
-                              onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
-                              placeholder="Unit"
-                            />
+                            {item.unit === 'Other' ? (
+                              <div className="customInputWrapper">
+                                <input
+                                  type="text"
+                                  value={item.other_unit || ''}
+                                  onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
+                                  placeholder="Enter custom unit"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleItemChange(idx, 'unit', '')}
+                                  className="clearCustomBtn"
+                                  title="Clear custom unit"
+                                >
+                                  <i className="ri-close-line" />
+                                </button>
+                              </div>
+                            ) : (
+                              <select
+                                value={item.unit}
+                                onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
+                                required
+                                className="formSelect"
+                              >
+                                <option value="">Select Unit</option>
+                                {ITEM_UNITS.map(unit => (
+                                  <option key={unit} value={unit}>{unit}</option>
+                                ))}
+                              </select>
+                            )}
                           </td>
                           <td>
                             <input
@@ -451,6 +683,38 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                             />
                           </td>
                           <td>₱{item.total_price.toLocaleString()}</td>
+                          <td>
+                            {item.category === 'Other' ? (
+                              <div className="customInputWrapper">
+                                <input
+                                  type="text"
+                                  value={item.other_category || ''}
+                                  onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
+                                  placeholder="Enter custom category"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleItemChange(idx, 'category', '')}
+                                  className="clearCustomBtn"
+                                  title="Clear custom category"
+                                >
+                                  <i className="ri-close-line" />
+                                </button>
+                              </div>
+                            ) : (
+                              <select
+                                value={item.category}
+                                onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+                                required
+                                className="formSelect"
+                              >
+                                <option value="">Select Category</option>
+                                {EXPENSE_CATEGORIES.map(cat => (
+                                  <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                                ))}
+                              </select>
+                            )}
+                          </td>
                           <td>
                             <button
                               type="button"

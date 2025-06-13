@@ -1,5 +1,4 @@
- 'use client';
-
+'use client';
 import React from 'react';
 import { formatDate } from '../../utility/dateFormatter';
 import '../../styles/viewReceipt.css';
@@ -12,6 +11,9 @@ type ReceiptItem = {
   unit_price: number;
   total_price: number;
   ocr_confidence?: number;
+  other_unit?: string;
+  category?: string;
+  other_category?: string;
 };
 
 type Receipt = {
@@ -44,7 +46,7 @@ type ViewReceiptModalProps = {
   onClose: () => void;
 };
 
-const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) => {
+const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }): React.ReactElement => {
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid': return 'statusBadge paid';
@@ -72,34 +74,62 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) 
     );
   };
 
-    return (
-      <div className="viewReceipt__modalOverlay">
-        <div className="viewReceipt__modalContent">
-          <div className="viewReceipt__modalHeader">
-            <h2>View Receipt</h2>
-            <button className="closeButton" onClick={onClose}>&times;</button>
-          </div>
+  // Fixed: Enhanced logic for displaying unit values
+  const getDisplayUnit = (item: ReceiptItem): string => {
+    // If unit is "Other" and other_unit exists, display other_unit
+    if (item.unit === 'Other' && item.other_unit) {
+      return item.other_unit;
+    }
+    // If unit is "Other" but other_unit is empty/null, return empty string
+    if (item.unit === 'Other') {
+      return '';
+    }
+    // Otherwise return the standard unit
+    return item.unit || '';
+  };
 
-          <div className="mainDetails">
-            <div className="detailRow">
-              <span className="label">Supplier:</span>
-              <span className="value">{record.supplier}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Category:</span>
-              <span className="value">
-                {record.category === 'Other' 
-                  ? record.other_category 
-                  : record.category.replace('_', ' ')}
-              </span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Status:</span>
-              <span className={getStatusBadgeClass(record.payment_status)}>
-                {record.payment_status}
-              </span>
-            </div>
+  // Fixed: Enhanced logic for displaying category values
+  const getDisplayCategory = (item: ReceiptItem): string => {
+    // If category is "Other" and other_category exists, display other_category
+    if (item.category === 'Other' && item.other_category) {
+      return item.other_category;
+    }
+    // If category is "Other" but other_category is empty/null, return empty string
+    if (item.category === 'Other') {
+      return '';
+    }
+    // Otherwise return the standard category (with underscore replacement)
+    return item.category ? item.category.replace(/_/g, ' ') : '';
+  };
+
+  return (
+    <div className="viewReceipt__modalOverlay">
+      <div className="viewReceipt__modalContent">
+        <div className="viewReceipt__modalHeader">
+          <h2>View Receipt</h2>
+          <button className="closeButton" onClick={onClose}>&times;</button>
+        </div>
+        
+        <div className="mainDetails">
+          <div className="detailRow">
+            <span className="label">Supplier:</span>
+            <span className="value">{record.supplier}</span>
           </div>
+          <div className="detailRow">
+            <span className="label">Category:</span>
+            <span className="value">
+              {record.category === 'Other' 
+                ? record.other_category || ''
+                : record.category.replace('_', ' ')}
+            </span>
+          </div>
+          <div className="detailRow">
+            <span className="label">Status:</span>
+            <span className={getStatusBadgeClass(record.payment_status)}>
+              {record.payment_status}
+            </span>
+          </div>
+        </div>
 
         <div className="receiptDetails">
           <h3>Receipt Details</h3>
@@ -117,7 +147,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) 
           </div>
           <div className="detailRow">
             <span className="label">Date Paid:</span>
-            <span className="value">{record.date_paid ? formatDate(record.date_paid) : 'N/A'}</span>
+            <span className="value">{record.date_paid ? formatDate(new Date(record.date_paid)) : 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Total Amount:</span>
@@ -157,17 +187,19 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }) 
                   <th>Quantity</th>
                   <th>Unit Price</th>
                   <th>Total Price</th>
+                  <th>Category</th>
                   {record.source !== 'Manual_Entry' && <th>OCR Confidence</th>}
                 </tr>
               </thead>
               <tbody>
                 {record.items.map((item, index) => (
-                  <tr key={index}>
+                  <tr key={item.receipt_item_id || index}>
                     <td>{item.item_name}</td>
-                    <td>{item.unit}</td>
+                    <td>{getDisplayUnit(item)}</td>
                     <td>{Number(item.quantity).toLocaleString()}</td>
                     <td>₱{Number(item.unit_price).toLocaleString()}</td>
                     <td>₱{Number(item.total_price).toLocaleString()}</td>
+                    <td>{getDisplayCategory(item)}</td>
                     {record.source !== 'Manual_Entry' && (
                       <td>{item.ocr_confidence ? `${(item.ocr_confidence * 100).toFixed(1)}%` : 'N/A'}</td>
                     )}
