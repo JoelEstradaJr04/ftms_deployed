@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\capstone\receipt draft\ftms_draft\ocr_service\venv
+set VIRTUAL_ENV=C:\capstone\ftms\backup_ftms\ocr_service\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

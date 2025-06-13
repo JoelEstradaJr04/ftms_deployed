@@ -453,11 +453,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               </div>
             )}
             {!isCategoryEditable(items) && (
-              <small className="categoryNote">
-                {category === 'Multiple_Categories'
-                  ? "Items have different categories. Use the lock icon to override if needed."
-                  : "Category is automatically determined by item categories. Use the lock icon to override if needed."}
-              </small>
+              <small className="categoryNote"></small>
             )}
           </div>
           <div className="formGroup">

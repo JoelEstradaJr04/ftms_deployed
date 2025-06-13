@@ -6,6 +6,27 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/(pages)/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(pages)/dashboard/page.css",
+      "static/chunks/app/(pages)/dashboard/page.js"
+    ],
+    "/api/revenues/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/revenues/route.js"
+    ],
+    "/api/expenses/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/expenses/route.js"
+    ],
     "/(pages)/receipt/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -22,11 +43,6 @@
       "static/chunks/main-app.js",
       "static/css/app/(pages)/expense/page.css",
       "static/chunks/app/(pages)/expense/page.js"
-    ],
-    "/api/expenses/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/expenses/route.js"
     ],
     "/api/assignments/cache/route": [
       "static/chunks/webpack.js",

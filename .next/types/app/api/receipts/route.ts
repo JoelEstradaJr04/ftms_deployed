@@ -1,4 +1,4 @@
-// File: C:\capstone\receipt draft\ftms_draft\app\api\receipts\route.ts
+// File: C:\capstone\ftms\backup_ftms\app\api\receipts\route.ts
 import * as entry from '../../../../../app/api/receipts/route.js'
 import type { NextRequest } from 'next/server.js'
 

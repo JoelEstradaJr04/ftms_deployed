@@ -230,9 +230,6 @@
   .resize {
     resize: both;
   }
-  .flex-wrap {
-    flex-wrap: wrap;
-  }
   .truncate {
     overflow: hidden;
     text-overflow: ellipsis;

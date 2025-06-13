@@ -1,4 +1,4 @@
-// File: C:\capstone\receipt draft\ftms_draft\app\(pages)\receipt\page.tsx
+// File: C:\capstone\ftms\backup_ftms\app\(pages)\receipt\page.tsx
 import * as entry from '../../../../../app/(pages)/receipt/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
