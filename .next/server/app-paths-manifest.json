@@ -1,6 +1,5 @@
 {
   "/api/receipts/route": "app/api/receipts/route.js",
-  "/api/receipts/[id]/route": "app/api/receipts/[id]/route.js",
-  "/(pages)/receipt/page": "app/(pages)/receipt/page.js",
-  "/(pages)/expense/page": "app/(pages)/expense/page.js"
+  "/(pages)/expense/page": "app/(pages)/expense/page.js",
+  "/(pages)/receipt/page": "app/(pages)/receipt/page.js"
 }

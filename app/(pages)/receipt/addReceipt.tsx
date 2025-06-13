@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import '../../styles/receipt.css';
 import { formatDate } from '../../utility/dateFormatter';
+import OCRUpload from '../../Components/OCRUpload';
+import OCRCamera from '../../Components/OCRCamera';
 
 const EXPENSE_CATEGORIES = [
   'Fuel',
@@ -78,21 +80,37 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   const [isOtherCategory, setIsOtherCategory] = useState(false);
   const [otherCategory, setOtherCategory] = useState('');
   const [categoryOverride, setCategoryOverride] = useState(false);
+  const [source, setSource] = useState<'Manual_Entry' | 'OCR_Camera' | 'OCR_File'>('Manual_Entry');
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    supplier: string;
+    transaction_date: string;
+    vat_reg_tin: string;
+    terms: 'Cash';
+    date_paid: string;
+    payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+    total_amount: number;
+    vat_amount: number;
+    total_amount_due: number;
+    category: ExpenseCategory;
+    other_category?: string;
+    remarks: string;
+    source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+    created_by: string;
+  }>({
     supplier: '',
     transaction_date: new Date().toISOString().split('T')[0],
     vat_reg_tin: '',
-    terms: 'Cash' as const,
+    terms: 'Cash',
     date_paid: '',
-    payment_status: 'Pending' as 'Paid' | 'Pending' | 'Cancelled' | 'Dued',
+    payment_status: 'Pending',
     total_amount: 0,
     vat_amount: 0,
     total_amount_due: 0,
-    category: 'Fuel' as ExpenseCategory,
-    other_category: undefined as string | undefined,
+    category: 'Fuel',
+    other_category: undefined,
     remarks: '',
-    source: 'Manual_Entry' as const,
+    source: 'Manual_Entry',
     created_by: currentUser,
   });
 
@@ -375,10 +393,46 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
+  const handleOCRComplete = (data: {
+    supplier: string;
+    transaction_date: string;
+    vat_reg_tin?: string;
+    total_amount: number;
+    vat_amount?: number;
+    items: Array<{
+      item_name: string;
+      unit: string;
+      quantity: number;
+      unit_price: number;
+      total_price: number;
+    }>;
+  }) => {
+    // Update form data with OCR results
+    setFormData(prev => ({
+      ...prev,
+      supplier: data.supplier || prev.supplier,
+      transaction_date: data.transaction_date || prev.transaction_date,
+      vat_reg_tin: data.vat_reg_tin || prev.vat_reg_tin,
+      total_amount: data.total_amount || prev.total_amount,
+      vat_amount: data.vat_amount || prev.vat_amount,
+      total_amount_due: (data.total_amount || 0) + (data.vat_amount || 0),
+      source: source
+    }));
+
+    // Update items with OCR results
+    if (data.items.length > 0) {
+      const newItems = data.items.map(item => ({
+        ...item,
+        category: 'Fuel' as ExpenseCategory,
+        other_category: ''
+      }));
+      setItems(newItems);
+    }
+  };
+
   return (
     <div className="modalOverlay">
       <div className="receiptModal">
-        {/* Close Button */}
         <button type="button" className="closeButton" onClick={onClose}>
           <i className="ri-close-line"></i>
         </button>
@@ -393,6 +447,40 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
         <form onSubmit={handleSubmit}>
           <div className="modalContent">
+            {/* Source Selection */}
+            <div className="source-selection">
+              <div 
+                className={`source-option ${source === 'Manual_Entry' ? 'active' : ''}`}
+                onClick={() => setSource('Manual_Entry')}
+              >
+                <i className="ri-edit-line"></i>
+                <p>Manual Entry</p>
+              </div>
+              <div 
+                className={`source-option ${source === 'OCR_Camera' ? 'active' : ''}`}
+                onClick={() => setSource('OCR_Camera')}
+              >
+                <i className="ri-camera-line"></i>
+                <p>Camera Scan</p>
+              </div>
+              <div 
+                className={`source-option ${source === 'OCR_File' ? 'active' : ''}`}
+                onClick={() => setSource('OCR_File')}
+              >
+                <i className="ri-upload-line"></i>
+                <p>File Upload</p>
+              </div>
+            </div>
+
+            {/* OCR Components */}
+            {source === 'OCR_File' && (
+              <OCRUpload onOCRComplete={handleOCRComplete} />
+            )}
+            {source === 'OCR_Camera' && (
+              <OCRCamera onOCRComplete={handleOCRComplete} />
+            )}
+
+            {/* Manual Entry Form */}
             <div className="formFieldsHorizontal">
               <div className="formInputs">
                 <div className="formRow">

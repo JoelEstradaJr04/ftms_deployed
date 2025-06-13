@@ -32,11 +32,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/assignments/cache/route.js"
-    ],
-    "/api/receipts/[id]/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/receipts/[id]/route.js"
     ]
   }
 }
