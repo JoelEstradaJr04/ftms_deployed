@@ -45,7 +45,7 @@ type AuditValues = {
 }
 
 // GET /api/receipts/[id]
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const receipt = await prisma.receipt.findUnique({
       where: {
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 // PATCH /api/receipts/[id]
-export async function PATCH(req: NextRequest, { params }: RouteParams) {
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await req.json();
     const {
@@ -267,7 +267,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/receipts/[id]
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     let reason = '';
     try {
