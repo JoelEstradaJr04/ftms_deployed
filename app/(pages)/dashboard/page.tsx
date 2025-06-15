@@ -31,6 +31,7 @@ interface DashboardData {
 }
 
 const DashboardPage = () => {
+  const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState(""); // Tracks the selected filter
   const [dateFrom, setDateFrom] = useState(""); // Tracks the start date
@@ -233,6 +234,7 @@ const DashboardPage = () => {
                                 fetchDashboardData();
                               }
                             }}
+                            max={today}
                         />
                     </div>
 
@@ -249,6 +251,7 @@ const DashboardPage = () => {
                                 fetchDashboardData();
                               }
                             }}
+                            max={today}
                         />
                     </div>
                 </div>

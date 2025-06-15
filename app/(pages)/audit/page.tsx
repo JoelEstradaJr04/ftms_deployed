@@ -82,6 +82,7 @@ const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
 };
 
 const AuditPage = () => {
+  const today = new Date().toISOString().split('T')[0];
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -254,12 +255,14 @@ const AuditPage = () => {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="dateFilter"
+              max = {today}
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="dateFilter"
+              max = {today}
             />
             <select
               value={tableFilter}

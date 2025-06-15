@@ -72,6 +72,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   assignments,
   currentUser 
 }) => {
+  const today = new Date().toISOString().split('T')[0];
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
@@ -438,6 +439,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                     onChange={handleInputChange}
                     required
                     className="formInput"
+                    max={today}
                   />
                 </div>
               </div>
