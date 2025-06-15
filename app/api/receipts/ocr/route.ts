@@ -1,3 +1,4 @@
+// app\api\receipts\ocr\route.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 // POST /api/receipts/ocr
