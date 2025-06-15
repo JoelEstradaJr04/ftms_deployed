@@ -5,50 +5,7 @@ import { formatDate } from '../../utility/dateFormatter';
 import '../../styles/viewExpense.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
-
-type ReceiptItem = {
-  receipt_item_id: string;
-  item_id: string;
-  item?: {
-    item_id: string;
-    item_name: string;
-    unit: string;
-    category: string;
-    other_unit?: string;
-    other_category?: string;
-  };
-  item_name?: string;
-  unit?: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  ocr_confidence?: number;
-};
-
-type Receipt = {
-  receipt_id: string;
-  supplier: string;
-  transaction_date: string;
-  vat_reg_tin?: string;
-  terms?: string;
-  date_paid?: string;
-  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
-  record_status: 'Active' | 'Inactive';
-  total_amount: number;
-  vat_amount?: number;
-  total_amount_due: number;
-  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
-  other_category?: string;
-  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
-  items: ReceiptItem[];
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-  updated_by?: string;
-  remarks?: string;
-  ocr_confidence?: number;
-  ocr_file_path?: string;
-};
+import type { Receipt } from '../../types/receipt';
 
 type Assignment = {
   assignment_id: string;
@@ -82,21 +39,24 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
     // Ensure all receipt data is properly structured for ViewReceiptModal
     const receiptData: Receipt = {
       ...record.receipt,
+      // Ensure required fields have values
+      created_at: record.receipt.created_at || new Date().toISOString(),
+      created_by: record.receipt.created_by || 'Unknown',
       // Ensure items have the complete structure expected by ViewReceiptModal
       items: record.receipt.items.map(item => ({
         ...item,
         item: item.item ? {
           ...item.item,
           // Provide fallbacks for required fields
-          item_name: item.item.item_name || item.item_name || '',
-          unit: item.item.unit || item.unit || '',
+          item_name: item.item.item_name || '', // Use only nested item property
+          unit: item.item.unit || '',           // Use only nested item property
           category: item.item.category || '',
           other_unit: item.item.other_unit || '',
           other_category: item.item.other_category || ''
         } : {
           item_id: item.item_id || '',
-          item_name: item.item_name || '',
-          unit: item.unit || '',
+          item_name: '',    // ReceiptItem does not have top-level item_name
+          unit: '',         // ReceiptItem does not have top-level unit
           category: '',
           other_unit: '',
           other_category: ''
