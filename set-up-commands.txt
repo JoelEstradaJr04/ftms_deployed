@@ -1,11 +1,14 @@
+# Initialize project directory
+cd backup_ftms
+
 # Install Node.js dependencies
 npm install
 
 # Run Prisma migrations
-npx prisma migrate dev --name init
+npx prisma migrate dev --name initial_database
 
 # Set up the OCR service
-cd backup_ftms/ocr_service
+cd ocr_service
 python -m venv venv
 .\venv\Scripts\Activate
 pip install -r requirements.txt
