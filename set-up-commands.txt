@@ -1,15 +1,45 @@
-# Initialize project directory
-cd backup_ftms
+** HOW TO CLONE THE PROJECT? **
 
-# Install Node.js dependencies
-npm install
+1. 
+    Create a folder for the project, any file name.
 
-# Run Prisma migrations
-npx prisma migrate dev --name initial_database
+2. 
+    # Run this in the project's termnial
+    git clone -b FTMS_DevBranch https://github.com/Joel-EstradaJr/ftms_deployed.git
 
-# Set up the OCR service
-cd ocr_service
-python -m venv venv
-.\venv\Scripts\Activate
-pip install -r requirements.txt
-python main.py
+3. 
+    # Initialize project directory
+    cd ftms_deployed
+
+4.
+    # Install Node.js dependencies
+    npm install
+
+5.
+    # Create the project's .env file. Use env.txt as your reference.
+
+6.
+    # Run Prisma migrations
+    npx prisma migrate dev --name initial_database
+
+7.
+    # Set up the OCR service
+    cd ocr_service
+    python -m venv venv
+    .\venv\Scripts\Activate
+    pip install -r requirements.txt
+
+
+** HOW TO RUN THE PROJECT? **
+
+1.
+    # Run the OCR Service
+    cd_ftms_deployed (if you are not yet in the project directory)
+    python main.py
+    # This will start the OCR service. Click the address/URL displayed in the terminal. 
+    # You will be redirected to the OCR service's webpage. NO UI/UX HERE.
+
+2.
+    # Run the FTMS project in a NEW TERMINAL
+    cd_ftms_deployed
+    npm run dev
