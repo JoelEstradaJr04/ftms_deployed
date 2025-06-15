@@ -7,8 +7,10 @@ import AddExpense from "../Components/addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "../Components/editExpense";
 import ViewExpenseModal from "../Components/viewExpense";
+import ViewReceiptModal from '../(pages)/receipt/viewReceipt';
 import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../utility/dateFormatter';
+import { formatDisplayText } from '../utils/formatting';
 
 // Define interface based on your Prisma ExpenseRecord schema
 interface ExpenseRecord {
@@ -34,17 +36,33 @@ interface Receipt {
   vat_reg_tin?: string;
   terms?: string;
   date_paid?: string;
-  status: string;
+  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+  record_status: 'Active' | 'Inactive';
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
+  created_at: string;
+  updated_at?: string;
+  created_by: string;
+  updated_by?: string;
+  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+  other_category?: string;
+  remarks?: string;
+  ocr_confidence?: number;
+  ocr_file_path?: string;
   items: ReceiptItem[];
 }
 
 interface ReceiptItem {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
+  item_id: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+  };
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -77,8 +95,10 @@ const ExpensePage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewReceiptModalOpen, setViewReceiptModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<ExpenseData | null>(null);
   const [recordToView, setRecordToView] = useState<ExpenseData | null>(null);
+  const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
@@ -92,7 +112,7 @@ const ExpensePage = () => {
 
   // Format receipt for display
   const formatReceipt = (receipt: Receipt): string => {
-    return `${receipt.terms || 'N/A'} | ${receipt.supplier} | ${formatDate(receipt.transaction_date)}`;
+    return `${receipt.supplier} - ${new Date(receipt.transaction_date).toLocaleDateString()} - ₱${receipt.total_amount_due} (${receipt.payment_status})`
   };
 
   // Fetch expenses data
@@ -288,14 +308,41 @@ const ExpensePage = () => {
     }
   };
 
-  const handleViewExpense = (expense: ExpenseData) => {
-    setRecordToView(expense);
-    setViewModalOpen(true);
+  const handleViewExpense = async (expense: ExpenseData) => {
+    try {
+      // If the expense is linked to a receipt, fetch the complete receipt data
+      if (expense.receipt_id) {
+        const response = await fetch(`/api/receipts/${expense.receipt_id}`);
+        if (!response.ok) throw new Error('Failed to fetch receipt details');
+        const receiptData = await response.json();
+        
+        // Update the expense record with complete receipt data
+        const updatedExpense = {
+          ...expense,
+          receipt: receiptData
+        };
+        
+        setRecordToView(updatedExpense);
+        setViewModalOpen(true);
+      } else {
+        // For non-receipt expenses, just show the expense view
+        setRecordToView(expense);
+        setViewModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching receipt details:', error);
+      Swal.fire('Error', 'Failed to load receipt details', 'error');
+    }
   };
 
   const handleCloseViewModal = () => {
     setRecordToView(null);
     setViewModalOpen(false);
+  };
+
+  const handleCloseReceiptModal = () => {
+    setReceiptToView(null);
+    setViewReceiptModalOpen(false);
   };
 
   // Generate the file name helper function
@@ -532,7 +579,7 @@ const ExpensePage = () => {
             rowData.push(escapeField(formatDate(item.expense_date)));
             break;
           case "Category":
-            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')));
+            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : formatDisplayText(item.category)));
             break;
           case "Amount":
             rowData.push(escapeField(Number(item.total_amount).toFixed(2)));
@@ -571,7 +618,7 @@ const ExpensePage = () => {
             rowData.push(escapeField(item.receipt?.terms));
             break;
           case "Receipt Status":
-            rowData.push(escapeField(item.receipt?.status));
+            rowData.push(escapeField(item.receipt?.payment_status));
             break;
           case "Receipt VAT Amount":
             rowData.push(escapeField(item.receipt?.vat_amount ? Number(item.receipt.vat_amount).toFixed(2) : ''));
@@ -681,7 +728,7 @@ const ExpensePage = () => {
                 <tr key={item.expense_id}>
                   <td>{formatDate(item.expense_date)}</td>
                   <td>{source}</td>
-                  <td>{item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')}</td>
+                  <td>{item.category === 'Other' ? item.other_category || 'Other' : formatDisplayText(item.category)}</td>
                   <td>₱{item.total_amount.toLocaleString()}</td>
                   <td className="actionButtons">
                     <button 
@@ -770,6 +817,13 @@ const ExpensePage = () => {
             other_source: recordToView.other_source
           }}
           onClose={handleCloseViewModal}
+        />
+      )}
+
+      {viewReceiptModalOpen && receiptToView && (
+        <ViewReceiptModal
+          record={receiptToView}
+          onClose={handleCloseReceiptModal}
         />
       )}
     </div>

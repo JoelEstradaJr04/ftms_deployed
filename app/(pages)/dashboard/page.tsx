@@ -7,6 +7,7 @@ import "../../styles/dashboard.css"; // External CSS for styling
 import { RevenueCategory, ExpenseCategory } from "@prisma/client";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 interface RevenueRecord {
   category: RevenueCategory;
@@ -276,7 +277,7 @@ const DashboardPage = () => {
                         <div className="categoryBreakdown">
                           {Object.entries(dashboardData.revenue.byCategory).map(([category, amount]) => (
                             <div key={category} className="categoryItem">
-                              <span>{category.replace('_', ' ')}</span>
+                              <span>{formatDisplayText(category)}</span>
                               <span>₱{amount.toLocaleString()}</span>
                             </div>
                           ))}
@@ -288,7 +289,7 @@ const DashboardPage = () => {
                         <div className="categoryBreakdown">
                           {Object.entries(dashboardData.expense.byCategory).map(([category, amount]) => (
                             <div key={category} className="categoryItem">
-                              <span>{category.replace('_', ' ')}</span>
+                              <span>{formatDisplayText(category)}</span>
                               <span>₱{amount.toLocaleString()}</span>
                             </div>
                           ))}

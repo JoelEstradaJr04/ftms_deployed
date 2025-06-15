@@ -2,19 +2,26 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import '../../styles/editReceipt.css';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 type ReceiptItem = {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
+  item_id: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+    other_category?: string;
+    other_unit?: string;
+  };
   quantity: number;
   unit_price: number;
   total_price: number;
   ocr_confidence?: number;
-  category?: string;
-  other_category?: string;
-  other_unit?: string;
 };
+
+type ItemField = 'item_name' | 'unit' | 'category' | 'other_category' | 'other_unit' | 'quantity' | 'unit_price';
 
 type EditReceiptModalProps = {
   record: {
@@ -49,7 +56,17 @@ type EditReceiptModalProps = {
     category: string;
     other_category?: string;
     remarks?: string;
-    items: ReceiptItem[];
+    items: Array<{
+      receipt_item_id: string;
+      item_name: string;
+      unit: string;
+      other_unit?: string;
+      quantity: number;
+      unit_price: number;
+      total_price: number;
+      category: string;
+      other_category?: string;
+    }>;
   }) => void;
 };
 
@@ -59,8 +76,25 @@ const EXPENSE_CATEGORIES = [
   'Tools',
   'Equipment',
   'Supplies',
-  'Other',
-  'Multiple_Categories',
+  'Other'
+];
+
+const ITEM_UNITS = [
+  'piece(s)',
+  'box(es)',
+  'pack(s)',
+  'gallon(s)',
+  'liter(s)',
+  'milliliter(s)',
+  'kilogram(s)',
+  'gram(s)',
+  'pound(s)',
+  'meter(s)',
+  'foot/feet',
+  'roll(s)',
+  'set(s)',
+  'pair(s)',
+  'Other'
 ];
 
 const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
@@ -147,60 +181,101 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       Swal.fire('Error', 'Please fill in all required fields', 'error');
       return;
     }
-    try {
-      await onSave({
-        receipt_id: record.receipt_id,
-        supplier,
-        transaction_date: transactionDate,
-        vat_reg_tin: vatRegTin || undefined,
-        terms: terms || undefined,
-        date_paid: datePaid || undefined,
-        payment_status: paymentStatus,
-        total_amount: totalAmount,
-        vat_amount: vatAmount || undefined,
-        total_amount_due: totalAmountDue,
-        category,
-        remarks: remarks || undefined,
-        items,
-        other_category: isOtherCategory ? otherCategory : undefined
-      });
-    } catch (error) {
-      console.error('Error saving receipt:', error);
-      Swal.fire('Error', 'Failed to save receipt', 'error');
+
+    // Filter out empty items
+    const validItems = items.filter(item => 
+      item.item.item_name && item.item.unit && item.quantity > 0 && item.unit_price > 0
+    );
+
+    if (validItems.length === 0) {
+      Swal.fire('Error', 'Please add at least one item', 'error');
+      return;
+    }
+
+    // Validate that all items have a valid category
+    const invalidItems = validItems.filter(item => 
+      !item.item.category || 
+      (item.item.category === 'Other' && !item.item.other_category)
+    );
+
+    if (invalidItems.length > 0) {
+      Swal.fire('Error', 'Please specify a category for all items. If "Other" is selected, please provide a custom category.', 'error');
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Confirm Update',
+      text: 'Are you sure you want to update this receipt?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#13CE66',
+      cancelButtonColor: '#961C1E',
+      confirmButtonText: 'Yes, update it!',
+      background: 'white',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Prepare the data with proper category handling
+        const submitData = {
+          receipt_id: record.receipt_id,
+          supplier,
+          transaction_date: transactionDate,
+          vat_reg_tin: vatRegTin || undefined,
+          terms: terms || undefined,
+          date_paid: datePaid || undefined,
+          payment_status: paymentStatus,
+          total_amount: totalAmount,
+          vat_amount: vatAmount || undefined,
+          total_amount_due: totalAmountDue,
+          category: EXPENSE_CATEGORIES.includes(category) 
+            ? category 
+            : 'Other',
+          other_category: EXPENSE_CATEGORIES.includes(category)
+            ? undefined
+            : category,
+          remarks: remarks || undefined,
+          items: validItems.map(item => ({
+            receipt_item_id: item.receipt_item_id,
+            item_name: item.item.item_name,
+            unit: ITEM_UNITS.includes(item.item.unit)
+              ? item.item.unit
+              : 'Other',
+            other_unit: item.item.unit === 'Other' ? item.item.other_unit : undefined,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            category: EXPENSE_CATEGORIES.includes(item.item.category)
+              ? item.item.category
+              : 'Other',
+            other_category: item.item.category === 'Other' ? item.item.other_category : undefined
+          }))
+        };
+
+        await onSave(submitData);
+        Swal.fire('Success', 'Receipt updated successfully', 'success');
+        onClose();
+      } catch (error) {
+        console.error('Error updating receipt:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        Swal.fire('Error', 'Failed to update receipt: ' + errorMessage, 'error');
+      }
     }
   };
 
   const computeSummaryCategory = (items: ReceiptItem[]): string => {
     if (items.length === 0) return 'Fuel';
-    
-    // Get unique categories and their totals
-    const categoryTotals: Record<string, number> = {};
-    
-    items.forEach(item => {
+    // Get unique categories
+    const uniqueCategories = Array.from(new Set(items.map(item => {
       // Resolve the actual category value
-      const resolvedCategory = item.category === 'Other' && item.other_category 
-        ? item.other_category 
-        : item.category;
-      
-      if (resolvedCategory) {
-        categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + Number(item.total_price);
-      }
-    });
-
-    // Get unique resolved categories
-    const uniqueCategories = Object.keys(categoryTotals);
-    
+      return item.item.category === 'Other' && item.item.other_category 
+        ? item.item.other_category 
+        : item.item.category;
+    }).filter(Boolean)));
     if (uniqueCategories.length === 0) return 'Fuel';
     if (uniqueCategories.length === 1) {
-      const singleCategory = uniqueCategories[0];
-      // If the single category is a standard category, return it
-      if (EXPENSE_CATEGORIES.includes(singleCategory)) {
-        return singleCategory;
-      }
-      // If it's a custom category, return it directly
-      return singleCategory;
+      return uniqueCategories[0];
     }
-    
     // Multiple different categories
     return 'Multiple_Categories';
   };
@@ -215,10 +290,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     if (category === 'Other' && otherCategory) {
       return otherCategory;
     }
-    if (category === 'Multiple_Categories') {
-      return 'Multiple Categories';
-    }
-    return category.replace('_', ' ');
+    return formatDisplayText(category);
   };
 
   useEffect(() => {
@@ -233,12 +305,13 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
   const handleItemChange = (
     index: number, 
-    field: keyof Omit<ReceiptItem, 'receipt_item_id' | 'total_price' | 'ocr_confidence'> | 'category', 
+    field: ItemField,
     value: string | number
   ) => {
     setItems(prevItems => {
       const updatedItems = [...prevItems];
       const item = { ...updatedItems[index] };
+      
       if (field === 'quantity' || field === 'unit_price') {
         let numValue: number;
         if (typeof value === 'string') {
@@ -255,32 +328,33 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         setTotalAmountDue(Number(newTotalAmount) + Number(vatAmount || 0));
       } else if (field === 'category') {
         if (value === 'Other') {
-          item.category = 'Other';
-          item.other_category = '';
+          item.item.category = 'Other';
+          item.item.other_category = '';
         } else {
-          item.category = value as string;
-          item.other_category = undefined;
+          item.item.category = value as string;
+          item.item.other_category = undefined;
         }
         updatedItems[index] = item;
       } else if (field === 'other_category') {
-        item.other_category = value as string;
+        item.item.other_category = value as string;
         updatedItems[index] = item;
       } else if (field === 'unit') {
         if (value === 'Other') {
-          item.unit = 'Other';
-          item.other_unit = '';
+          item.item.unit = 'Other';
+          item.item.other_unit = '';
         } else {
-          item.unit = value as string;
-          item.other_unit = undefined;
+          item.item.unit = value as string;
+          item.item.other_unit = undefined;
         }
         updatedItems[index] = item;
       } else if (field === 'other_unit') {
-        item.other_unit = value as string;
+        item.item.other_unit = value as string;
         updatedItems[index] = item;
-      } else {
-        (item[field as keyof ReceiptItem] as string) = value.toString();
+      } else if (field === 'item_name') {
+        item.item.item_name = value as string;
         updatedItems[index] = item;
       }
+      
       // Only auto-set summary category if not overridden
       if (!categoryOverride) {
         setCategory(computeSummaryCategory(updatedItems));
@@ -293,8 +367,13 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     const temporaryId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newItem: ReceiptItem = {
       receipt_item_id: temporaryId,
-      item_name: '',
-      unit: '',
+      item_id: '',
+      item: {
+        item_id: '',
+        item_name: '',
+        unit: '',
+        category: '',
+      },
       quantity: 0,
       unit_price: 0,
       total_price: 0
@@ -373,10 +452,10 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               className="formSelect"
             >
               <option value="Cash">Cash</option>
-              <option value="Net_15">Net 15</option>
-              <option value="Net_30">Net 30</option>
-              <option value="Net_60">Net 60</option>
-              <option value="Net_90">Net 90</option>
+              <option value="Net_15">{formatDisplayText('Net_15')}</option>
+              <option value="Net_30">{formatDisplayText('Net_30')}</option>
+              <option value="Net_60">{formatDisplayText('Net_60')}</option>
+              <option value="Net_90">{formatDisplayText('Net_90')}</option>
             </select>
           </div>
         </div>
@@ -399,7 +478,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                   >
                     <option value="">Select Category</option>
                     {EXPENSE_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                      <option key={cat} value={cat}>{formatDisplayText(cat)}</option>
                     ))}
                   </select>
                   {items.length > 0 && (
@@ -439,7 +518,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <div className="readOnlyCategory">
                 <input
                   type="text"
-                  value={getDisplayCategory(category, otherCategory)}
+                  value={formatDisplayText(getDisplayCategory(category, otherCategory))}
                   readOnly
                 />
                 <div className="categoryTooltip">
@@ -507,18 +586,42 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                   <td>
                     <input
                       type="text"
-                      value={item.item_name}
+                      value={item.item.item_name}
                       onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
                       required
+                      placeholder="Enter item name"
                     />
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      value={item.unit}
-                      onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
-                      required
-                    />
+                    {item.item.unit === 'Other' ? (
+                      <div className="otherUnitInput">
+                        <input
+                          type="text"
+                          value={item.item.other_unit || ''}
+                          onChange={(e) => handleItemChange(index, 'other_unit', e.target.value)}
+                          placeholder="Specify unit"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleItemChange(index, 'unit', 'piece(s)')}
+                          className="clearUnitBtn"
+                        >
+                          <i className="ri-close-line" />
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={item.item.unit}
+                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                        required
+                      >
+                        <option value="">Select Unit</option>
+                        {ITEM_UNITS.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td>
                     <input
@@ -527,7 +630,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                       value={item.quantity || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        // Allow empty string, numbers, and decimal points
                         if (value === '' || /^\d*\.?\d*$/.test(value)) {
                           handleItemChange(index, 'quantity', value);
                         }
@@ -545,7 +647,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                       value={item.unit_price || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        // Allow empty string, numbers, and decimal points
                         if (value === '' || /^\d*\.?\d*$/.test(value)) {
                           handleItemChange(index, 'unit_price', value);
                         }
@@ -558,17 +659,34 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                   </td>
                   <td>₱{formatMoney(item.total_price)}</td>
                   <td>
-                    <select
-                      value={item.category || ''}
-                      onChange={e => handleItemChange(index, 'category', e.target.value)}
-                      required
-                      className="formSelect"
-                    >
-                      <option value="">Select</option>
-                      {EXPENSE_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-                      ))}
-                    </select>
+                    {item.item.category === 'Other' ? (
+                      <div className="otherCategoryInput">
+                        <input
+                          type="text"
+                          value={item.item.other_category || ''}
+                          onChange={(e) => handleItemChange(index, 'other_category', e.target.value)}
+                          placeholder="Specify category"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleItemChange(index, 'category', 'Fuel')}
+                          className="clearCategoryBtn"
+                        >
+                          <i className="ri-close-line" />
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={item.item.category}
+                        onChange={(e) => handleItemChange(index, 'category', e.target.value)}
+                        required
+                      >
+                        {EXPENSE_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{formatDisplayText(cat)}</option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td>
                     <button

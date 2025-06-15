@@ -15,6 +15,7 @@ import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type As
 import { formatDate } from '../../../utility/dateFormatter';
 import Loading from '../../../Components/loading';
 import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../../utility/Alerts';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 // Define interface based on your Prisma BalanceRecord schema
 interface BalanceRecord {
@@ -569,7 +570,7 @@ const handleAddBalance = async (newBalance: {
         escapeField(item.status),
         escapeField(item.payment_count),
         escapeField(formatDate(item.due_date)),
-        escapeField(item.description || '')
+        escapeField(formatDisplayText(item.description) || '')
       ].join(',');
     }).join('\n');
 
@@ -680,7 +681,7 @@ const handleAddBalance = async (newBalance: {
                       </span>
                     </td>
                     <td onClick={() => { setRecordToView(item); setViewModalOpen(true); }}>{formatDate(item.due_date)}</td>
-                    <td onClick={() => { setRecordToView(item); setViewModalOpen(true); }}>{item.description || 'N/A'}</td>
+                    <td onClick={() => { setRecordToView(item); setViewModalOpen(true); }}>{formatDisplayText(item.description) || 'N/A'}</td>
                     <td className="actionButtons">
                       <div className="actionButtonsContainer">
                         <button className="payBtn" onClick={() => {setRecordToPay(item); setPayModalOpen(true)}} title="View Record">

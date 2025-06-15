@@ -2,6 +2,7 @@
 
 import React from 'react';
 import '../../../styles/viewBalance.css';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 
 type ViewBalanceProps = {
@@ -45,7 +46,7 @@ const ViewBalance: React.FC<ViewBalanceProps> = ({ record, onClose }) => {
               </div>
               <div className="formField">
                 <label>Position</label>
-                <div className="viewField">{record.position}</div>
+                <div className="viewField">{formatDisplayText(record.position)}</div>
               </div>
             </div>
 

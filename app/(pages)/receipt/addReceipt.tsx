@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
-import '../../styles/receipt.css';
-import { formatDate } from '../../utility/dateFormatter';
+import { ExpenseCategory } from '@prisma/client';
 import OCRUpload from '../../Components/OCRUpload';
 import OCRCamera from '../../Components/OCRCamera';
+import Swal from 'sweetalert2';
+import { formatDate } from '../../utility/dateFormatter';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 const EXPENSE_CATEGORIES = [
   'Fuel',
@@ -34,18 +35,20 @@ const ITEM_UNITS = [
   'Other'
 ];
 
-type ExpenseCategory = 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
-
 type ReceiptItem = {
   receipt_item_id?: string;
-  item_name: string;
-  unit: string;
-  other_unit?: string;
+  item_id: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: ExpenseCategory;
+    other_category?: string;
+    other_unit?: string;
+  };
   quantity: number;
   unit_price: number;
   total_price: number;
-  category: ExpenseCategory;
-  other_category?: string;
 };
 
 type AddReceiptFormData = {
@@ -64,7 +67,16 @@ type AddReceiptFormData = {
     other_category?: string;
     remarks?: string;
     source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
-    items: ReceiptItem[];
+    items: Array<{
+      item_name: string;
+      unit: string;
+      other_unit?: string;
+      quantity: number;
+      unit_price: number;
+      total_price: number;
+      category: ExpenseCategory;
+      other_category?: string;
+    }>;
     created_by: string;
   }) => void;
   currentUser: string;
@@ -115,14 +127,16 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   });
 
   const [items, setItems] = useState<ReceiptItem[]>([{
-    item_name: '',
-    unit: '',
-    other_unit: '',
+    item_id: '',
+    item: {
+      item_id: '',
+      item_name: '',
+      unit: '',
+      category: 'Fuel',
+    },
     quantity: 0,
     unit_price: 0,
     total_price: 0,
-    category: 'Fuel',
-    other_category: ''
   }]);
 
   useEffect(() => {
@@ -162,9 +176,9 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     
     items.forEach(item => {
       // Resolve the actual category value
-      const resolvedCategory = item.category === 'Other' && item.other_category 
-        ? item.other_category 
-        : item.category;
+      const resolvedCategory = item.item.category === 'Other' && item.item.other_category 
+        ? item.item.other_category 
+        : item.item.category;
       
       if (resolvedCategory) {
         categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + item.total_price;
@@ -216,7 +230,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   }, [items, categoryOverride, otherCategory]);
 
-  const handleItemChange = (index: number, field: keyof ReceiptItem, value: string | number) => {
+  const handleItemChange = (index: number, field: string, value: string | number) => {
     const updatedItems = [...items];
     const item = { ...updatedItems[index] };
 
@@ -224,28 +238,31 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       const numValue = Number(value);
       item[field] = numValue;
       item.total_price = item.quantity * item.unit_price;
+    } else if (field === 'item_name') {
+      item.item = {
+        ...item.item,
+        item_name: value as string
+      };
     } else if (field === 'unit') {
       if (value === 'Other') {
-        item.unit = 'Other';
-        item.other_unit = '';
+        item.item.unit = 'Other';
+        item.item.other_unit = '';
       } else {
-        item.unit = value as string;
-        item.other_unit = undefined;
+        item.item.unit = value as string;
+        item.item.other_unit = undefined;
       }
     } else if (field === 'other_unit') {
-      item.other_unit = value as string;
+      item.item.other_unit = value as string;
     } else if (field === 'category') {
       if (value === 'Other') {
-        item.category = 'Other';
-        item.other_category = '';
+        item.item.category = 'Other';
+        item.item.other_category = '';
       } else {
-        item.category = value as ExpenseCategory;
-        item.other_category = undefined;
+        item.item.category = value as ExpenseCategory;
+        item.item.other_category = undefined;
       }
     } else if (field === 'other_category') {
-      item.other_category = value as string;
-    } else if (field === 'item_name') {
-      item.item_name = value as string;
+      item.item.other_category = value as string;
     }
 
     updatedItems[index] = item;
@@ -263,17 +280,19 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     // Add a new row if it's the last row and not empty
     if (
       index === items.length - 1 &&
-      (item.item_name || item.unit || item.quantity > 0 || item.unit_price > 0)
+      (item.item.item_name || item.item.unit || item.quantity > 0 || item.unit_price > 0)
     ) {
       setItems([...updatedItems, {
-        item_name: '',
-        unit: '',
-        other_unit: '',
+        item_id: '',
+        item: {
+          item_id: '',
+          item_name: '',
+          unit: '',
+          category: 'Fuel' as ExpenseCategory,
+        },
         quantity: 0,
         unit_price: 0,
         total_price: 0,
-        category: 'Fuel' as ExpenseCategory,
-        other_category: ''
       }]);
     }
   };
@@ -305,7 +324,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
     // Filter out empty items
     const validItems = items.filter(item => 
-      item.item_name && item.unit && item.quantity > 0 && item.unit_price > 0
+      item.item.item_name && item.item.unit && item.quantity > 0 && item.unit_price > 0
     );
 
     if (validItems.length === 0) {
@@ -315,11 +334,12 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
     // Validate that all items have a valid category
     const invalidItems = validItems.filter(item => 
-      !item.category || (item.category === 'Other' && !item.other_category)
+      !item.item.category || 
+      (item.item.category === 'Other' && !item.item.other_category)
     );
 
     if (invalidItems.length > 0) {
-      Swal.fire('Error', 'Please specify a category for all items', 'error');
+      Swal.fire('Error', 'Please specify a category for all items. If "Other" is selected, please provide a custom category.', 'error');
       return;
     }
 
@@ -347,17 +367,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
             ? undefined
             : formData.category,
           items: validItems.map(item => ({
-            ...item,
-            // For items, if the category is not a standard one, use 'Other' and store the custom value
-            category: EXPENSE_CATEGORIES.includes(item.category as ExpenseCategory)
-              ? item.category
+            item_name: item.item.item_name,
+            unit: ITEM_UNITS.includes(item.item.unit)
+              ? item.item.unit
               : 'Other',
-            other_category: item.category === 'Other' ? item.other_category : undefined,
-            // For units, if it's 'Other', store the custom value
-            unit: ITEM_UNITS.includes(item.unit)
-              ? item.unit
+            other_unit: item.item.unit === 'Other' ? item.item.other_unit : undefined,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            category: EXPENSE_CATEGORIES.includes(item.item.category as ExpenseCategory)
+              ? item.item.category
               : 'Other',
-            other_unit: item.unit === 'Other' ? item.other_unit : undefined
+            other_category: item.item.category === 'Other' ? item.item.other_category : undefined
           }))
         };
 
@@ -422,9 +443,16 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     // Update items with OCR results
     if (data.items.length > 0) {
       const newItems = data.items.map(item => ({
-        ...item,
-        category: 'Fuel' as ExpenseCategory,
-        other_category: ''
+        item_id: '',
+        item: {
+          item_id: '',
+          item_name: item.item_name,
+          unit: item.unit,
+          category: 'Fuel' as ExpenseCategory,
+        },
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
       }));
       setItems(newItems);
     }
@@ -474,10 +502,14 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
             {/* OCR Components */}
             {source === 'OCR_File' && (
-              <OCRUpload onOCRComplete={handleOCRComplete} />
+              <div>
+                <OCRUpload />
+              </div>
             )}
             {source === 'OCR_Camera' && (
-              <OCRCamera onOCRComplete={handleOCRComplete} />
+              <div>
+                <OCRCamera onOCRComplete={handleOCRComplete} />
+              </div>
             )}
 
             {/* Manual Entry Form */}
@@ -565,7 +597,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                         <div className="readOnlyCategory">
                           <input
                             type="text"
-                            value={getDisplayCategory(formData.category || 'Fuel', formData.other_category)}
+                            value={formatDisplayText(getDisplayCategory(formData.category || 'Fuel', formData.other_category))}
                             readOnly
                             className="formInput"
                           />
@@ -711,17 +743,17 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                           <td>
                             <input
                               type="text"
-                              value={item.item_name}
+                              value={item.item.item_name}
                               onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
                               placeholder="Enter item name"
                             />
                           </td>
                           <td>
-                            {item.unit === 'Other' ? (
+                            {item.item.unit === 'Other' ? (
                               <div className="customInputWrapper">
                                 <input
                                   type="text"
-                                  value={item.other_unit || ''}
+                                  value={item.item.other_unit || ''}
                                   onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
                                   placeholder="Enter custom unit"
                                 />
@@ -736,7 +768,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               </div>
                             ) : (
                               <select
-                                value={item.unit}
+                                value={item.item.unit}
                                 onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
                                 required
                                 className="formSelect"
@@ -768,11 +800,11 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                           </td>
                           <td>₱{item.total_price.toLocaleString()}</td>
                           <td>
-                            {item.category === 'Other' ? (
+                            {item.item.category === 'Other' ? (
                               <div className="customInputWrapper">
                                 <input
                                   type="text"
-                                  value={item.other_category || ''}
+                                  value={item.item.other_category || ''}
                                   onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
                                   placeholder="Enter custom category"
                                 />
@@ -787,7 +819,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               </div>
                             ) : (
                               <select
-                                value={item.category}
+                                value={item.item.category}
                                 onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
                                 required
                                 className="formSelect"
@@ -804,7 +836,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               type="button"
                               onClick={() => removeItem(idx)}
                               className="removeItemBtn"
-                              title="Remove Item"
+                              title="Remove item"
                             >
                               <i className="ri-delete-bin-line" />
                             </button>

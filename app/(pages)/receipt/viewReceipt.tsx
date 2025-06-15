@@ -1,19 +1,25 @@
+// app/(pages)/receipt/viewReceipt.tsx
 'use client';
 import React from 'react';
 import { formatDate } from '../../utility/dateFormatter';
 import '../../styles/viewReceipt.css';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 type ReceiptItem = {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
+  item_id: string;
   quantity: number;
   unit_price: number;
   total_price: number;
   ocr_confidence?: number;
-  other_unit?: string;
-  category?: string;
-  other_category?: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+    other_unit?: string;
+    other_category?: string;
+  };
 };
 
 type Receipt = {
@@ -74,32 +80,23 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
     );
   };
 
-  // Fixed: Enhanced logic for displaying unit values
-  const getDisplayUnit = (item: ReceiptItem): string => {
-    // If unit is "Other" and other_unit exists, display other_unit
-    if (item.unit === 'Other' && item.other_unit) {
-      return item.other_unit;
+  const getDisplayUnit = (item: ReceiptItem) => {
+    if (!item.item) return '';
+    if (item.item.unit === 'Other' && item.item.other_unit) {
+      return formatDisplayText(item.item.other_unit);
     }
-    // If unit is "Other" but other_unit is empty/null, return empty string
-    if (item.unit === 'Other') {
-      return '';
-    }
-    // Otherwise return the standard unit
-    return item.unit || '';
+    return formatDisplayText(item.item.unit);
   };
 
-  // Fixed: Enhanced logic for displaying category values
-  const getDisplayCategory = (item: ReceiptItem): string => {
-    // If category is "Other" and other_category exists, display other_category
-    if (item.category === 'Other' && item.other_category) {
-      return item.other_category;
+  const getDisplayCategory = (item: ReceiptItem) => {
+    if (!item.item) return '';
+    if (item.item.category === 'Other' && item.item.other_category) {
+      return formatDisplayText(item.item.other_category);
     }
-    // If category is "Other" but other_category is empty/null, return empty string
-    if (item.category === 'Other') {
-      return '';
+    if (item.item.category === 'Multiple_Categories') {
+      return 'Multiple Categories';
     }
-    // Otherwise return the standard category (with underscore replacement)
-    return item.category ? item.category.replace(/_/g, ' ') : '';
+    return formatDisplayText(item.item.category);
   };
 
   return (
@@ -113,14 +110,14 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Supplier:</span>
-            <span className="value">{record.supplier}</span>
+            <span className="value">{formatDisplayText(record.supplier)}</span>
           </div>
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
               {record.category === 'Other' 
-                ? record.other_category || ''
-                : record.category.replace('_', ' ')}
+                ? formatDisplayText(record.other_category || '')
+                : formatDisplayText(record.category)}
             </span>
           </div>
           <div className="detailRow">
@@ -139,11 +136,11 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           </div>
           <div className="detailRow">
             <span className="label">VAT Reg TIN:</span>
-            <span className="value">{record.vat_reg_tin || 'N/A'}</span>
+            <span className="value">{formatDisplayText(record.vat_reg_tin || 'N/A')}</span>
           </div>
           <div className="detailRow">
             <span className="label">Terms:</span>
-            <span className="value">{record.terms || 'N/A'}</span>
+            <span className="value">{record.terms ? formatDisplayText(record.terms) : 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Date Paid:</span>
@@ -164,14 +161,14 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           <div className="detailRow">
             <span className="label">Source:</span>
             <span className="value">
-              {record.source.replace('_', ' ')}
+              {formatDisplayText(record.source)}
               {record.ocr_confidence && renderOcrConfidence(record.ocr_confidence)}
             </span>
           </div>
           {record.remarks && (
             <div className="detailRow">
               <span className="label">Remarks:</span>
-              <span className="value">{record.remarks}</span>
+              <span className="value">{formatDisplayText(record.remarks)}</span>
             </div>
           )}
         </div>
@@ -194,7 +191,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
               <tbody>
                 {record.items.map((item, index) => (
                   <tr key={item.receipt_item_id || index}>
-                    <td>{item.item_name}</td>
+                    <td>{formatDisplayText(item.item?.item_name || '')}</td>
                     <td>{getDisplayUnit(item)}</td>
                     <td>{Number(item.quantity).toLocaleString()}</td>
                     <td>₱{Number(item.unit_price).toLocaleString()}</td>

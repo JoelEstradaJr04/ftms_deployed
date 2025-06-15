@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "../../styles/receipt.css";
 import "../../styles/table.css";
 import PaginationComponent from "../../Components/pagination";
@@ -9,8 +8,61 @@ import { formatDate } from '../../utility/dateFormatter';
 import ViewReceiptModal from './viewReceipt';
 import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
+import { formatDisplayText } from '@/app/utils/formatting';
+import Loading from '../../Components/loading';
 
-// Define interface based on your Prisma Receipt schema
+// ... (keep all your existing type definitions exactly as they are)
+type RawReceiptItem = {
+  receipt_item_id: string;
+  item_id?: string; 
+  item?: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+    other_unit?: string;
+    other_category?: string;
+  };
+  item_name?: string;
+  unit?: string;
+  category?: string;
+  other_unit?: string;
+  other_category?: string;
+  quantity: number | string;
+  unit_price: number | string;
+  total_price: number | string;
+  ocr_confidence?: number;
+};
+
+type RawReceipt = {
+  receipt_id: string;
+  supplier: string;
+  transaction_date: string;
+  vat_reg_tin?: string;
+  terms?: string;
+  date_paid?: string;
+  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+  record_status?: 'Active' | 'Inactive';
+  total_amount: number | string;
+  vat_amount?: number | string;
+  total_amount_due: number | string;
+  created_at: string;
+  updated_at?: string;
+  created_by: string;
+  updated_by?: string;
+  is_deleted?: boolean;
+  deletion_reason?: string;
+  deleted_by?: string;
+  deleted_at?: string;
+  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+  other_category?: string;
+  remarks?: string;
+  ocr_confidence?: number;
+  ocr_file_path?: string;
+  items: RawReceiptItem[];
+};
+
 interface Receipt {
   receipt_id: string;
   supplier: string;
@@ -42,31 +94,24 @@ interface Receipt {
 
 interface ReceiptItem {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  category?: string;
-}
-
-interface ReceiptResponse {
-  receipts: Receipt[];
-  pagination: {
-    total: number;
-    pages: number;
-    current: number;
-    limit: number;
+  item_id: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+    other_unit?: string;
+    other_category?: string;
   };
-}
-
-interface NewReceiptItem {
-  receipt_item_id?: string;
-  item_name: string;
-  unit: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  ocr_confidence?: number;
+  item_name?: string; 
+  unit?: string;
+  category?: string;
+  other_unit?: string;
+  other_category?: string;
 }
 
 interface AddReceiptFormData {
@@ -82,13 +127,39 @@ interface AddReceiptFormData {
   category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
   remarks?: string;
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
-  items: NewReceiptItem[];
+  items: {
+    item_name: string;
+    unit: string;
+    other_unit?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+    other_category?: string;
+  }[];
   created_by: string;
+  other_category?: string;
+}
+
+interface EditReceiptData extends Omit<Receipt, 'items'> {
+  items: {
+    receipt_item_id: string;
+    item_name: string;
+    unit: string;
+    other_unit?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    category: string;
+    other_category?: string;
+  }[];
 }
 
 const ReceiptPage = () => {
   const [data, setData] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Separate loading states for different purposes  
+  const [initialLoading, setInitialLoading] = useState(true); // For initial page load
+  const [tableLoading, setTableLoading] = useState(false); // For subsequent data fetches
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -101,49 +172,109 @@ const ReceiptPage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<Receipt | null>(null);
   const [recordToView, setRecordToView] = useState<Receipt | null>(null);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
-  // Fetch receipts data
-  const fetchReceipts = async () => {
-    try {
-      const response = await fetch('/api/receipts');
-      if (!response.ok) throw new Error('Failed to fetch receipts');
-      const data: ReceiptResponse = await response.json();
-      setData(data.receipts); // Set the receipts array from the response
-    } catch (error) {
-      console.error('Error fetching receipts:', error);
-      Swal.fire('Error', 'Failed to load receipts', 'error');
-    }
+  // Helper function to normalize receipt data and ensure type consistency
+  const normalizeReceipt = (receiptData: RawReceipt): Receipt => {
+    const normalizedItems = receiptData.items.map((item: RawReceiptItem): ReceiptItem => ({
+      receipt_item_id: item.receipt_item_id,
+      item_id: item.item_id || "",
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      total_price: Number(item.total_price),
+      ocr_confidence: item.ocr_confidence,
+      item: item.item || {
+        item_id: item.item_id || "",
+        item_name: item.item_name || "",
+        unit: item.unit || "",
+        category: item.category || "",
+        other_unit: item.other_unit,
+        other_category: item.other_category
+      },
+      item_name: item.item_name || (item.item ? item.item.item_name : ""),
+      unit: item.unit || (item.item ? item.item.unit : ""),
+      category: item.category || (item.item ? item.item.category : ""),
+      other_unit: item.other_unit || (item.item ? item.item.other_unit : undefined),
+      other_category: item.other_category || (item.item ? item.item.other_category : undefined)
+    }));
+
+    return {
+      receipt_id: receiptData.receipt_id,
+      supplier: receiptData.supplier,
+      transaction_date: receiptData.transaction_date,
+      vat_reg_tin: receiptData.vat_reg_tin,
+      terms: receiptData.terms,
+      date_paid: receiptData.date_paid,
+      payment_status: receiptData.payment_status,
+      record_status: receiptData.record_status || 'Active',
+      total_amount: Number(receiptData.total_amount),
+      vat_amount: receiptData.vat_amount ? Number(receiptData.vat_amount) : undefined,
+      total_amount_due: Number(receiptData.total_amount_due),
+      created_at: receiptData.created_at,
+      updated_at: receiptData.updated_at,
+      created_by: receiptData.created_by,
+      updated_by: receiptData.updated_by,
+      is_deleted: receiptData.is_deleted || false,
+      deletion_reason: receiptData.deletion_reason,
+      deleted_by: receiptData.deleted_by,
+      deleted_at: receiptData.deleted_at,
+      source: receiptData.source,
+      category: receiptData.category,
+      other_category: receiptData.other_category,
+      remarks: receiptData.remarks,
+      ocr_confidence: receiptData.ocr_confidence,
+      ocr_file_path: receiptData.ocr_file_path,
+      items: normalizedItems
+    };
   };
 
-  // Initial data fetch
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await fetchReceipts();
-      setLoading(false);
-    };
-    loadData();
-  }, []);
-
-  // Auto-reload data every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdate(Date.now());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fetch data when lastUpdate changes
-  useEffect(() => {
-    if (!loading && !showModal && !editModalOpen) {
-      fetchReceipts();
+  // Modified fetchReceipts function with loading state management
+  const fetchReceipts = useCallback(async (isInitialLoad = false) => {
+    // Set appropriate loading state
+    if (isInitialLoad) {
+      setInitialLoading(true);
+    } else {
+      setTableLoading(true);
     }
-  }, [lastUpdate, loading, showModal, editModalOpen]);
 
+    try {
+      const response = await fetch(`/api/receipts?page=${currentPage}&limit=${pageSize}`);
+      const result = await response.json();
+      const normalizedReceipts = result.receipts.map(normalizeReceipt);
+      setData(normalizedReceipts);
+    } catch (error) {
+      console.error('Error fetching receipts:', error);
+    } finally {
+      // Clear appropriate loading state
+      if (isInitialLoad) {
+        setInitialLoading(false);
+      } else {
+        setTableLoading(false);
+      }
+    }
+  }, [currentPage, pageSize]);
+
+  // Initial data fetch - this will show the full page loading
+  useEffect(() => {
+    fetchReceipts(true); // Pass true to indicate this is initial load
+  }, []); // Only run on component mount
+
+  // Subsequent data fetches for pagination - these will show table loading only
+  useEffect(() => {
+    // Skip if this is the initial mount (data is already being fetched above)
+    if (initialLoading) return;
+    
+    fetchReceipts(false); // Pass false for subsequent fetches
+  }, [currentPage, pageSize, fetchReceipts, initialLoading]);
+
+  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [search, categoryFilter, statusFilter, dateFrom, dateTo, pageSize]);
+
+  // Show initial loading screen
+  if (initialLoading) {
+    return <Loading />;
+  }
 
   // Filter and pagination logic
   const filteredData = data
@@ -161,14 +292,14 @@ const ReceiptPage = () => {
     .sort((a, b) => {
       const dateA = new Date(a.updated_at || a.created_at);
       const dateB = new Date(b.updated_at || b.created_at);
-      return dateB.getTime() - dateA.getTime(); // Sort by latest first
+      return dateB.getTime() - dateA.getTime();
     });
 
   const indexOfLastRecord = currentPage * pageSize;
   const indexOfFirstRecord = indexOfLastRecord - pageSize;
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-
+  
   const handleDelete = async (receipt_id: string) => {
     const result = await Swal.fire({
       title: 'Delete Receipt',
@@ -204,7 +335,8 @@ const ReceiptPage = () => {
         }
 
         await Swal.fire('Deleted!', 'Receipt has been deleted.', 'success');
-        fetchReceipts(); // Refresh the list
+        await fetchReceipts(false); // Refresh data after successful deletion
+        
       } catch (error) {
         console.error('Error deleting receipt:', error);
         Swal.fire('Error', error instanceof Error ? error.message : 'Failed to delete receipt', 'error');
@@ -240,7 +372,6 @@ const ReceiptPage = () => {
   };
 
   const handleExport = () => {
-    // Generate confirmation message helper function
     const generateConfirmationMessage = () => {
       let message = `<strong>Receipt Records Export</strong><br/><br/>`;
       
@@ -249,7 +380,6 @@ const ReceiptPage = () => {
       } else {
         message += `<strong>Category:</strong> All Categories<br/>`;
       }
-
       if (statusFilter) {
         message += `<strong>Status:</strong> ${statusFilter}<br/>`;
       } else {
@@ -268,7 +398,6 @@ const ReceiptPage = () => {
       return message;
     };
 
-    // Show confirmation dialog
     Swal.fire({
       title: 'Confirm Export',
       html: generateConfirmationMessage(),
@@ -306,41 +435,40 @@ const ReceiptPage = () => {
       "Created By",
       "Created At"
     ].join(",") + "\n";
-  
-  // Update in the performExport function
-  const rows = recordsToExport.map(item => {
-    const escapeField = (field: string | undefined | number) => {
-      if (field === undefined || field === null) return '';
-      const stringField = String(field);
-      if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-        return `"${stringField.replace(/"/g, '""')}"`;
-      }
-      return stringField;
-    };
 
-    const formatMoney = (amount: number) => {
-      return Number(amount).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    };
+    const rows = recordsToExport.map(item => {
+      const escapeField = (field: string | undefined | number) => {
+        if (field === undefined || field === null) return '';
+        const stringField = String(field);
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+          return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+      };
 
-    return [
-      escapeField(item.receipt_id),
-      escapeField(formatDate(item.transaction_date)),
-      escapeField(item.supplier),
-      escapeField(item.category.replace('_', ' ')),
-      escapeField(item.payment_status),
-      escapeField(formatMoney(item.total_amount)),
-      escapeField(item.vat_amount ? formatMoney(item.vat_amount) : ''),
-      escapeField(formatMoney(item.total_amount_due)),
-      escapeField(item.source.replace('_', ' ')),
-      escapeField(item.ocr_confidence ? (item.ocr_confidence * 100).toFixed(1) + '%' : 'N/A'),
-      escapeField(item.created_by),
-      escapeField(formatDate(item.created_at))
-    ].join(',');
-  }).join("\n");
-  
+      const formatMoney = (amount: number) => {
+        return Number(amount).toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      };
+
+      return [
+        escapeField(item.receipt_id),
+        escapeField(formatDate(item.transaction_date)),
+        escapeField(item.supplier),
+        escapeField(item.category.replace('_', ' ')),
+        escapeField(item.payment_status),
+        escapeField(formatMoney(item.total_amount)),
+        escapeField(item.vat_amount ? formatMoney(item.vat_amount) : ''),
+        escapeField(formatMoney(item.total_amount_due)),
+        escapeField(item.source.replace('_', ' ')),
+        escapeField(item.ocr_confidence ? (item.ocr_confidence * 100).toFixed(1) + '%' : 'N/A'),
+        escapeField(item.created_by),
+        escapeField(formatDate(item.created_at))
+      ].join(',');
+    }).join("\n");
+
     const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -352,48 +480,50 @@ const ReceiptPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Add new receipt handler
   const handleAddReceipt = async (formData: AddReceiptFormData) => {
     try {
+      const apiData = {
+        ...formData,
+        items: formData.items.map(item => ({
+          ...item,
+          item_id: '',
+        }))
+      };
+
       const response = await fetch('/api/receipts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(apiData),
       });
 
       if (!response.ok) {
         throw new Error('Failed to add receipt');
       }
 
-      await fetchReceipts(); // Refresh the receipts list
       setShowModal(false);
-      Swal.fire('Success', 'Receipt added successfully', 'success');
+      await fetchReceipts(false);
+      
     } catch (error) {
       console.error('Error adding receipt:', error);
       Swal.fire('Error', 'Failed to add receipt', 'error');
     }
   };
-
-  // Helper function to get badge class for payment status
+  
   const getStatusBadgeClass = (status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued') => {
     return `statusBadge ${status.toLowerCase()}`;
   };
 
-  // Helper to get display category for a receipt
   const getDisplayCategory = (receipt: Receipt) => {
-    // If category is 'Other', display the other_category value
     if (receipt.category === 'Other' && receipt.other_category) {
       return receipt.other_category;
     }
     
-    // For Multiple_Categories, display as "Multiple Categories"
     if (receipt.category === 'Multiple_Categories') {
       return 'Multiple Categories';
     }
     
-    // For all other categories, replace all underscores with spaces
     return receipt.category.replace(/_/g, ' ');
   };
 
@@ -403,8 +533,6 @@ const ReceiptPage = () => {
         <div className="title">
           <h1>Receipt Management</h1>
         </div>
-        {loading && <div className="loading">Loading...</div>}
-
         <div className="settings">
           <div className="searchBar">
             <i className="ri-search-line" />
@@ -415,7 +543,6 @@ const ReceiptPage = () => {
               onChange={(e) => setSearch(e.target.value)}
             /> 
           </div>
-
           <div className="filters">
             <input
               type="date"
@@ -423,14 +550,12 @@ const ReceiptPage = () => {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
-
             <input
               type="date"
               className="dateFilter"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
             />
-
             <select
               value={categoryFilter}
               id="categoryFilter"
@@ -445,7 +570,6 @@ const ReceiptPage = () => {
               <option value="Other">Other</option>
               <option value="Multiple_Categories">Multiple Categories</option>
             </select>
-
             <select
               value={statusFilter}
               id="statusFilter"
@@ -457,15 +581,17 @@ const ReceiptPage = () => {
               <option value="Cancelled">Cancelled</option>
               <option value="Dued">Dued</option>
             </select>
-
             <button onClick={handleExport} id="export"><i className="ri-file-download-line" /> Export CSV</button>
-
             <button onClick={() => setShowModal(true)} id='addExpense'><i className="ri-add-line" /> Add Receipt</button>
           </div>
         </div>
 
-        {/* ==========table===========  */}
         <div className="table-wrapper">
+          {tableLoading && (
+            <div className="table-loading-overlay">
+              Loading...
+            </div>
+          )}
           <div className="tableContainer">
             <table className="data-table">
               <thead>
@@ -486,8 +612,8 @@ const ReceiptPage = () => {
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>{formatDate(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
-                    <td>{getDisplayCategory(item)}</td>
-                    <td>{item.terms?.replace('_', ' ') || 'Cash'}</td>
+                    <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
+                    <td>{formatDisplayText(item.terms || '') || 'Cash'}</td>
                     <td>₱{Number(item.total_amount_due).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
@@ -514,7 +640,7 @@ const ReceiptPage = () => {
                 ))}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !tableLoading && <p>No records found.</p>}
           </div>
         </div>
 
@@ -524,12 +650,11 @@ const ReceiptPage = () => {
           pageSize={pageSize}
           onPageChange={(page) => {
             setCurrentPage(page);
-            // Optional: Scroll to top when changing pages
             window.scrollTo(0, 0);
           }}
           onPageSizeChange={(size) => {
             setPageSize(size);
-            setCurrentPage(1); // Reset to first page when changing page size
+            setCurrentPage(1);
           }}
         />
 
@@ -543,37 +668,78 @@ const ReceiptPage = () => {
 
         {viewModalOpen && recordToView && (
           <ViewReceiptModal
-            record={recordToView}
+            record={{
+              ...recordToView,
+              items: recordToView.items.map(item => ({
+                ...item,
+                item: item.item || {
+                  item_id: item.item_id || '',
+                  item_name: item.item_name || '',
+                  unit: item.unit || '',
+                  category: item.category || '',
+                }
+              }))
+            }}
             onClose={() => setViewModalOpen(false)}
           />
         )}
         
         {editModalOpen && recordToEdit && (
           <EditReceiptModal
-            record={recordToEdit}
+            record={{
+              ...recordToEdit,
+              items: recordToEdit.items.map(item => ({
+                ...item,
+                item: item.item || {
+                  item_id: item.item_id || '',
+                  item_name: item.item_name || '',
+                  unit: item.unit || '',
+                  category: item.category || '',
+                }
+              }))
+            }}
             onClose={() => setEditModalOpen(false)}
             onSave={async (updatedRecord) => {
               try {
+                const originalRecord = recordToEdit;
+                if (!originalRecord) throw new Error('Original record not found');
+
+                const validCategories = [
+                  'Fuel',
+                  'Vehicle_Parts',
+                  'Tools',
+                  'Equipment',
+                  'Supplies',
+                  'Other',
+                  'Multiple_Categories',
+                ] as const;
+
+                const castCategory = (category: unknown): EditReceiptData['category'] =>
+                  validCategories.includes(category as EditReceiptData['category'])
+                    ? (category as EditReceiptData['category'])
+                    : 'Other';
+
+                const fullUpdatedRecord: EditReceiptData = {
+                  ...originalRecord,
+                  ...updatedRecord,
+                  category: castCategory(updatedRecord.category),
+                  payment_status: updatedRecord.payment_status as 'Paid' | 'Pending' | 'Cancelled' | 'Dued',
+                  updated_at: new Date().toISOString(),
+                  updated_by: 'ftms_user',
+                };
+
                 const response = await fetch(`/api/receipts/${updatedRecord.receipt_id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updatedRecord),
+                  body: JSON.stringify(fullUpdatedRecord),
                 });
-                
+
                 if (!response.ok) throw new Error('Failed to update receipt');
-                
-                setData(prev => prev.map(item => 
-                  item.receipt_id === updatedRecord.receipt_id ? 
-                    {
-                      ...item, 
-                      ...updatedRecord, 
-                      payment_status: updatedRecord.payment_status as 'Paid' | 'Pending' | 'Cancelled' | 'Dued',
-                      category: updatedRecord.category as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories'
-                    } 
-                    : item
-                ));
+
                 setEditModalOpen(false);
-                Swal.fire('Success', 'Receipt updated successfully', 'success');
+                await Swal.fire('Success', 'Receipt updated successfully', 'success');
+                await fetchReceipts(false);
+                
               } catch (error) {
                 console.error('Error updating receipt:', error);
                 Swal.fire('Error', 'Failed to update receipt', 'error');
@@ -586,4 +752,4 @@ const ReceiptPage = () => {
   );
 };
 
-export default ReceiptPage; 
+export default ReceiptPage;

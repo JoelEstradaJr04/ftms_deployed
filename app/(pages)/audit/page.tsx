@@ -1,13 +1,12 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import '../../styles/table.css';
 import "../../styles/audit.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from "sweetalert2";
 import Loading from '../../Components/loading';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
-
+import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 type AuditLog = {
   log_id: string;
@@ -57,7 +56,7 @@ const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
             </div>
             <div className="detailRow">
               <strong>Table:</strong>
-              <span>{log.table_affected}</span>
+              <span>{formatDisplayText(log.table_affected)}</span>
             </div>
             <div className="detailRow">
               <strong>Record ID:</strong>
@@ -73,7 +72,14 @@ const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
             </div>
             <div className="detailRow">
               <strong>Details:</strong>
-              <span className="fullDetails">{log.details}</span>
+              <span className="fullDetails">
+                {typeof log.details === 'string'
+                  ? log.details
+                  : <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>
+                      {JSON.stringify(log.details, null, 2)}
+                    </pre>
+                }
+              </span>
             </div>
           </div>
         </div>
@@ -112,12 +118,15 @@ const AuditPage = () => {
 
   const filteredLogs = auditLogs.filter((log) => {
     const matchesSearch = 
-      log.details.toLowerCase().includes(search.toLowerCase()) ||
-      log.performed_by.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase());
+      (log.details && typeof log.details === 'string' && log.details.toLowerCase().includes(search.toLowerCase())) ||
+      (log.performed_by && typeof log.performed_by === 'string' && log.performed_by.toLowerCase().includes(search.toLowerCase())) ||
+      (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes(search.toLowerCase()));
+    
     const matchesTable = tableFilter ? log.table_affected === tableFilter : true;
+    
     const logDate = new Date(log.timestamp).toISOString().split('T')[0];
     const matchesDate = (!dateFrom || logDate >= dateFrom) && (!dateTo || logDate <= dateTo);
+    
     return matchesSearch && matchesTable && matchesDate;
   });
 
@@ -134,14 +143,13 @@ const AuditPage = () => {
           'No records found with the current filters. Do you want to proceed with exporting an empty dataset?',
           'Warning'
         );
-
         if (!warningResult.isConfirmed) {
           return;
         }
       }
 
       // Show export confirmation with details
-      const confirmResult = await await showConfirmation(`
+      const confirmResult = await showConfirmation(`
         <div class="exportConfirmation">
           <p><strong>Date Range:</strong> ${dateFrom ? formatDateTime(dateFrom) : 'Start'} to ${dateTo ? formatDateTime(dateTo) : 'End'}</p>
           <p><strong>Table Filter:</strong> ${tableFilter || 'All Tables'}</p>
@@ -194,7 +202,7 @@ const AuditPage = () => {
         'Record ID': log.record_id,
         'Performed By': log.performed_by,
         'IP Address': log.ip_address || 'N/A',
-        'Details': log.details
+        'Details': log.details || 'N/A'
       }));
 
       // Convert to CSV
@@ -233,10 +241,10 @@ const AuditPage = () => {
         </div>
     );
   }
+
   return (
     <div className="card">
       {/* <h1 className="title">Audit Logs</h1> */}
-
       <div className="elements">
         <h1 className="title">Audit Logs</h1>
         <div className="settings">
@@ -255,14 +263,14 @@ const AuditPage = () => {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="dateFilter"
-              max = {today}
+              max={today}
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="dateFilter"
-              max = {today}
+              max={today}
             />
             <select
               value={tableFilter}
@@ -292,18 +300,19 @@ const AuditPage = () => {
                 <th>IP Address</th>
               </tr>
             </thead>
-            <tbody>{currentRecords.map((log) => (<tr key={log.log_id} onClick={() => setSelectedLog(log)}>
-              <td>{formatDateTime(log.timestamp)}</td>
-              <td>{log.action}</td>
-              <td>{log.table_affected}</td>
-              <td>{log.record_id}</td>
-              <td>{log.performed_by}</td>
-              <td>{log.ip_address || 'N/A'}</td>
-            </tr>))}</tbody></table>
+            <tbody>{currentRecords.map((log) => (
+              <tr key={log.log_id} onClick={() => setSelectedLog(log)}>
+                <td>{formatDateTime(log.timestamp)}</td>
+                <td>{log.action}</td>
+                <td>{formatDisplayText(log.table_affected)}</td>
+                <td>{log.record_id}</td>
+                <td>{log.performed_by}</td>
+                <td>{log.ip_address || 'N/A'}</td>
+              </tr>
+            ))}</tbody></table>
             {currentRecords.length === 0 && <p className="noRecords">No audit logs found.</p>}
           </div>
         </div>
-
         <PaginationComponent
           currentPage={currentPage}
           totalPages={totalPages}
@@ -311,7 +320,6 @@ const AuditPage = () => {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
-
         {selectedLog && (
           <ViewDetailsModal
             log={selectedLog}

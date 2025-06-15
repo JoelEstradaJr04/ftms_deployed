@@ -6,3 +6,12 @@
     "outDir": "./dist"
   }
 }
+
+
+
+
+// Add this to package.json
+
+  "prisma": {
+    "seed": "ts-node --project tsconfig-seed.json prisma/seed.ts"
+  }

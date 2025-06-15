@@ -1,6 +1,8 @@
+// app/api/receipts/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaClient, Prisma, ExpenseCategory, ItemUnit } from '@prisma/client'
 import { generateId } from '@/lib/idGenerator'
+import { getClientIp } from '@/lib/auditLogger'
 
 const prisma = new PrismaClient()
 
@@ -13,11 +15,11 @@ interface RouteParams {
 interface ReceiptItem {
   receipt_item_id?: string;
   item_name: string;
-  unit: string;
+  unit: ItemUnit;
   quantity: number;
   unit_price: number;
   total_price: number;
-  category: string;
+  category: ExpenseCategory;
   other_unit?: string;
   other_category?: string;
 }
@@ -27,7 +29,7 @@ interface DbReceiptItem {
   item_name: string;
   unit: string;
   quantity: Prisma.Decimal;
-  unit_price: Prisma.Decimal;  // Changed from number to Prisma.Decimal
+  unit_price: Prisma.Decimal;
   total_price: Prisma.Decimal;
   created_at: Date;
   updated_at: Date | null;
@@ -51,7 +53,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         is_deleted: false,
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            item: true
+          }
+        },
         ocr_fields: true,
         keywords: true,
       },
@@ -95,20 +101,25 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     } = body;
 
     const { id: receipt_id } = await params;
+    const clientIp = await getClientIp(req);
 
     // Compute summary category from items if not manually provided
     let summaryCategory = manualCategory;
     if (!manualCategory && items && items.length > 0) {
-      // Tally total by category
-      const categoryTotals = items.reduce((acc: Record<string, number>, item: ReceiptItem) => {
-        if (item.category) {
-          acc[item.category] = (acc[item.category] || 0) + Number(item.total_price || 0);
-        }
-        return acc;
-      }, {} as Record<string, number>);
+      // Get unique categories
+      const uniqueCategories = Array.from(new Set(items.map((item: ReceiptItem) => {
+        return item.category === 'Other' && item.other_category
+          ? item.other_category
+          : item.category;
+      }).filter(Boolean)));
 
-      // Find category with highest total
-      summaryCategory = (Object.entries(categoryTotals) as [string, number][]).sort((a, b) => b[1] - a[1])[0][0];
+      if (uniqueCategories.length === 0) {
+        summaryCategory = 'Fuel';
+      } else if (uniqueCategories.length === 1) {
+        summaryCategory = uniqueCategories[0];
+      } else {
+        summaryCategory = 'Multiple_Categories';
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -160,10 +171,19 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
                 item_id: await generateId('ITM'),
                 item_name: item.item_name,
                 unit: item.unit,
+                category: item.category,
+                other_unit: item.unit === 'Other' ? item.other_unit : null,
+                other_category: item.category === 'Other' ? item.other_category : null,
                 created_at: new Date(),
                 is_deleted: false
               },
-              update: {} // Don't update existing items
+              update: {
+                unit: item.unit,
+                category: item.category,
+                other_unit: item.unit === 'Other' ? item.other_unit : null,
+                other_category: item.category === 'Other' ? item.other_category : null,
+                updated_at: new Date()
+              }
             });
 
             // Create new receipt item
@@ -172,18 +192,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
               data: {
                 receipt_item_id,
                 receipt_id,
-                item_name: item.item_name,
-                unit: item.unit,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                total_price: item.total_price,
-                category: item.category as 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other'  | 'Multiple_Categories',
+                item_id: masterItem.item_id,
+                quantity: new Prisma.Decimal(item.quantity),
+                unit_price: new Prisma.Decimal(item.unit_price),
+                total_price: new Prisma.Decimal(item.total_price),
                 created_by: 'ftms_user',
                 created_at: new Date(),
-                is_deleted: false,
-                other_unit: item.unit === 'Other' ? item.other_unit : null,
-                other_category: item.category === 'Other' ? item.other_category : null
-              } as Prisma.ReceiptItemUncheckedCreateInput,
+                is_deleted: false
+              }
             });
 
             // Create item transaction record
@@ -192,8 +208,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
                 transaction_id: await generateId('ITX'),
                 item_id: masterItem.item_id,
                 receipt_id,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
+                quantity: new Prisma.Decimal(item.quantity),
+                unit_price: new Prisma.Decimal(item.unit_price),
                 transaction_date: new Date(transaction_date),
                 created_by: 'ftms_user',
                 created_at: new Date()
@@ -203,7 +219,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         );
       }
 
-      // Create audit log for update
+      // Create audit log for update with IP address
       const updateAuditDetails = {
         previous_values: JSON.parse(JSON.stringify({
           ...existingReceipt,
@@ -211,7 +227,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
             ...item,
             total_price: item.total_price.toString(),
             quantity: item.quantity.toString(),
-            unit_price: item.unit_price.toString()  // Add conversion for unit_price
+            unit_price: item.unit_price.toString()
           }))
         })),
         new_values: JSON.parse(JSON.stringify({
@@ -220,7 +236,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
             ...item,
             total_price: item.total_price.toString(),
             quantity: item.quantity.toString(),
-            unit_price: item.unit_price.toString()  // Add conversion for unit_price
+            unit_price: item.unit_price.toString()
           }))
         }))
       } satisfies AuditValues;
@@ -232,6 +248,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           table_affected: 'Receipt',
           record_id: receipt_id,
           performed_by: 'ftms_user',
+          ip_address: clientIp,
           details: updateAuditDetails,
         },
       });
@@ -262,6 +279,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
 
     const { id: receipt_id } = await params;
+    const clientIp = await getClientIp(req);
 
     // Replace the existing transaction with this new one
     const result = await prisma.$transaction(async (tx) => {
@@ -290,7 +308,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         }
       });
 
-      // Create audit log
+      // Create audit log with IP address
       await tx.auditLog.create({
         data: {
           log_id: await generateId('LOG'),
@@ -298,6 +316,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
           table_affected: 'Receipt',
           record_id: receipt_id,
           performed_by: 'ftms_user',
+          ip_address: clientIp,
           details: {
             old_values: {
               ...receipt,

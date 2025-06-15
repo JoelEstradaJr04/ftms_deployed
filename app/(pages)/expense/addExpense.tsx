@@ -3,10 +3,9 @@
 
 //---------------------IMPORTS HERE----------------------//
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import '../../styles/addExpense.css';
 import { formatDate } from '../../utility/dateFormatter';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 //---------------------DECLARATIONS HERE----------------------//
 // Uncomment and use these types
 type ReceiptItem = {
@@ -105,16 +104,14 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     const fetchReceipts = async () => {
       try {
         setReceiptLoading(true);
-        const response = await fetch('/api/receipts');
+        const response = await fetch('/api/receipts?isExpenseRecorded=false');
         if (!response.ok) throw new Error('Failed to fetch receipts');
-        const data = await response.json();
-        // Filter out receipts that are already recorded as expenses and sort by transaction_date
-        const unrecordedReceipts = data
-          .filter((receipt: Receipt) => !receipt.is_expense_recorded)
-          .sort((a: Receipt, b: Receipt) => 
-            new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
-          );
-        setReceipts(unrecordedReceipts);
+        const { receipts } = await response.json();
+        // Sort by transaction_date
+        const sortedReceipts = receipts.sort((a: Receipt, b: Receipt) => 
+          new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
+        );
+        setReceipts(sortedReceipts);
       } catch (error) {
         console.error('Error fetching receipts:', error);
         showError('Error', 'Failed to load receipts');

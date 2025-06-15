@@ -3,7 +3,6 @@
 
 //---------------------IMPORTS HERE----------------------//
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import '../styles/addExpense.css';
 import { formatDate } from '../utility/dateFormatter';
 
@@ -16,6 +15,24 @@ type ReceiptItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
+  category?: string;
+  other_category?: string;
+  other_unit?: string;
+};
+
+type ExpenseRecord = {
+  expense_id: string;
+  category: string;
+  total_amount: number;
+  expense_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+  is_deleted: boolean;
+  other_source?: string;
+  other_category?: string;
+  receipt_id?: string;
+  assignment_id?: string;
 };
 
 type Receipt = {
@@ -24,12 +41,18 @@ type Receipt = {
   transaction_date: string;
   vat_reg_tin?: string;
   terms?: string;
-  status: string;
+  date_paid?: string;
+  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+  record_status: 'Active' | 'Inactive';
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+  other_category?: string;
   items: ReceiptItem[];
-  is_expense_recorded: boolean;
+  expense?: ExpenseRecord;
+  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+  is_deleted: boolean;
 };
 
 // type ExpenseData = {
@@ -72,55 +95,44 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   assignments,
   currentUser 
 }) => {
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
-  const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [receiptLoading, setReceiptLoading] = useState(true);
-  
   const [formData, setFormData] = useState({
-    category: 'Fuel',
+    category: '',
     assignment_id: '',
     receipt_id: '',
     total_amount: 0,
     expense_date: new Date().toISOString().split('T')[0],
-    created_by: currentUser,
     other_source: '',
-    other_category: '',
+    other_category: ''
   });
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(formatDate(now));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
 
   useEffect(() => {
     const fetchReceipts = async () => {
       try {
         setReceiptLoading(true);
-        const response = await fetch('/api/receipts');
-        if (!response.ok) throw new Error('Failed to fetch receipts');
-        const data = await response.json();
-        // Filter out receipts that are already recorded as expenses and sort by transaction_date
-        const unrecordedReceipts = data
-          .filter((receipt: Receipt) => !receipt.is_expense_recorded)
-          .sort((a: Receipt, b: Receipt) => 
-            new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
-          );
-        setReceipts(unrecordedReceipts);
+        setError(null);
+        const response = await fetch('/api/receipts?limit=1000')
+        if (!response.ok) {
+          throw new Error('Failed to fetch receipts')
+        }
+        const data = await response.json()
+        // Filter out receipts that are already linked to expenses or are inactive
+        const availableReceipts = data.receipts.filter((receipt: Receipt) => 
+          !receipt.expense && 
+          receipt.record_status === 'Active' &&
+          !receipt.is_deleted
+        )
+        setReceipts(availableReceipts)
       } catch (error) {
-        console.error('Error fetching receipts:', error);
-        Swal.fire('Error', 'Failed to load receipts', 'error');
+        console.error('Error fetching receipts:', error)
+        setError('Failed to fetch receipts')
       } finally {
         setReceiptLoading(false);
       }
-    };
+    }
 
     fetchReceipts();
   }, []);
@@ -169,86 +181,25 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     
     if (name === 'source') {
       setSource(value as 'operations' | 'receipt' | 'other');
-    } else if (name === 'total_amount' && source === 'other') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: parseFloat(value) || 0
-      }));
-    } else if (name === 'category' && value === 'Other') {
-      setFormData(prev => ({
-        ...prev,
-        category: value,
-        other_category: ''  // Reset other_category when switching to Other
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
     }
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const { category, assignment_id, receipt_id, total_amount, expense_date, other_source, other_category } = formData;
-
-    if (!category || !expense_date || !currentUser) {
-      Swal.fire('Error', 'Please fill in all required fields', 'error');
-      return;
-    }
-
-    if (source === 'operations' && !assignment_id) {
-      Swal.fire('Error', 'Please select an assignment', 'error');
-      return;
-    }
-
-    if (source === 'receipt' && !receipt_id) {
-      Swal.fire('Error', 'Please select a receipt', 'error');
-      return;
-    }
-
-    if (source === 'other' && !other_source) {
-      Swal.fire('Error', 'Please specify the source', 'error');
-      return;
-    }
-
-    if (category === 'Other' && !other_category) {
-      Swal.fire('Error', 'Please specify the category', 'error');
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: 'Confirm Add',
-      text: 'Are you sure you want to add this expense record?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
-      confirmButtonText: 'Yes, add it!',
-      background: 'white',
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await onAddExpense({
-          category,
-          total_amount,
-          expense_date,
-          created_by: currentUser,
-          ...(source === 'operations' ? { assignment_id } : {}),
-          ...(source === 'receipt' ? { receipt_id } : {}),
-          ...(source === 'other' ? { other_source } : {}),
-          ...(category === 'Other' ? { other_category } : {})
-        });
-
-        Swal.fire('Success', 'Expense added successfully', 'success');
-        onClose();
-      } catch (error: unknown) {
-        console.error('Error adding expense:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        Swal.fire('Error', 'Failed to add expense: ' + errorMessage, 'error');
-      }
+    try {
+      await onAddExpense({
+        ...formData,
+        created_by: currentUser
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      setError('Failed to add expense');
     }
   };
 
@@ -260,186 +211,189 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
   // Format receipt for display
   const formatReceipt = (receipt: Receipt) => {
-    return `₱ ${receipt.total_amount_due} | ${receipt.terms || 'N/A'} | ${receipt.supplier} | ${formatDate(receipt.transaction_date)}`;
+    return `${receipt.supplier} - ${new Date(receipt.transaction_date).toLocaleDateString()} - ₱${receipt.total_amount_due} (${receipt.payment_status})`
   };
 
   return (
-    <div className="modalOverlay">
-      <div className="addExpenseModal">
-        <div className="modalHeader">
-          <h2>Add Expense</h2>
-          <div className="timeDate">
-            <div className="currTime">{currentTime}</div>
-            <div className="currDate">{currentDate}</div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="formFieldsHorizontal">
-            <div className="formLabels">
-              <div className="formLabel">Source Type</div>
-              <div className="formLabel">Source</div>
-              <div className="formLabel">Category</div>
-              <div className="formLabel">Amount</div>
-              <div className="formLabel">Expense Date</div>
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="mt-3 text-center">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Add New Expense</h3>
+          {error && (
+            <div className="mt-2 px-7 py-3">
+              <div className="text-sm text-red-500">{error}</div>
             </div>
-            
-            <div className="formInputs">
-              {/* SOURCE TYPE */}
-              <div className="formField">
-                <select
-                  name="source"
-                  value={source}
-                  onChange={handleInputChange}
-                  required
-                  className="formSelect"
-                >
-                  <option value="operations">Operations</option>
-                  <option value="receipt">Receipt</option>
-                  <option value="other">Other</option>
-                </select>
+          )}
+          <form onSubmit={handleSubmit} className="mt-4">
+            <div className="formFieldsHorizontal">
+              <div className="formLabels">
+                <div className="formLabel">Source Type</div>
+                <div className="formLabel">Source</div>
+                <div className="formLabel">Category</div>
+                <div className="formLabel">Amount</div>
+                <div className="formLabel">Expense Date</div>
               </div>
-
-              {/* SOURCE */}
-              <div className="formField">
-                {source === 'operations' && (
+              
+              <div className="formInputs">
+                {/* SOURCE TYPE */}
+                <div className="formField">
                   <select
-                    name="assignment_id"
-                    value={formData.assignment_id}
+                    name="source"
+                    value={source}
                     onChange={handleInputChange}
                     required
                     className="formSelect"
                   >
-                    <option value="">Select Assignment</option>
-                    {filteredAssignments.map((assignment) => (
-                      <option 
-                        key={assignment.assignment_id} 
-                        value={assignment.assignment_id}
-                      >
-                        {formatAssignment(assignment)}
-                      </option>
-                    ))}
+                    <option value="operations">Operations</option>
+                    <option value="receipt">Receipt</option>
+                    <option value="other">Other</option>
                   </select>
-                )}
+                </div>
 
-                {source === 'receipt' && (
-                  <select
-                    name="receipt_id"
-                    value={formData.receipt_id}
-                    onChange={handleInputChange}
-                    required
-                    className="formSelect"
-                    disabled={receiptLoading}
-                  >
-                    <option value="">Select Receipt</option>
-                    {receipts.map((receipt) => (
-                      <option 
-                        key={receipt.receipt_id} 
-                        value={receipt.receipt_id}
-                      >
-                        {formatReceipt(receipt)}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                {/* SOURCE */}
+                <div className="formField">
+                  {source === 'operations' && (
+                    <select
+                      name="assignment_id"
+                      value={formData.assignment_id}
+                      onChange={handleInputChange}
+                      required
+                      className="formSelect"
+                    >
+                      <option value="">Select Assignment</option>
+                      {filteredAssignments.map((assignment) => (
+                        <option 
+                          key={assignment.assignment_id} 
+                          value={assignment.assignment_id}
+                        >
+                          {formatAssignment(assignment)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
-                {source === 'other' && (
-                  <input
-                    type="text"
-                    name="other_source"
-                    value={formData.other_source}
-                    onChange={handleInputChange}
-                    placeholder="Specify source"
-                    required
-                    className="formInput"
-                  />
-                )}
-              </div>
+                  {source === 'receipt' && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700">Select Receipt</label>
+                      {receiptLoading ? (
+                        <div className="mt-1 text-sm text-gray-500">Loading receipts...</div>
+                      ) : (
+                        <select
+                          name="receipt_id"
+                          value={formData.receipt_id}
+                          onChange={handleInputChange}
+                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                          required
+                        >
+                          <option value="">Select a receipt</option>
+                          {receipts.map((receipt) => (
+                            <option key={receipt.receipt_id} value={receipt.receipt_id}>
+                              {formatReceipt(receipt)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
 
-              {/* CATEGORY */}
-              <div className="formField">
-                {formData.category === 'Other' ? (
-                  <div className="categoryInputWrapper">
+                  {source === 'other' && (
                     <input
                       type="text"
-                      name="other_category"
-                      value={formData.other_category || ''}
+                      name="other_source"
+                      value={formData.other_source}
                       onChange={handleInputChange}
-                      placeholder="Specify category"
+                      placeholder="Specify source"
                       required
                       className="formInput"
                     />
-                    <button 
-                      type="button"
-                      className="clearCategoryBtn"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        category: 'Fuel',
-                        other_category: ''
-                      }))}
+                  )}
+                </div>
+
+                {/* CATEGORY */}
+                <div className="formField">
+                  {formData.category === 'Other' ? (
+                    <div className="categoryInputWrapper">
+                      <input
+                        type="text"
+                        name="other_category"
+                        value={formData.other_category || ''}
+                        onChange={handleInputChange}
+                        placeholder="Specify category"
+                        required
+                        className="formInput"
+                      />
+                      <button 
+                        type="button"
+                        className="clearCategoryBtn"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          category: 'Fuel',
+                          other_category: ''
+                        }))}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      required
+                      className="formSelect"
+                      disabled={source === 'operations'} // Disabled for operations as it's always Fuel
                     >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <select
-                    name="category"
-                    value={formData.category}
+                      <option value="">Select Category</option>
+                      <option value="Fuel">Fuel</option>
+                      <option value="Vehicle_Parts">Vehicle Parts</option>
+                      <option value="Tools">Tools</option>
+                      <option value="Equipment">Equipment</option>
+                      <option value="Supplies">Supplies</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  )}
+                </div>
+
+                {/* AMOUNT */}
+                <div className="formField">
+                  <input
+                    type="number"
+                    name="total_amount"
+                    value={formData.total_amount || ''}
+                    onChange={handleInputChange}
+                    placeholder="Enter amount"
+                    required
+                    className="formInput"
+                    min="0"
+                    step="0.01"
+                    readOnly={source !== 'other'} // Only editable for 'other' source
+                  />
+                </div>
+
+                {/* DATE */}
+                <div className="formField">
+                  <input
+                    type="date"
+                    name="expense_date"
+                    value={formData.expense_date}
                     onChange={handleInputChange}
                     required
-                    className="formSelect"
-                    disabled={source === 'operations'} // Disabled for operations as it's always Fuel
-                  >
-                    <option value="">Select Category</option>
-                    <option value="Fuel">Fuel</option>
-                    <option value="Vehicle_Parts">Vehicle Parts</option>
-                    <option value="Tools">Tools</option>
-                    <option value="Equipment">Equipment</option>
-                    <option value="Supplies">Supplies</option>
-                    <option value="Other">Other</option>
-                  </select>
-                )}
-              </div>
-
-              {/* AMOUNT */}
-              <div className="formField">
-                <input
-                  type="number"
-                  name="total_amount"
-                  value={formData.total_amount || ''}
-                  onChange={handleInputChange}
-                  placeholder="Enter amount"
-                  required
-                  className="formInput"
-                  min="0"
-                  step="0.01"
-                  readOnly={source !== 'other'} // Only editable for 'other' source
-                />
-              </div>
-
-              {/* DATE */}
-              <div className="formField">
-                <input
-                  type="date"
-                  name="expense_date"
-                  value={formData.expense_date}
-                  onChange={handleInputChange}
-                  required
-                  className="formInput"
-                />
+                    className="formInput"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="modalButtons">
-            <button type="button" className="cancelButton" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="addButton">
-              Add
-            </button>
-          </div>
-        </form>
+            <div className="modalButtons">
+              <button type="button" className="cancelButton" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="addButton">
+                Add
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

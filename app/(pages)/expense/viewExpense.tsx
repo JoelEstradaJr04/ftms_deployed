@@ -1,16 +1,28 @@
+// app/(pages)/expense/viewExpense.tsx
 'use client';
-
 import React from 'react';
 import { formatDate } from '../../utility/dateFormatter';
 import '../../styles/viewExpense.css';
+import { formatDisplayText } from '@/app/utils/formatting';
+import ViewReceiptModal from '../receipt/viewReceipt';
 
 type ReceiptItem = {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
+  item_id: string;
+  item?: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+    other_unit?: string;
+    other_category?: string;
+  };
+  item_name?: string;
+  unit?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
+  ocr_confidence?: number;
 };
 
 type Receipt = {
@@ -20,11 +32,22 @@ type Receipt = {
   vat_reg_tin?: string;
   terms?: string;
   date_paid?: string;
-  status: string;
+  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+  record_status: 'Active' | 'Inactive';
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+  other_category?: string;
+  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
   items: ReceiptItem[];
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+  remarks?: string;
+  ocr_confidence?: number;
+  ocr_file_path?: string;
 };
 
 type Assignment = {
@@ -54,8 +77,40 @@ type ViewExpenseModalProps = {
 };
 
 const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) => {
+  // If the record has a receipt, use the ViewReceiptModal to display all receipt details
+  if (record.receipt) {
+    // Ensure all receipt data is properly structured for ViewReceiptModal
+    const receiptData: Receipt = {
+      ...record.receipt,
+      // Ensure items have the complete structure expected by ViewReceiptModal
+      items: record.receipt.items.map(item => ({
+        ...item,
+        item: item.item ? {
+          ...item.item,
+          // Provide fallbacks for required fields
+          item_name: item.item.item_name || item.item_name || '',
+          unit: item.item.unit || item.unit || '',
+          category: item.item.category || '',
+          other_unit: item.item.other_unit || '',
+          other_category: item.item.other_category || ''
+        } : {
+          item_id: item.item_id || '',
+          item_name: item.item_name || '',
+          unit: item.unit || '',
+          category: '',
+          other_unit: '',
+          other_category: ''
+        }
+      }))
+    };
+    
+    // Pass the complete receipt data to ViewReceiptModal
+    return <ViewReceiptModal record={receiptData} onClose={onClose} />;
+  }
+
   const renderOperationsDetails = () => {
     if (!record.assignment) return null;
+
     return (
       <div className="operationsDetails">
         <h3>Operations Details</h3>
@@ -95,83 +150,10 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
     );
   };
 
-  const renderReceiptDetails = () => {
-    if (!record.receipt) return null;
-    return (
-      <div className="receiptDetails">
-        <h3>Receipt Details</h3>
-        <div className="detailRow">
-          <span className="label">Supplier:</span>
-          <span className="value">{record.receipt.supplier}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Transaction Date:</span>
-          <span className="value">{formatDate(record.receipt.transaction_date)}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">VAT Reg TIN:</span>
-          <span className="value">{record.receipt.vat_reg_tin || 'N/A'}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Terms:</span>
-          <span className="value">{record.receipt.terms || 'N/A'}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Date Paid:</span>
-          <span className="value">{record.receipt.date_paid ? formatDate(record.receipt.date_paid) : 'N/A'}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Status:</span>
-          <span className="value">{record.receipt.status}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Total Amount:</span>
-          <span className="value">₱{Number(record.receipt.total_amount).toLocaleString()}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">VAT Amount:</span>
-          <span className="value">₱{record.receipt.vat_amount ? Number(record.receipt.vat_amount).toLocaleString() : 'N/A'}</span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Total Amount Due:</span>
-          <span className="value">₱{Number(record.receipt.total_amount_due).toLocaleString()}</span>
-        </div>
-
-        {record.receipt.items && record.receipt.items.length > 0 && (
-          <div className="itemsSection">
-            <h4>Items</h4>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item Name</th>
-                  <th>Unit</th>
-                  <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Total Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {record.receipt.items.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.item_name}</td>
-                    <td>{item.unit}</td>
-                    <td>{Number(item.quantity).toLocaleString()}</td>
-                    <td>₱{Number(item.unit_price).toLocaleString()}</td>
-                    <td>₱{Number(item.total_price).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div className="viewExpense__modalOverlay">
-      <div className="viewExpense__modalContent">
-        <div className="viewExpense__modalHeader">
+    <div className="modalOverlay">
+      <div className="modalContent">
+        <div className="modalHeader">
           <h2>View Expense</h2>
           <button className="closeButton" onClick={onClose}>&times;</button>
         </div>
@@ -180,12 +162,12 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {record.category === 'Other' ? record.other_category || 'Other' : record.category.replace('_', ' ')}
+              {record.category === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category)}
             </span>
           </div>
           <div className="detailRow">
             <span className="label">Amount:</span>
-            <span className="value">₱{record.total_amount.toLocaleString()}</span>
+            <span className="value">₱{Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="detailRow">
             <span className="label">Date:</span>
@@ -194,7 +176,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         </div>
 
         {record.assignment && renderOperationsDetails()}
-        {record.receipt && renderReceiptDetails()}
+
         {!record.assignment && !record.receipt && (
           <div className="otherDetails">
             <h3>Expense Source Details</h3>

@@ -187,6 +187,7 @@ model Receipt {
   remarks            String?
   ocr_confidence     Float?    // Overall OCR confidence score
   ocr_file_path      String?   // Path to stored receipt image/file
+  is_expense_recorded Boolean  @default(false)  // Track if receipt is already recorded as expense
   items              ReceiptItem[]
   transactions       ItemTransaction[]
   expense            ExpenseRecord?
@@ -199,31 +200,34 @@ model Receipt {
 model ReceiptItem {
   receipt_item_id    String   @id
   receipt_id        String
+  item_id           String
   receipt           Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
-  item_name         String
-  unit              String
-  other_unit        String?
+  item              Item      @relation(fields: [item_id], references: [item_id])
   quantity          Decimal   @db.Decimal(10, 2)
   unit_price        Decimal   @db.Decimal(20, 4)
   total_price       Decimal   @db.Decimal(20, 4)
-  category          ExpenseCategory
-  other_category    String?
   created_at        DateTime  @default(now())
   updated_at        DateTime?
   created_by        String
   updated_by        String?
   is_deleted        Boolean   @default(false)
   ocr_confidence    Float?    // OCR confidence score for this item
+
+  @@unique([receipt_id, item_id])
 }
 
 model Item {
   item_id       String   @id
   item_name     String   @unique
   unit          String
+  category      ExpenseCategory
+  other_unit    String?
+  other_category String?
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
   transactions  ItemTransaction[]
+  receipt_items ReceiptItem[]
 }
 
 model ItemTransaction {
@@ -239,6 +243,8 @@ model ItemTransaction {
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
+
+  @@index([item_id, transaction_date])
 }
 
 model ReceiptExport {

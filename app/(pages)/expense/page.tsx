@@ -8,10 +8,12 @@ import AddExpense from "./addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "./editExpense";
 import ViewExpenseModal from "./viewExpense";
-import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
+import { getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
+import { formatDisplayText } from '@/app/utils/formatting';
+import ViewReceiptModal from '../receipt/viewReceipt';
 
 // Define interface based on your Prisma ExpenseRecord schema
 interface ExpenseRecord {
@@ -37,17 +39,26 @@ interface Receipt {
   vat_reg_tin?: string;
   terms?: string;
   date_paid?: string;
-  status: string;
+  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
+  record_status: 'Active' | 'Inactive';
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
+  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
+  other_category?: string;
   items: ReceiptItem[];
+  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
 }
 
 interface ReceiptItem {
   receipt_item_id: string;
-  item_name: string;
-  unit: string;
+  item_id: string;
+  item: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    category: string;
+  };
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -80,10 +91,10 @@ const ExpensePage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewReceiptModalOpen, setViewReceiptModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<ExpenseData | null>(null);
   const [recordToView, setRecordToView] = useState<ExpenseData | null>(null);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+  const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
@@ -95,7 +106,7 @@ const ExpensePage = () => {
 
   // Format receipt for display
   const formatReceipt = (receipt: Receipt): string => {
-    return `${receipt.terms || 'N/A'} | ${receipt.supplier} | ${formatDate(receipt.transaction_date)}`;
+    return `${receipt.supplier} - ${new Date(receipt.transaction_date).toLocaleDateString()} - ₱${receipt.total_amount_due} (${receipt.payment_status})`
   };
 
   // Fetch expenses data
@@ -114,19 +125,12 @@ const ExpensePage = () => {
   // Fetch assignments data
   const fetchAssignments = async () => {
     try {
-      setAssignmentsLoading(true);
-      // Get unrecorded expense assignments for the dropdown
-      const unrecordedAssignments = await getUnrecordedExpenseAssignments();
-      setAssignments(unrecordedAssignments);
-      
       // Get all assignments for reference (including recorded ones)
       const allAssignmentsData = await getAllAssignmentsWithRecorded();
       setAllAssignments(allAssignmentsData);
     } catch (error) {
       console.error('Error fetching assignments:', error);
       showError('Failed to load assignments', 'Error');
-    } finally {
-      setAssignmentsLoading(false);
     }
   };
 
@@ -287,8 +291,21 @@ const ExpensePage = () => {
   };
 
   const handleViewExpense = (expense: ExpenseData) => {
+    // If the expense is linked to a receipt, show the receipt view
+    if (expense.receipt) {
+      setReceiptToView(expense.receipt);
+      setViewReceiptModalOpen(true);
+      return;
+    }
+    
+    // For other types of expenses, show the expense modal
     setRecordToView(expense);
     setViewModalOpen(true);
+  };
+
+  const handleCloseReceiptModal = () => {
+    setReceiptToView(null);
+    setViewReceiptModalOpen(false);
   };
 
   const handleCloseViewModal = () => {
@@ -530,7 +547,7 @@ const ExpensePage = () => {
             rowData.push(escapeField(formatDate(item.expense_date)));
             break;
           case "Category":
-            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')));
+            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : formatDisplayText(item.category)));
             break;
           case "Amount":
             rowData.push(escapeField(Number(item.total_amount).toFixed(2)));
@@ -569,7 +586,7 @@ const ExpensePage = () => {
             rowData.push(escapeField(item.receipt?.terms));
             break;
           case "Receipt Status":
-            rowData.push(escapeField(item.receipt?.status));
+            rowData.push(escapeField(item.receipt?.payment_status));
             break;
           case "Receipt VAT Amount":
             rowData.push(escapeField(item.receipt?.vat_amount ? Number(item.receipt.vat_amount).toFixed(2) : ''));
@@ -706,7 +723,7 @@ const ExpensePage = () => {
                     <tr key={item.expense_id}>
                       <td>{formatDate(item.expense_date)}</td>
                       <td>{source}</td>
-                      <td>{item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')}</td>
+                      <td>{formatDisplayText(item.category)}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
                       <td className="actionButtons">
                         <div className="actionButtonsContainer">
@@ -746,7 +763,7 @@ const ExpensePage = () => {
           <AddExpense
             onClose={() => setShowModal(false)}
             onAddExpense={handleAddExpense}
-            assignments={assignments}
+            assignments={allAssignments}
             currentUser="ftms_user" // Replace with your actual user ID
           />
         )}
@@ -790,6 +807,13 @@ const ExpensePage = () => {
               other_source: recordToView.other_source
             }}
             onClose={handleCloseViewModal}
+          />
+        )}
+
+        {viewReceiptModalOpen && receiptToView && (
+          <ViewReceiptModal
+            record={receiptToView}
+            onClose={handleCloseReceiptModal}
           />
         )}
       </div>

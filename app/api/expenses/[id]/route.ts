@@ -1,3 +1,4 @@
+// app/api/expenses/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
@@ -8,13 +9,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
+  
   const expense = await prisma.expenseRecord.findUnique({
     where: { expense_id: id },
     include: {
       receipt: {
         include: {
-          items: true
+          items: {
+            include: {
+              item: true
+            }
+          }
         }
       }
     }
@@ -40,7 +45,15 @@ export async function PUT(
     const originalRecord = await prisma.expenseRecord.findUnique({
       where: { expense_id: id },
       include: {
-        receipt: true
+        receipt: {
+          include: {
+            items: {
+              include: {
+                item: true
+              }
+            }
+          }
+        }
       }
     });
 
@@ -70,7 +83,11 @@ export async function PUT(
       include: {
         receipt: {
           include: {
-            items: true
+            items: {
+              include: {
+                item: true
+              }
+            }
           }
         }
       }

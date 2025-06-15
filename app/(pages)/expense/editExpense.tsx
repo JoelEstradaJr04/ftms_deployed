@@ -10,6 +10,7 @@ import '../../styles/editExpense.css';
 import { getAssignmentById } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import { formatDisplayText } from '@/app/utils/formatting';
 
 /* ───── types ──────────────────────────────────────────────── */
 type ReceiptItem = {
@@ -275,6 +276,18 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                <div className="detailRow">
+                  <span className="label">Category:</span>
+                  <span className="value">
+                    {record.category === 'Other' ? formatDisplayText(record.other_category || '') : formatDisplayText(record.category)}
+                  </span>
+                </div>
+
+                <div className="detailRow">
+                  <span className="label">Terms:</span>
+                  <span className="value">{record.receipt?.terms ? formatDisplayText(record.receipt.terms) : 'N/A'}</span>
+                </div>
 
               </div>
             </div>
