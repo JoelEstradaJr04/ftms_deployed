@@ -48,6 +48,8 @@ interface Receipt {
   other_category?: string;
   items: ReceiptItem[];
   source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+  created_by: string;
+  created_at: string;
 }
 
 interface ReceiptItem {
