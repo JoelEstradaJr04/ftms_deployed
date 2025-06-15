@@ -1,16 +1,10 @@
-// app/api/receipts/[id]/route.ts
+//  app/api/receipts/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient, Prisma, ExpenseCategory, ItemUnit } from '@prisma/client'
 import { generateId } from '@/lib/idGenerator'
 import { getClientIp } from '@/lib/auditLogger'
 
 const prisma = new PrismaClient()
-
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
 
 interface ReceiptItem {
   receipt_item_id?: string;
