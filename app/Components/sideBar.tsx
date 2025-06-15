@@ -34,6 +34,7 @@ const Sidebar: React.FC = () => {
     if (financialSubItems.includes(pathname)) {
       setOpenSubMenu("financial-management");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const toggleSubMenu = (id: string) => {
