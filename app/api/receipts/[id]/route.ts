@@ -18,22 +18,6 @@ interface ReceiptItem {
   other_category?: string;
 }
 
-interface DbReceiptItem {
-  receipt_item_id: string;
-  item_name: string;
-  unit: string;
-  quantity: Prisma.Decimal;
-  unit_price: Prisma.Decimal;
-  total_price: Prisma.Decimal;
-  created_at: Date;
-  updated_at: Date | null;
-  created_by: string;
-  updated_by: string | null;
-  is_deleted: boolean;
-  ocr_confidence: number | null;
-  category: string;
-}
-
 type AuditValues = {
   [key: string]: Prisma.JsonValue;
 }
@@ -66,6 +50,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// PATCH /api/receipts/[id]
+// PATCH /api/receipts/[id]
 // PATCH /api/receipts/[id]
 export async function PATCH(req: NextRequest) {
   try {
@@ -101,9 +87,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // Include the item relationship to get item_name, unit, and category
       const existingReceipt = await tx.receipt.findUnique({
         where: { receipt_id: id },
-        include: { items: true },
+        include: { 
+          items: {
+            include: {
+              item: true
+            }
+          }
+        },
       });
 
       if (!existingReceipt) throw new Error('Receipt not found');
@@ -137,18 +130,18 @@ export async function PATCH(req: NextRequest) {
             create: {
               item_id: await generateId('ITM'),
               item_name: item.item_name,
-              unit: item.unit,
+              unit: item.unit.toString(),
               category: item.category,
-              other_unit: item.unit === 'Other' ? item.other_unit : null,
-              other_category: item.category === 'Other' ? item.other_category : null,
+              other_unit: item.unit === ItemUnit.Other ? item.other_unit : null,
+              other_category: item.category === ExpenseCategory.Other ? item.other_category : null,
               created_at: new Date(),
               is_deleted: false
             },
             update: {
-              unit: item.unit,
+              unit: item.unit.toString(),
               category: item.category,
-              other_unit: item.unit === 'Other' ? item.other_unit : null,
-              other_category: item.category === 'Other' ? item.other_category : null,
+              other_unit: item.unit === ItemUnit.Other ? item.other_unit : null,
+              other_category: item.category === ExpenseCategory.Other ? item.other_category : null,
               updated_at: new Date()
             }
           });
@@ -168,29 +161,39 @@ export async function PATCH(req: NextRequest) {
             }
           });
 
-          await tx.itemTransaction.create({
-            data: {
-              transaction_id: await generateId('ITX'),
-              item_id: masterItem.item_id,
-              receipt_id: id,
-              quantity: new Prisma.Decimal(item.quantity),
-              unit_price: new Prisma.Decimal(item.unit_price),
-              transaction_date: new Date(transaction_date),
-              created_by: 'ftms_user',
-              created_at: new Date()
-            }
-          });
+        await tx.itemTransaction.create({
+          data: {
+            transaction_id: await generateId('ITX'),
+            item_id: masterItem.item_id,
+            receipt_id: id,
+            quantity: new Prisma.Decimal(item.quantity),
+            unit_price: new Prisma.Decimal(item.unit_price),
+            transaction_date: new Date(transaction_date),
+            created_by: 'ftms_user',
+            created_at: new Date(),
+            transaction_type: "IN" // <-- Add this line, or use logic to determine the correct type
+          }
+        });
         }));
       }
 
       const updateAuditDetails = {
         previous_values: JSON.parse(JSON.stringify({
           ...existingReceipt,
-          items: existingReceipt.items.map((item: DbReceiptItem) => ({
-            ...item,
-            total_price: item.total_price.toString(),
-            quantity: item.quantity.toString(),
-            unit_price: item.unit_price.toString()
+          items: existingReceipt.items.map((receiptItem) => ({
+            receipt_item_id: receiptItem.receipt_item_id,
+            item_name: receiptItem.item.item_name,
+            unit: receiptItem.item.unit,
+            quantity: receiptItem.quantity.toString(),
+            unit_price: receiptItem.unit_price.toString(),
+            total_price: receiptItem.total_price.toString(),
+            category: receiptItem.item.category,
+            created_at: receiptItem.created_at,
+            updated_at: receiptItem.updated_at,
+            created_by: receiptItem.created_by,
+            updated_by: receiptItem.updated_by,
+            is_deleted: receiptItem.is_deleted,
+            ocr_confidence: receiptItem.ocr_confidence
           }))
         })),
         new_values: JSON.parse(JSON.stringify({
@@ -223,69 +226,5 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error('Error updating receipt:', error);
     return NextResponse.json({ error: 'Failed to update receipt' }, { status: 500 });
-  }
-}
-
-// DELETE /api/receipts/[id]
-export async function DELETE(req: NextRequest) {
-  try {
-    let reason = '';
-    try {
-      const body = await req.json();
-      reason = body.reason || '';
-    } catch {
-      console.log('No deletion reason provided');
-    }
-
-    const id = req.nextUrl.pathname.split('/').pop()!;
-    const clientIp = await getClientIp(req);
-
-    const result = await prisma.$transaction(async (tx) => {
-      const receipt = await tx.receipt.findUnique({
-        where: { receipt_id: id },
-        include: { items: true, expense: true }
-      });
-
-      if (!receipt) throw new Error('Receipt not found');
-
-      const updatedReceipt = await tx.receipt.update({
-        where: { receipt_id: id },
-        data: {
-          is_deleted: true,
-          deletion_reason: reason,
-          deleted_by: 'ftms_user',
-          deleted_at: new Date(),
-          record_status: 'Inactive'
-        }
-      });
-
-      await tx.auditLog.create({
-        data: {
-          log_id: await generateId('LOG'),
-          action: 'DELETE',
-          table_affected: 'Receipt',
-          record_id: id,
-          performed_by: 'ftms_user',
-          ip_address: clientIp,
-          details: {
-            old_values: {
-              ...receipt,
-              storage_size_bytes: receipt.storage_size_bytes?.toString() || null,
-              total_amount: receipt.total_amount.toString(),
-              total_amount_due: receipt.total_amount_due.toString(),
-              vat_amount: receipt.vat_amount?.toString() || null,
-            },
-            deletion_reason: reason
-          },
-        },
-      });
-
-      return updatedReceipt;
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Error deleting receipt:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to delete receipt' }, { status: 500 });
   }
 }

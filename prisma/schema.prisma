@@ -46,6 +46,14 @@ enum ReceiptSource {
 enum ExportFormat {
   CSV
   PDF
+  XSL
+}
+
+enum TransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+  NONE
 }
 
 enum PaymentStatus {
@@ -243,6 +251,7 @@ model ItemTransaction {
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
+  transaction_type TransactionType @default(NONE)
 
   @@index([item_id, transaction_date])
 }
