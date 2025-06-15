@@ -1,5 +1,3 @@
-// filterDropdowm.tsx
-
 import React, { useState, useRef, useEffect } from "react";
 
 // Generic filter option type
@@ -17,15 +15,15 @@ export interface FilterSection {
     title: string;
     type: FilterFieldType;
     options?: FilterOption[];
-    defaultValue?: any;
+    defaultValue?: string | string[] | { from: string; to: string }; // Specify possible types
     placeholder?: string;
 }
 
 // Props for the FilterDropdown component
 export interface FilterDropdownProps {
     sections: FilterSection[];
-    onApply: (filterValues: Record<string, any>) => void;
-    initialValues?: Record<string, any>;
+    onApply: (filterValues: Record<string, string | string[] | { from: string; to: string }>) => void; // Specify possible types
+    initialValues?: Record<string, string | string[] | { from: string; to: string }>; // Specify possible types
     className?: string;
 }
 
@@ -40,7 +38,7 @@ export default function FilterDropdown({
 
     // Initialize filter values with default values from sections and any provided initialValues
     const getInitialFilterValues = () => {
-        const defaults: Record<string, any> = {};
+        const defaults: Record<string, string | string[] | { from: string; to: string }> = {};
 
         sections.forEach(section => {
             if (initialValues[section.id] !== undefined) {
@@ -57,6 +55,8 @@ export default function FilterDropdown({
                         defaults[section.id] = [];
                         break;
                     case 'radio':
+                        defaults[section.id] = '';
+                        break;
                 }
             }
         });
@@ -64,7 +64,7 @@ export default function FilterDropdown({
         return defaults;
     };
 
-    const [filterValues, setFilterValues] = useState<Record<string, any>>(getInitialFilterValues);
+    const [filterValues, setFilterValues] = useState<Record<string, string | string[] | { from: string; to: string }>>(getInitialFilterValues());
 
     // Handle clicks outside the dropdown to close it
     useEffect(() => {
@@ -91,7 +91,7 @@ export default function FilterDropdown({
         setFilterValues({
             ...filterValues,
             [sectionId]: {
-                ...filterValues[sectionId],
+                ...filterValues[sectionId] as { from: string; to: string }, // Type assertion
                 [field]: value
             }
         });
@@ -99,7 +99,7 @@ export default function FilterDropdown({
 
     // Handle checkbox selection (multiple selection)
     const handleCheckboxChange = (sectionId: string, optionId: string) => {
-        const currentValues = filterValues[sectionId] || [];
+        const currentValues = filterValues[sectionId] as string[] || [];
         const newValues = currentValues.includes(optionId)
             ? currentValues.filter((item: string) => item !== optionId)
             : [...currentValues, optionId];
@@ -131,7 +131,7 @@ export default function FilterDropdown({
 
     // Check if a checkbox option is selected
     const isCheckboxSelected = (sectionId: string, optionId: string) => {
-        const values = filterValues[sectionId] || [];
+        const values = filterValues[sectionId] as string[] || [];
         return values.includes(optionId);
     };
 
@@ -145,7 +145,7 @@ export default function FilterDropdown({
                             <label>From:</label>
                             <input
                                 type="date"
-                                value={filterValues[section.id]?.from || ''}
+                                value={(filterValues[section.id] as { from: string; to: string })?.from || ''}
                                 onChange={(e) => handleDateRangeChange(section.id, "from", e.target.value)}
                                 placeholder={section.placeholder || "mm/dd/yyyy"}
                             />
@@ -154,7 +154,7 @@ export default function FilterDropdown({
                             <label>To:</label>
                             <input
                                 type="date"
-                                value={filterValues[section.id]?.to || ''}
+                                value={(filterValues[section.id] as { from: string; to: string })?.to || ''}
                                 onChange={(e) => handleDateRangeChange(section.id, "to", e.target.value)}
                                 placeholder={section.placeholder || "mm/dd/yyyy"}
                             />

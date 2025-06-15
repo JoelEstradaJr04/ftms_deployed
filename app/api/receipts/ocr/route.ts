@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateId } from '@/lib/idGenerator'
 
 // POST /api/receipts/ocr
 // Process receipt image through OCR
@@ -15,10 +14,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
-    // Generate unique filename
-    const timestamp = new Date().getTime()
-    const filename = `receipt_${timestamp}_${file.name}`
     
     // TODO: Implement file upload to your storage service
     // const uploadedUrl = await uploadFile(file, filename)

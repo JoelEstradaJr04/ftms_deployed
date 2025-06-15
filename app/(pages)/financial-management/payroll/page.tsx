@@ -5,10 +5,8 @@ import "../../../styles/payroll.css";
 import "../../../styles/table.css";
 import "../../../styles/chips.css";
 import PaginationComponent from "../../../Components/pagination";
-import Swal from "sweetalert2";
 import Loading from '../../../Components/loading';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../../utility/Alerts';
-
+import { showSuccess } from '../../../utility/Alerts';
 
 // Payroll record type
 type PayrollRecord = {
@@ -51,14 +49,13 @@ const dummyPayrolls: PayrollRecord[] = [
 ];
 
 const PayrollPage = () => {
-
-  // Selcted Employee IDs
+  // Selected Employee IDs
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
     
   // State
   const [data, setData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null); // Fixed: use error state correctly
 
   // Filters
   const [search, setSearch] = useState("");
@@ -68,6 +65,10 @@ const PayrollPage = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const handleEdit = (item: PayrollRecord) => {
+    console.log("Editing payroll:", item);
+  };
 
   // Fetch payroll data (simulate API)
   useEffect(() => {
@@ -79,12 +80,13 @@ const PayrollPage = () => {
         // Replace with real API call
         setData(dummyPayrolls);
         setLoading(false);
-      } catch (err) {
+      } catch (err) { 
+        console.error("Error fetching payroll data:", err);
         setError("Error retrieving payroll data.");
         setLoading(false);
       }
     }, 800);
-  }, []);
+  }, []); // No need to include setError
 
   // Filter logic
   const filteredData = data.filter((item) => {
@@ -110,34 +112,27 @@ const PayrollPage = () => {
   const departments = Array.from(new Set(data.map((d) => d.department)));
   const periods = Array.from(new Set(data.map((d) => d.payroll_period)));
 
+  // Handle release action
+  const handleRelease = (ids: string[]) => {
+    if (ids.length === 0) return;
+    setData(prev =>
+      prev.map(item =>
+        ids.includes(item.payroll_id) && item.status === "Pending"
+          ? { ...item, status: "Released" }
+          : item
+      )
+    );
+    setSelectedIds([]);
+    showSuccess('Payroll released!', 'Success');
+  };
 
-    // Handle release action
-    const handleRelease = (ids: string[]) => {
-        if (ids.length === 0) return;
-        setData(prev =>
-            prev.map(item =>
-            ids.includes(item.payroll_id) && item.status === "Pending"
-                ? { ...item, status: "Released" }
-                : item
-            )
-        );
-        setSelectedIds([]);
-        showSuccess('Payroll released!', 'Success');
-    };
-
-    const handleEdit = (item: PayrollRecord) => {
-        // Open your edit modal here
-        showWarning('Edit not implemented in this demo.');
-    };
-
-
-    if (loading) {
-      return (
-          <div className="card">
-              <h1 className="title">Payroll Management</h1>
-              <Loading />
-          </div>
-      );
+  if (loading) {
+    return (
+      <div className="card">
+        <h1 className="title">Payroll Management</h1>
+        <Loading />
+      </div>
+    );
   }
 
   return (
@@ -148,51 +143,51 @@ const PayrollPage = () => {
         </div>
 
         <div className="settings">
-            <div className="searchBar">
-                <i className="ri-search-line" />
-                <input
-                    type="text"
-                    placeholder="Search employee or job title…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
+          <div className="searchBar">
+            <i className="ri-search-line" />
+            <input
+              type="text"
+              placeholder="Search employee or job title…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-            <div className="filters">
-                <select
-                    value={departmentFilter}
-                    onChange={(e) => setDepartmentFilter(e.target.value)}
-                    className="filterSelect"
-                >
-                <option value="">All Departments</option>
-                    {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                            {dept}
-                        </option>
-                    ))}
-                </select>
+          <div className="filters">
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="filterSelect"
+            >
+              <option value="">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
 
-                <select
-                    value={periodFilter}
-                        onChange={(e) => setPeriodFilter(e.target.value)}
-                        className="filterSelect"
-                    >
-                    <option value="">All Payroll Periods</option>
-                    {periods.map((period) => (
-                        <option key={period} value={period}>
-                            {period}
-                        </option>
-                    ))}
-                </select>
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="filterSelect"
+            >
+              <option value="">All Payroll Periods</option>
+              {periods.map((period) => (
+                <option key={period} value={period}>
+                  {period}
+                </option>
+              ))}
+            </select>
 
-                <button
-                    className="releaseAllBtn"
-                    disabled={selectedIds.length === 0}
-                    onClick={() => handleRelease(selectedIds)}
-                >
-                    <i className="ri-check-double-line" /> Release
-                </button>
-            </div>
+            <button
+              className="releaseAllBtn"
+              disabled={selectedIds.length === 0}
+              onClick={() => handleRelease(selectedIds)}
+            >
+              <i className="ri-check-double-line" /> Release
+            </button>
+          </div>
         </div>
 
         {/* Payroll Table */}
@@ -201,50 +196,50 @@ const PayrollPage = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                    <th>
-                        <input
-                            type="checkbox"
-                            checked={
-                                filteredData.length > 0 &&
-                                filteredData.filter(r => r.status === "Pending").every(r => selectedIds.includes(r.payroll_id))
-                            }
-                            onChange={e => {
-                                if (e.target.checked) {
-                                    setSelectedIds(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id));
-                                } else {
-                                    setSelectedIds([]);
-                                }
-                            }}
-                        />
-                    </th>
-                    <th>Employee Name</th>
-                    <th>Job Title</th>
-                    <th>Department</th>
-                    <th>Payroll Period</th>
-                    <th>Net Pay</th>
-                    <th>Deduction</th>
-                    <th>Salary</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredData.length > 0 &&
+                        filteredData.filter(r => r.status === "Pending").every(r => selectedIds.includes(r.payroll_id))
+                      }
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                    />
+                  </th>
+                  <th>Employee Name</th>
+                  <th>Job Title</th>
+                  <th>Department</th>
+                  <th>Payroll Period</th>
+                  <th>Net Pay</th>
+                  <th>Deduction</th>
+                  <th>Salary</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {currentRecords.map((item) => (
                   <tr key={item.payroll_id}>
                     <td>
-                        {item.status === "Pending" && (
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.includes(item.payroll_id)}
-                                onChange={e => {
-                                    if (e.target.checked) {
-                                        setSelectedIds(prev => [...prev, item.payroll_id]);
-                                    } else {
-                                        setSelectedIds(prev => prev.filter(id => id !== item.payroll_id));
-                                    }
-                                }}
-                            />
-                        )}
+                      {item.status === "Pending" && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.payroll_id)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setSelectedIds(prev => [...prev, item.payroll_id]);
+                            } else {
+                              setSelectedIds(prev => prev.filter(id => id !== item.payroll_id));
+                            }
+                          }}
+                        />
+                      )}
                     </td>
                     <td>{item.employee_name}</td>
                     <td>{item.job_title}</td>
@@ -259,29 +254,29 @@ const PayrollPage = () => {
                       </span>
                     </td>
                     <td>
-                        <div className="actionButtonsContainer">
-                            {item.status === "Pending" ? (
-                                <button
-                                    className="releaseBtn"
-                                    onClick={() => handleRelease([item.payroll_id])}
-                                    title="Release Payroll"
-                                >
-                                    <i className="ri-check-double-line" />
-                                </button>
-                            ) : (
-                                <button className="releaseBtn" disabled title="Already Released">
-                                    <i className="ri-check-double-line" />
-                                </button>
-                            )}
-                            <button
-                                className="editBtn"
-                                onClick={() => handleEdit(item)}
-                                title="Edit Payroll"
-                                disabled={item.status !== "Pending"} // <-- Disable if not pending
-                            >
-                                <i className="ri-edit-2-line" />
-                            </button>
-                        </div>
+                      <div className="actionButtonsContainer">
+                        {item.status === "Pending" ? (
+                          <button
+                            className="releaseBtn"
+                            onClick={() => handleRelease([item.payroll_id])}
+                            title="Release Payroll"
+                          >
+                            <i className="ri-check-double-line" />
+                          </button>
+                        ) : (
+                          <button className="releaseBtn" disabled title="Already Released">
+                            <i className="ri-check-double-line" />
+                          </button>
+                        )}
+                        <button
+                          className="editBtn"
+                          onClick={() => handleEdit(item)}
+                          title="Edit Payroll"
+                          disabled={item.status !== "Pending"} // Disable if not pending
+                        >
+                          <i className="ri-edit-2-line" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

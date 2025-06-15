@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient, Prisma, ExpenseCategory, PaymentStatus } from '@prisma/client'
 import { generateId } from '@/lib/idGenerator'
 import { prisma } from '@/lib/prisma'
-import { logAudit, getClientIp } from '@/lib/auditLogger'
+import { getClientIp } from '@/lib/auditLogger'
 
 interface ReceiptItem {
   item_name: string;

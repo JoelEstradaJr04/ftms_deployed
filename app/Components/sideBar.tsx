@@ -34,7 +34,6 @@ const Sidebar: React.FC = () => {
     if (financialSubItems.includes(pathname)) {
       setOpenSubMenu("financial-management");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const toggleSubMenu = (id: string) => {
@@ -44,7 +43,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="sidebar shadow-lg" id="sidebar">
       <div className="sidebar-content">
-        <div className="logo-img">
+        <div className="logo-Image /">
           <Image src="/agilaLogo.png" alt="logo" width={150} height={50} priority />
         </div>
 

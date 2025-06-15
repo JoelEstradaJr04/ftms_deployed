@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import * as Chart from 'chart.js';
 
 // Register Chart.js components
@@ -33,14 +33,15 @@ const ExpensesPieChart: React.FC<ExpensesPieChartProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart.Chart | null>(null);
 
-  const expenseColors = {
+  // Memoize expenseColors so it doesn't change on every render
+  const expenseColors = useMemo(() => ({
     Fuel: "#d00000",
     Vehicle_Parts: "#dc2f02",
     Tools: "#e85d04",
     Equipment: "#f48c06",
     Supplies: "#faa307",
     Other: "#ffba08"
-  };
+  }), []);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -111,7 +112,7 @@ const ExpensesPieChart: React.FC<ExpensesPieChartProps> = ({
         chartInstance.current = null;
       }
     };
-  }, [data]);
+  }, [data, expenseColors]); // expenseColors is now stable due to useMemo
 
   return (
     <div style={{ height: '400px', width: '100%' }}>

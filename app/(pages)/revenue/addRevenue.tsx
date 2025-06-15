@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import '../../styles/addRevenue.css';
 import axios from 'axios'; // ✅ Required for PUT request
 import {
@@ -13,7 +12,7 @@ import {
 } from '../../utility/Alerts';
 import { isValidAmount } from '../../utility/validation';
 import { formatDate } from '../../utility/dateFormatter';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import {showError} from '../../utility/Alerts';
 
 type AddRevenueProps = {
   onClose: () => void;

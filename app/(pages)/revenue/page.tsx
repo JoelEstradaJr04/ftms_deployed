@@ -11,7 +11,7 @@ import EditRevenueModal from "./editRevenue";
 import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import { showSuccess, showError} from '../../utility/Alerts';
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
@@ -621,53 +621,6 @@ const RevenuePage = () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split("\n").slice(1); // Skip header
-      
-      try {
-        const importPromises = lines
-          .filter(line => line.trim())
-          .map(async (line: string) => {  // Explicitly type the line parameter
-            const [, collection_date, category, amount] = line.split(",");
-            const response = await fetch('/api/revenues', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                category,
-                total_amount: parseFloat(amount),
-                collection_date: new Date(collection_date).toISOString(),
-                created_by: 'import-job'
-              })
-            });
-            return await response.json() as RevenueRecord;
-          });
-
-      const imported = await Promise.all(importPromises);
-      
-        setData(prev => [...prev, ...imported.map((item: RevenueRecord) => ({
-          revenue_id: item.revenue_id,
-          category: item.category,
-          total_amount: Number(item.total_amount),
-          collection_date: new Date(item.collection_date).toISOString().split('T')[0],
-          created_by: item.created_by,
-          assignment_id: item.assignment_id
-        }))]);
-
-          showSuccess('Import completed', 'Success');
-        } catch (error) {
-          console.error('Import error:', error);
-          showError('Failed to import some records', 'Error');
-        }
-      };
-      reader.readAsText(file);
-    };
 
   if (loading) {
         return (

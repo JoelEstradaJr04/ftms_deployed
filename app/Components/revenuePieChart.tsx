@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import * as Chart from 'chart.js';
 
 // Register Chart.js components
@@ -29,12 +29,13 @@ const RevenuePieChart: React.FC<RevenuePieChartProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart.Chart | null>(null);
 
-  const revenueColors = {
+  // Memoize revenueColors so it doesn't change on every render
+  const revenueColors = useMemo(() => ({
     Boundary: "#4373A1",
     Percentage: "#708D81",
     Bus_Rental: "#F4D58D",
     Other: "#001427"
-  };
+  }), []);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -105,7 +106,7 @@ const RevenuePieChart: React.FC<RevenuePieChartProps> = ({
         chartInstance.current = null;
       }
     };
-  }, [data]);
+  }, [data, revenueColors]);
 
   return (
     <div style={{ height: '400px', width: '100%' }}>

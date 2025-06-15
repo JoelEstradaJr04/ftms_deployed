@@ -5,11 +5,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 import '../../styles/editExpense.css';
 import { getAssignmentById } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
-import { showSuccess, showError, showWarning, showInformation, showConfirmation } from '../../utility/Alerts';
+import { showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
 
 /* ───── types ──────────────────────────────────────────────── */
@@ -78,7 +77,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [amount, setAmount] = useState(record.amount);
   const [otherSource, setOtherSource] = useState(record.other_source || '');
   const [otherCategory, setOtherCategory] = useState(record.other_category || '');
-  const [originalAmount] = useState(record.amount);
   const [originalTripExpense, setOriginalTripExpense] = useState<number | null>(null);
   const [showDeviationWarning, setShowDeviationWarning] = useState(false);
   const [deviationPercentage, setDeviationPercentage] = useState(0);

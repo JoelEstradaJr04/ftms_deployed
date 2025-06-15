@@ -256,7 +256,7 @@ const ReceiptPage = () => {
   // Initial data fetch - this will show the full page loading
   useEffect(() => {
     fetchReceipts(true); // Pass true to indicate this is initial load
-  }, []); // Only run on component mount
+  }, [fetchReceipts]); // Only run on component mount
 
   // Subsequent data fetches for pagination - these will show table loading only
   useEffect(() => {
