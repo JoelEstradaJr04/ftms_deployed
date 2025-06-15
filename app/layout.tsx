@@ -1,10 +1,7 @@
 'use client';
 
-import type { Metadata } from "next";
-import { Poppins, Inter, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import './styles/index.css';
-import React, { useState } from 'react'; 
 import SideBar from "./Components/sideBar";
 import TopBar from './Components/topBar';
 
