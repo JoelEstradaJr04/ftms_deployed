@@ -6,6 +6,7 @@
 
 # Next.js
 /.next/
+.next/
 /out/
 
 # Environment variables
