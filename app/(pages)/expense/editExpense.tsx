@@ -54,6 +54,7 @@ type EditExpenseModalProps = {
     receipt_id?: string;
     other_source?: string;
     other_category?: string;
+    receipt?: Receipt;
   };
   onClose: () => void;
   onSave: (updatedRecord: {
