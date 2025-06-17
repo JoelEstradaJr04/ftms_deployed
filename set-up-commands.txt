@@ -34,12 +34,12 @@
 
 1.
     # Run the OCR Service
-    cd_ftms_deployed (if you are not yet in the project directory)
+    # Create new terminal
+    cd ftms_deployed/ocr_service
     python main.py
-    # This will start the OCR service. Click the address/URL displayed in the terminal. 
-    # You will be redirected to the OCR service's webpage. NO UI/UX HERE.
 
 2.
     # Run the FTMS project in a NEW TERMINAL
-    cd_ftms_deployed
+    cd ftms_deployed
     npm run dev
+    # Click on the link in the terminal to access the project.
