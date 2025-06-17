@@ -69,5 +69,5 @@ next-env.d.ts
 /supabase/.temp
 
 # OCR Service
-ocr_service/
-ocr_service
+# ocr_service/
+# ocr_service
