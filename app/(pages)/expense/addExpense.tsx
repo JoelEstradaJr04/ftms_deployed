@@ -427,7 +427,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
               
                 {/* DATE */}
                 <div className="formField">
-                  <label htmlFor="expense_date">Expense Date<span className='requiredTags'></span></label>
+                  <label htmlFor="expense_date">Expense Date<span className='requiredTags'> *</span></label>
                   <input
                     type="date"
                     id="expense_date"
