@@ -178,7 +178,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                 
                 <div className="formRow">
                   <div className="formField">
-                    <label htmlFor="category">Category</label>
+                    <label htmlFor="category">Category<span className='requiredTags'></span></label>
                     <input
                       type="text"
                       id="category"
@@ -189,7 +189,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     />
                   </div>
                   <div className="formField">
-                    <label htmlFor="source">Source</label>
+                    <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
                     <input
                       type="text"
                       id="source"
@@ -204,7 +204,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                 {record.category === 'Other' && (
                   <div className="formRow">
                     <div className="formField">
-                      <label htmlFor="other_category">Category</label>
+                      <label htmlFor="other_category">Category<span className='requiredTags'></span></label>
                       <input
                         type="text"
                         id="other_category"
@@ -217,7 +217,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       />
                     </div>
                     <div className="formField">
-                      <label htmlFor="other_source">Source</label>
+                      <label htmlFor="other_source">Source<span className='requiredTags'></span></label>
                       <input
                         type="text"
                         id="other_source"
@@ -234,7 +234,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
                 <div className="formRow">
                   <div className="formField">
-                    <label htmlFor="expense_date">Expense Date</label>
+                    <label htmlFor="expense_date">Expense Date<span className='requiredTags'> *</span></label>
                     <input
                       type="date"
                       id="expense_date"
@@ -243,10 +243,11 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       onChange={(e) => setExpenseDate(e.target.value)}
                       required
                       className="formInput"
+                      max={currentDate} // Prevent future dates
                     />
                   </div>
                   <div className="formField">
-                    <label htmlFor="amount">Amount</label>
+                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
                     <input
                       type="number"
                       id="amount"

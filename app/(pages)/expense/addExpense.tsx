@@ -280,7 +280,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                 {/* SOURCE TYPE */}
                 <div className="formRow">
                   <div className="formField">
-                    <label htmlFor="source">Source Type</label>
+                    <label htmlFor="source">Source Type<span className='requiredTags'> *</span></label>
                     <select
                       id="source"
                       name="source"
@@ -297,7 +297,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
                   {/* SOURCE */}
                   <div className="formField">
-                    <label htmlFor="sourceDetail">Source</label>
+                    <label htmlFor="sourceDetail">Source<span className='requiredTags'> *</span></label>
                     {source === 'operations' && (
                       <select
                         id="sourceDetail"
@@ -358,7 +358,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                 <div className="formRow">
                   {/* CATEGORY */}
                   <div className="formField">
-                    <label htmlFor="category">Category</label>
+                    <label htmlFor="category">Category<span className='requiredTags'> *</span></label>
                     {formData.category === 'Other' ? (
                       <div className="categoryInputWrapper">
                         <input
@@ -407,7 +407,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   
                      {/* AMOUNT */}
                     <div className="formField">
-                      <label htmlFor="amount">Amount</label>
+                      <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
                       <input
                         type="number"
                         id="amount"
@@ -427,7 +427,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
               
                 {/* DATE */}
                 <div className="formField">
-                  <label htmlFor="expense_date">Expense Date</label>
+                  <label htmlFor="expense_date">Expense Date<span className='requiredTags'></span></label>
                   <input
                     type="date"
                     id="expense_date"

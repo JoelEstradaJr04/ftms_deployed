@@ -27,6 +27,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [collection_date, setDate] = useState(record.collection_date);
+  const today = new Date().toISOString().split('T')[0];
   const [amount, setAmount] = useState(record.amount);
   const [otherSource, setOtherSource] = useState(record.other_source || '');
   const [originalTripRevenue, setOriginalTripRevenue] = useState<number | null>(null);
@@ -126,7 +127,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                 <div className="formRow">
                   {/* CATEGORY */}
                   <div className="formField">
-                    <label htmlFor="category">Category</label>
+                    <label htmlFor="category">Category<span className='requiredTags'> *</span></label>
                     <input
                       type="text"
                       id="category"
@@ -139,7 +140,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
 
                   {/* SOURCE */}
                   <div className="formField">
-                    <label htmlFor="source">Source</label>
+                    <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
                     <input
                       type="text"
                       id="source"
@@ -154,7 +155,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                 <div className="formRow">
                   {/* COLLECTION DATE */}
                   <div className="formField">
-                    <label htmlFor="collection_date">Collection Date</label>
+                    <label htmlFor="collection_date">Collection Date <span className='requiredTags'> *</span></label>
                     <input
                       type="date"
                       id="collection_date"
@@ -163,12 +164,13 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                       onChange={(e) => setDate(e.target.value)}
                       required
                       className="formInput"
+                      max={today}
                     />
                   </div>
 
                   {/* AMOUNT */}
                   <div className="formField">
-                    <label htmlFor="amount">Amount</label>
+                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
                     <input
                       type="number"
                       id="amount"
@@ -201,7 +203,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                 {record.category === 'Other' && (
                   <div className="formRow">
                     <div className="formField">
-                      <label htmlFor="other_source">Source Detail</label>
+                      <label htmlFor="other_source">Source Detail<span className='requiredTags'> *</span></label>
                       <input
                         type="text"
                         id="other_source"

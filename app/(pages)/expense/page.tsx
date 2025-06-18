@@ -88,6 +88,7 @@ const ExpensePage = () => {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const today = new Date().toISOString().split('T')[0];
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [showModal, setShowModal] = useState(false);
@@ -667,6 +668,7 @@ const ExpensePage = () => {
               className="dateFilter"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
+              max={today}
             />
 
             <input
@@ -674,6 +676,7 @@ const ExpensePage = () => {
               className="dateFilter"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
+              max={today}
             />
 
             <select
