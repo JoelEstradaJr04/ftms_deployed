@@ -10,7 +10,7 @@
   font-family: "Open Sans", sans-serif !important;
 }
 
-.requiredTag {
+.requiredTags {
   color: var(--error-color);
   font-weight: bold;
 }
