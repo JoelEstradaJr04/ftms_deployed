@@ -46,6 +46,7 @@ const RevenuePage = () => {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [maxDate, setMaxDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
@@ -80,6 +81,12 @@ const RevenuePage = () => {
       setAssignmentsLoading(false);
     }
   };
+
+  // Set maxDate to today on mount
+  useEffect(() => {
+    const today = new Date();
+    setMaxDate(today.toISOString().split('T')[0]);
+  }, []);
 
   // Set up periodic refresh of assignments with error boundary
   useEffect(() => {
@@ -656,6 +663,7 @@ const RevenuePage = () => {
               className="dateFilter"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
+              max={maxDate}
             />
 
             <input
@@ -663,6 +671,7 @@ const RevenuePage = () => {
               className="dateFilter"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
+              max={maxDate}
             />
 
             <select
