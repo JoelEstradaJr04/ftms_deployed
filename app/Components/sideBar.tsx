@@ -63,7 +63,7 @@ const Sidebar: React.FC = () => {
             className={`nav-item ${activeItem === "revenue" ? "active" : ""}`}
             onClick={() => setActiveItem("revenue")}
           >
-            <i className="fa-duotone fa-dollar-sign" />
+            <i className="ri-money-dollar-circle-line" />
             <span>Revenue Management</span>
           </Link>
 
@@ -72,7 +72,7 @@ const Sidebar: React.FC = () => {
             className={`nav-item ${activeItem === "expense" ? "active" : ""}`}
             onClick={() => setActiveItem("expense")}
           >
-            <i className="ri-money-dollar-circle-line" />
+            <i className="ri-wallet-3-line"></i>
             <span>Expense Management</span>
           </Link>
 
