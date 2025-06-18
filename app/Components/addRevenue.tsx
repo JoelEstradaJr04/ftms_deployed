@@ -47,6 +47,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [maxDate, setMaxDate] = useState("");
   const [filteredAssignments, setFilteredAssignments] = useState(assignments.filter(a => !a.is_revenue_recorded));
   
   const [formData, setFormData] = useState({
@@ -57,6 +58,12 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     created_by: currentUser,
     other_source: '',
   });
+
+  // Set maxDate to today on mount
+  useEffect(() => {
+    const today = new Date();
+    setMaxDate(today.toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -220,41 +227,48 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                   <option value="Bus_Rental">Bus Rental</option>
                   <option value="Other">Other</option>
                 </select>
+                <span className='requiredTag'> *</span>
               </div>
 
               {/* SOURCE */}
               <div className="formField">
                 {formData.category === 'Other' ? (
-                  <input
-                    type="text"
-                    id="other_source"
-                    name="other_source"
-                    value={formData.other_source}
-                    onChange={handleInputChange}
-                    placeholder="Please specify"
-                    required
-                    className="formInput"
-                  />
+                  <>
+                    <input
+                      type="text"
+                      id="other_source"
+                      name="other_source"
+                      value={formData.other_source}
+                      onChange={handleInputChange}
+                      placeholder="Please specify"
+                      required
+                      className="formInput"
+                    />
+                    <span className='requiredTag'> *</span>
+                  </>
                 ) : (
-                  <select
-                    id="assignment_id"
-                    name="assignment_id"
-                    value={formData.assignment_id}
-                    onChange={handleInputChange}
-                    required
-                    className="formSelect"
-                    disabled={filteredAssignments.length === 0}
-                  >
-                    <option value="">Select {formData.category} Assignment</option>
-                    {filteredAssignments.map((assignment) => (
-                      <option 
-                        key={assignment.assignment_id} 
-                        value={assignment.assignment_id}
-                      >
-                        {formatAssignment(assignment)}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      id="assignment_id"
+                      name="assignment_id"
+                      value={formData.assignment_id}
+                      onChange={handleInputChange}
+                      required
+                      className="formSelect"
+                      disabled={filteredAssignments.length === 0}
+                    >
+                      <option value="">Select {formData.category} Assignment</option>
+                      {filteredAssignments.map((assignment) => (
+                        <option 
+                          key={assignment.assignment_id} 
+                          value={assignment.assignment_id}
+                        >
+                          {formatAssignment(assignment)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className='requiredTag'> *</span>
+                  </>
                 )}
 
                 {formData.category !== 'Other' && filteredAssignments.length === 0 && (
@@ -265,27 +279,33 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
               {/* AMOUNT */}
               <div className="formField">
                 {formData.category === 'Other' ? (
-                  <input
-                    type="number"
-                    id="total_amount"
-                    name="total_amount"
-                    value={formData.total_amount || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter amount"
-                    required
-                    className="formInput"
-                    min="0"
-                    step="0.01"
-                  />
+                  <>
+                    <input
+                      type="number"
+                      id="total_amount"
+                      name="total_amount"
+                      value={formData.total_amount || ''}
+                      onChange={handleInputChange}
+                      placeholder="Enter amount"
+                      required
+                      className="formInput"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className='requiredTag'> *</span>
+                  </>
                 ) : (
-                  <input
-                    type="text"
-                    id="total_amount"
-                    name="total_amount"
-                    value={formData.total_amount.toLocaleString()}
-                    readOnly
-                    className="formInput"
-                  />
+                  <>
+                    <input
+                      type="text"
+                      id="total_amount"
+                      name="total_amount"
+                      value={formData.total_amount.toLocaleString()}
+                      readOnly
+                      className="formInput"
+                    />
+                    <span className='requiredTag'> *</span>
+                  </>
                 )}
               </div>
 
@@ -299,7 +319,9 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                   onChange={handleInputChange}
                   required
                   className="formInput"
+                  max={maxDate}
                 />
+                <span className='requiredTag'> *</span>
               </div>
             </div>
           </div>
