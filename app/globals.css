@@ -15,6 +15,12 @@
   font-weight: bold;
 }
 
+.error-message {
+  color: var(--error-color);
+  font-size: 0.7em;
+  margin-top: 2px;
+}
+
 .viewField {
   display: flex;
   gap: 0.5rem;

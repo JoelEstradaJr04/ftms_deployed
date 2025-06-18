@@ -6,6 +6,8 @@ import React, { useState, useEffect } from 'react';
 import '../../styles/addExpense.css';
 import { formatDate } from '../../utility/dateFormatter';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
+import { validateField, isValidAmount, ValidationRule } from "../../utility/validation";
+
 //---------------------DECLARATIONS HERE----------------------//
 // Uncomment and use these types
 type ReceiptItem = {
@@ -65,6 +67,8 @@ type AddExpenseProps = {
   currentUser: string;
 };
 
+type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'other_source' | 'total_amount' | 'expense_date';
+
 const AddExpense: React.FC<AddExpenseProps> = ({ 
   onClose, 
   onAddExpense,
@@ -77,7 +81,25 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receiptLoading, setReceiptLoading] = useState(true);
+
+  const validationRules: Record<FieldName, ValidationRule> = {
+    category: { required: true, label: "Category", pattern: /^(Fuel|Maintenance|Other)$/i },
+    assignment_id: { required: source === 'operations', label: "Assignment" },
+    receipt_id: { required: source === 'receipt', label: "Receipt" },
+    other_source: { required: source === 'other', label: "Source", minLength: 2, maxLength: 50 },
+    total_amount: { required: true, min: 0.01, label: "Amount", custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0." },
+    expense_date: { required: true, label: "Expense Date" },
+  };
   
+  const [errors, setErrors] = useState<Record<FieldName, string[]>>({
+    category: [],
+    assignment_id: [],
+    receipt_id: [],
+    other_source: [],
+    total_amount: [],
+    expense_date: [],
+  });
+
   const [formData, setFormData] = useState({
     category: 'Fuel',
     assignment_id: '',
@@ -164,24 +186,37 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
+    // Prepare the new value for formData
+    let newValue: any = value;
+
     if (name === 'source') {
       setSource(value as 'operations' | 'receipt' | 'other');
-    } else if (name === 'total_amount' && source === 'other') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: parseFloat(value) || 0
-      }));
-    } else if (name === 'category' && value === 'Other') {
+    }
+
+    if (name === 'total_amount') {
+      newValue = parseFloat(value) || 0;
+    }
+
+    // Special handling for category "Other"
+    if (name === 'category' && value === 'Other') {
       setFormData(prev => ({
         ...prev,
         category: value,
-        other_category: ''  // Reset other_category when switching to Other
+        other_category: '', // Reset other_category when switching to Other
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: newValue,
+      }));
+    }
+
+    // Validate this field immediately
+    if (validationRules[name as FieldName]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: validateField(newValue, validationRules[name as FieldName]),
       }));
     }
   };
@@ -287,7 +322,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                       value={source}
                       onChange={handleInputChange}
                       required
-                      className="formSelect"
+                      className='formSelect'
                     >
                       <option value="operations">Operations</option>
                       <option value="receipt">Receipt</option>
@@ -340,16 +375,21 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                       </select>
                     )}
                     {source === 'other' && (
-                      <input
-                        type="text"
-                        id="sourceDetail"
-                        name="other_source"
-                        value={formData.other_source}
-                        onChange={handleInputChange}
-                        placeholder="Specify source"
-                        required
-                        className="formInput"
-                      />
+                      <>
+                        <input
+                          type="text"
+                          id="sourceDetail"
+                          name="other_source"
+                          value={formData.other_source}
+                          onChange={handleInputChange}
+                          placeholder="Specify source"
+                          required
+                          className={`formInput${errors.other_source.length ? ' input-error' : ''}`}
+                        />
+                        {errors.other_source.map((msg, i) => (
+                          <div className="error-message" key={i}>{msg}</div>
+                        ))}
+                      </>
                     )}
                   </div>
                 </div>
@@ -369,7 +409,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                           onChange={handleInputChange}
                           placeholder="Specify category"
                           required
-                          className="formInput"
+                          className={`formInput${errors.category.length ? ' input-error' : ''}`}
                         />
                         <button 
                           type="button"
@@ -382,6 +422,9 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         >
                           ×
                         </button>
+                        {errors.category.map((msg, i) => (
+                          <div className="error-message" key={i}>{msg}</div>
+                        ))}
                       </div>
                     ) : (
                       <select
@@ -416,11 +459,14 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         onChange={handleInputChange}
                         placeholder="Enter amount"
                         required
-                        className="formInput"
+                        className={`formInput${errors.total_amount.length ? ' input-error' : ''}`}
                         min="0"
                         step="0.01"
                         readOnly={source !== 'other'}
                       />
+                      {errors.total_amount.map((msg, i) => (
+                        <div className="error-message" key={i}>{msg}</div>
+                      ))}
                     </div>
                 </div>
 
@@ -435,9 +481,12 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                     value={formData.expense_date}
                     onChange={handleInputChange}
                     required
-                    className="formInput"
+                    className={`formInput${errors.expense_date.length ? ' input-error' : ''}`}
                     max={today}
                   />
+                  {errors.expense_date.map((msg, i) => (
+                    <div className="error-message" key={i}>{msg}</div>
+                  ))}
                 </div>
               </div>
             </div>
