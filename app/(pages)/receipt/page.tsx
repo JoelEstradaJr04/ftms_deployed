@@ -528,7 +528,7 @@ const ReceiptPage = () => {
   };
 
   return (
-    <div className="card receiptPage">
+    <div className="card">
       <div className="elements">
         <div className="title">
           <h1>Receipt Management</h1>

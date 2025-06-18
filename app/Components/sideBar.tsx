@@ -44,7 +44,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="sidebar shadow-lg" id="sidebar">
       <div className="sidebar-content">
-        <div className="logo-Image /">
+        <div className="logo-img">
           <Image src="/agilaLogo.png" alt="logo" width={150} height={50} priority />
         </div>
 
@@ -103,12 +103,6 @@ const Sidebar: React.FC = () => {
 
           {openSubMenu === "financial-management" && (
             <div className="sub-menu active">
-              <Link
-                href="/financial-management/balancePayment"
-                className={`sub-item ${activeItem === "balancePayment" ? "active" : ""}`}
-              >
-                Balance & Payment
-              </Link>
               <Link
                 href="/financial-management/payroll"
                 className={`sub-item ${activeItem === "payroll" ? "active" : ""}`}
