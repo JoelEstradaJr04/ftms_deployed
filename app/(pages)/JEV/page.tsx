@@ -221,13 +221,21 @@ const dummyRecords = [
                     </tr>
                 </thead>
                 <tbody>
-                    {dummyRecords.map((rec, idx) => (
-                        <tr key={idx}>
-                            <td>{rec.responsibilityCenter}</td>
-                            <td>{rec.accountExplanation}</td>
-                            <td>{rec.debit}</td>
-                            <td>{rec.credit}</td>
-                        </tr>
+                    {dummyRecords
+                        .filter(
+                            (rec) =>
+                                rec.responsibilityCenter.toLowerCase().includes(search.toLowerCase()) ||
+                                rec.accountExplanation.toLowerCase().includes(search.toLowerCase()) ||
+                                rec.debit.toString().includes(search) ||
+                                rec.credit.toString().includes(search)
+                        )
+                        .map((rec, idx) => (
+                            <tr key={idx}>
+                                <td>{rec.responsibilityCenter}</td>
+                                <td>{rec.accountExplanation}</td>
+                                <td>{rec.debit}</td>
+                                <td>{rec.credit}</td>
+                            </tr>
                     ))}
                 </tbody>
                 <tfoot>
