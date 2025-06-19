@@ -483,9 +483,10 @@ const ExpensePage = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
+      cancelButtonColor: '#FEB71F',
       confirmButtonText: 'Export',
       background: 'white',
+      reverseButtons:true,
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {

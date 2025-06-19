@@ -116,7 +116,7 @@ export const showError = (message: string, title: string) => {
     text: message,
     confirmButtonColor: '#961C1E',
     background: 'white',
-    timer: 2000,
+    timer: 3000,
     backdrop: false,
     timerProgressBar: true,
     showConfirmButton: false,
@@ -134,7 +134,7 @@ export const showWarning = (message: string) => {
     confirmButtonColor: '#961C1E',
     background: 'white',
     backdrop: false,
-    timer: 2000,
+    timer: 3000,
     timerProgressBar: true,
     customClass: {
     popup: 'swal-custom-popup'
@@ -151,7 +151,7 @@ export const showInformation = (message: string, title: string) => {
     confirmButtonColor: '#961C1E',
     background: 'white',
     backdrop: false,
-    timer: 2000,
+    timer: 3000,
     timerProgressBar: true,
     customClass: {
     popup: 'swal-custom-popup'
@@ -170,8 +170,9 @@ export const showConfirmation = (message: string, title: string) => {
     cancelButtonText: 'Cancel',
     background: 'white',
     confirmButtonColor: '#961C1E',
-    cancelButtonColor: '#ECECEC',
+    cancelButtonColor: '#FEB71F',
     backdrop: false,
+    reverseButtons: true,
     customClass: {
     popup: 'swal-custom-popup'
   }

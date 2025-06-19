@@ -10,6 +10,8 @@ import { getAssignmentById } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
+import { validateField, isValidAmount, ValidationRule } from "../../utility/validation";
+
 
 /* ───── types ──────────────────────────────────────────────── */
 type ReceiptItem = {
@@ -81,6 +83,76 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [originalTripExpense, setOriginalTripExpense] = useState<number | null>(null);
   const [showDeviationWarning, setShowDeviationWarning] = useState(false);
   const [deviationPercentage, setDeviationPercentage] = useState(0);
+
+  type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'source' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category';
+
+  const validationRules: Record<FieldName, ValidationRule> = {
+    expense_date: { required: true, label: "Expense Date" },
+    category: { required: true, label: "Category" },
+    source: { required: true, label: "Source" },
+    amount: { required: true, min: 0.01, label: "Amount" },
+    assignment_id: { required: record.source === 'operations', label: "Assignment" },
+    receipt_id: { required: record.source === 'receipt', label: "Receipt" },
+    other_source: { required: record.source === 'other', label: "Other Source", minLength: 2, maxLength: 50 },
+    other_category: { required: record.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
+    total_amount: { required: false, label: "Total Amount" }, // Added to satisfy FieldName
+  };
+
+  const [errors, setErrors] = useState<Record<FieldName, string[]>>({
+      category: [],
+      assignment_id: [],
+      receipt_id: [],
+      source: [],
+      amount: [],
+      other_source: [],
+      total_amount: [],
+      expense_date: [],
+      other_category: [],
+    });
+
+  const [formData, setFormData] = useState({
+      category: 'Fuel',
+      assignment_id: '',
+      receipt_id: '',
+      total_amount: 0,
+      expense_date: new Date().toISOString().split('T')[0],
+      other_source: '',
+      other_category: '',
+    });
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+  
+      // Prepare the new value for formData
+      let newValue: any = value;
+  
+      if (name === 'total_amount') {
+        newValue = parseFloat(value) || 0;
+      }
+  
+      // Special handling for category "Other"
+      if (name === 'category' && value === 'Other') {
+        setFormData(prev => ({
+          ...prev,
+          category: value,
+          other_category: '', // Reset other_category when switching to Other
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          [name]: newValue,
+        }));
+      }
+  
+      // Validate this field immediately
+      if (validationRules[name as FieldName]) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: validateField(newValue, validationRules[name as FieldName]),
+        }));
+      }
+    };
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -184,9 +256,13 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       id="category"
                       name="category"
                       value={record.category === 'Other' ? record.other_category || 'Other' : record.category}
+                      onChange={handleInputChange}
                       readOnly
-                      className="formInput"
+                      className={`formInput${errors.category.length ? ' input-error' : ''}`}
                     />
+                    {errors.category.map((msg, i) => (
+                      <div className="error-message" key={i}>{msg}</div>
+                    ))}
                   </div>
                   <div className="formField">
                     <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
@@ -196,8 +272,12 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       name="source"
                       value={record.source}
                       readOnly
-                      className="formInput"
+                      onChange={handleInputChange}
+                      className={`formInput${errors.source.length ? ' input-error' : ''}`}
                     />
+                    {errors.source.map((msg, i) => (
+                      <div className="error-message" key={i}>{msg}</div>
+                    ))}
                   </div>
                 </div>
 
@@ -210,11 +290,14 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                         id="other_category"
                         name="other_category"
                         value={otherCategory}
-                        onChange={(e) => setOtherCategory(e.target.value)}
+                        onChange={(e) => { setOtherCategory(e.target.value); handleInputChange(e); }}
                         placeholder="Specify category"
                         required
-                        className="formInput"
+                        className={`formInput${errors.other_category.length ? ' input-error' : ''}`}
                       />
+                      {errors.other_category.map((msg, i) => (
+                        <div className="error-message" key={i}>{msg}</div>
+                      ))}
                     </div>
                     <div className="formField">
                       <label htmlFor="other_source">Source<span className='requiredTags'></span></label>
@@ -223,11 +306,14 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                         id="other_source"
                         name="other_source"
                         value={otherSource}
-                        onChange={(e) => setOtherSource(e.target.value)}
+                        onChange={(e) => {setOtherSource(e.target.value); handleInputChange(e); }}
                         placeholder="Specify source"
                         required
-                        className="formInput"
+                        className={`formInput${errors.other_source.length ? ' input-error' : ''}`}
                       />
+                      {errors.other_source.map((msg, i) => (
+                        <div className="error-message" key={i}>{msg}</div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -240,11 +326,32 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       id="expense_date"
                       name="expense_date"
                       value={expenseDate}
-                      onChange={(e) => setExpenseDate(e.target.value)}
+                      onChange={(e) => {setExpenseDate(e.target.value); handleInputChange(e); }}
                       required
-                      className="formInput"
+                      className={`formInput${errors.expense_date.length ? ' input-error' : ''}`}
+                    />
+                    {errors.expense_date.map((msg, i) => (
+                      <div className="error-message" key={i}>{msg}</div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="formRow">
+                  <div className="formField">
+                    <label htmlFor="expense_date">Expense Date<span className='requiredTags'> *</span></label>
+                    <input
+                      type="date"
+                      id="expense_date"
+                      name="expense_date"
+                      value={expenseDate}
+                      onChange={(e) => {setExpenseDate(e.target.value); handleInputChange(e); }}
+                      required
+                      className={`formInput${errors.expense_date.length ? ' input-error' : ''}`}
                       max={currentDate} // Prevent future dates
                     />
+                    {errors.expense_date.map((msg, i) => (
+                      <div className="error-message" key={i}>{msg}</div>
+                    ))}
                   </div>
                   <div className="formField">
                     <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
@@ -253,12 +360,15 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       id="amount"
                       name="amount"
                       value={amount}
-                      onChange={(e) => handleAmountChange(parseFloat(e.target.value))}
+                      onChange={(e) => {handleAmountChange(parseFloat(e.target.value)); handleInputChange(e); }}
                       min="0"
                       step="0.01"
                       required
-                      className="formInput"
+                      className={`formInput${errors.amount.length ? ' input-error' : ''}`}
                     />
+                    {errors.amount.map((msg, i) => (
+                      <div className="error-message" key={i}>{msg}</div>
+                    ))}
                   </div>
                 </div>
 
