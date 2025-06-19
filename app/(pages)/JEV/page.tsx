@@ -26,6 +26,42 @@ const formatDateTime = (iso: string) => {
 };
 
 const JEVpage = () => {
+
+
+const dummyRecords = [
+  {
+    responsibilityCenter: "Finance",
+    accountExplanation: "Cash on Hand",
+    debit: 10000,
+    credit: 0,
+  },
+  {
+    responsibilityCenter: "HR",
+    accountExplanation: "Salaries Expense",
+    debit: 0,
+    credit: 8000,
+  },
+  {
+    responsibilityCenter: "IT",
+    accountExplanation: "Equipment Purchase",
+    debit: 5000,
+    credit: 0,
+  },
+  {
+    responsibilityCenter: "Logistics",
+    accountExplanation: "Transportation Expense",
+    debit: 0,
+    credit: 2000,
+  },
+  {
+    responsibilityCenter: "Admin",
+    accountExplanation: "Office Supplies",
+    debit: 1500,
+    credit: 0,
+  },
+];
+
+
   const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -148,48 +184,24 @@ const JEVpage = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                    </tr>
+                    {dummyRecords.map((rec, idx) => (
+                        <tr key={idx}>
+                            <td>{rec.responsibilityCenter}</td>
+                            <td>{rec.accountExplanation}</td>
+                            <td>{rec.debit}</td>
+                            <td>{rec.credit}</td>
+                        </tr>
+                    ))}
                 </tbody>
                 <tfoot>
                     <tr>
-                        <th colSpan={2}>Total:</th>
-                        <th>[Total Debit Here]</th>
-                        <th>[Total Credit Here]</th>
+                        <td colSpan={2} style={{ fontWeight: "bold" }}>Total:</td>
+                        <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                            {dummyRecords.reduce((sum, rec) => sum + rec.debit, 0)}
+                        </td>
+                        <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                            {dummyRecords.reduce((sum, rec) => sum + rec.credit, 0)}
+                        </td>
                     </tr>
                 </tfoot>
             </table>
