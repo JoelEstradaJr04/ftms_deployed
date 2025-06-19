@@ -6,7 +6,9 @@ import "../../../styles/table.css";
 import "../../../styles/chips.css";
 import PaginationComponent from "../../../Components/pagination";
 import Loading from '../../../Components/loading';
-import { showSuccess } from '../../../utility/Alerts';
+import Swal from 'sweetalert2';
+import { showSuccess, showConfirmation } from '../../../utility/Alerts';
+import ViewPayrollModal from "./viewPayroll";
 
 // Payroll record type
 type PayrollRecord = {
@@ -66,6 +68,10 @@ const PayrollPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  //vieewPayroll modal
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [recordToView, setRecordToView] = useState<PayrollRecord | null>(null);
+
   const handleEdit = (item: PayrollRecord) => {
     console.log("Editing payroll:", item);
   };
@@ -111,6 +117,27 @@ const PayrollPage = () => {
   // Unique departments and periods for filter dropdowns
   const departments = Array.from(new Set(data.map((d) => d.department)));
   const periods = Array.from(new Set(data.map((d) => d.payroll_period)));
+
+
+  const handleReleaseWithConfirm = (ids: string[]) => {
+    Swal.fire({
+      title: 'Confirm Release',
+      text: 'Are you sure you want to release this payroll?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#13CE66',
+      cancelButtonColor: '#FEB71F',
+      confirmButtonText: 'Yes, Release',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      background: 'white',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleRelease(ids);
+      }
+    });
+  };
+
 
   // Handle release action
   const handleRelease = (ids: string[]) => {
@@ -225,7 +252,13 @@ const PayrollPage = () => {
               </thead>
               <tbody>
                 {currentRecords.map((item) => (
-                  <tr key={item.payroll_id}>
+                  <tr key={item.payroll_id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                    setRecordToView(item);
+                    setViewModalOpen(true);
+                    }}
+                  >
                     <td>
                       {item.status === "Pending" && (
                         <input
@@ -258,7 +291,7 @@ const PayrollPage = () => {
                         {item.status === "Pending" ? (
                           <button
                             className="releaseBtn"
-                            onClick={() => handleRelease([item.payroll_id])}
+                            onClick={() => handleReleaseWithConfirm([item.payroll_id])}
                             title="Release Payroll"
                           >
                             <i className="ri-check-double-line" />
@@ -295,6 +328,16 @@ const PayrollPage = () => {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
+
+        {viewModalOpen && recordToView && (
+          <ViewPayrollModal
+            record={recordToView}
+            onClose={() => {
+              setViewModalOpen(false);
+              setRecordToView(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );
