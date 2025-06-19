@@ -107,6 +107,7 @@
   min-width: 400px !important;
 }
 
+.modalContent .grossEarningsTable tbody td,
 .modalContent .deductionTable tbody td,
 .modalContent .bonusTable tbody td {
   padding: 0.75rem !important;
@@ -123,6 +124,44 @@
 
 .modalContent .deductionTable tr:hover,
 .modalContent .bonusTable tr:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* ---------- Gross Earnings Table ---------- */
+.modalContent .grossEarningsTable {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 1rem !important;
+  min-width: 400px !important;
+  background-color: #fff !important;
+}
+
+.modalContent .grossEarningsTable th,
+.modalContent .deductionTable th,
+.modalContent .bonusTable th {
+  background-color: #FFD966 !important; /* Light yellow for header */
+  font-weight: bold !important;
+  color: #000 !important;
+  padding: 0.75rem !important;
+  border-bottom: 1px solid #eee !important;
+  text-align: center !important;
+}
+
+.modalContent .grossEarningsTable td {
+  padding: 0.75rem !important;
+  border-bottom: 1px solid #eee !important;
+  text-align: center !important;
+  color: #333 !important;
+}
+
+.modalContent .grossEarningsTable tr.section-header td {
+  background-color: #f8f9fa !important;
+  font-weight: bold !important;
+  text-align: left !important;
+  color: #333 !important;
+}
+
+.modalContent .grossEarningsTable tr:hover td {
   background-color: #f8f9fa !important;
 }
 
@@ -195,7 +234,9 @@
   }
 
   .modalContent .deductionTable,
-  .modalContent .bonusTable {
+  .modalContent .bonusTable,
+  .modalContent .grossEarningsTable {
     min-width: auto !important;
+    font-size: 0.95em !important;
   }
 }
