@@ -20,7 +20,7 @@ type Reimbursement = {
   approved_by: string | null;
   approved_date: string | null;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Paid';
-  approved_amount: number | null;
+  amount: number | null;
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
@@ -67,7 +67,7 @@ const ReimbursementPage = () => {
           approved_by: 'MGR001',
           approved_date: '2024-06-16',
           status: 'Approved',
-          approved_amount: 150.00,
+          amount: 150.00,
           rejection_reason: null,
           paid_date: null,
           payment_reference: null,
@@ -82,7 +82,7 @@ const ReimbursementPage = () => {
           approved_by: null,
           approved_date: null,
           status: 'Pending',
-          approved_amount: null,
+          amount: null,
           rejection_reason: null,
           paid_date: null,
           payment_reference: null,
@@ -149,28 +149,55 @@ const ReimbursementPage = () => {
     setApplyModalOpen(true);
   };
 
-  const handleSubmitReimbursement = (data: any) => {
-  // You can add logic to POST to your backend here.   <------------ JOEL HERE ADD REIMBURSEMENT
-  setReimbursements(prev => [
-    {
-      reimbursement_id: `R${String(prev.length + 1).padStart(3, "0")}`,
-      expense_id: data.expense_id,
-      employee_id: data.employee_id,
-      employee_name: "New Employee", // You may want to look up the name
-      submitted_date: new Date().toISOString().split("T")[0],
-      approved_by: null,
-      approved_date: null,
-      status: "Pending",
-      approved_amount: null,
-      rejection_reason: null,
-      paid_date: null,
-      payment_reference: null,
-      notes: data.notes,
-    },
-    ...prev,
-  ]);
-  setApplyModalOpen(false);
-};
+ const handleSubmitReimbursement = (data: any) => {
+    setReimbursements(prev => [
+      {
+        reimbursement_id: `R${String(prev.length + 1).padStart(3, "0")}`,
+        expense_id: data.expense_id,
+        employee_id: data.employee_id,
+        employee_name: data.employeeDetails?.employee_name || "Unknown",
+        submitted_date: new Date().toISOString().split("T")[0],
+        approved_by: null,
+        approved_date: null,
+        status: "Pending",
+        amount: data.amount, // <-- ADD THIS LINE to store original amount
+        approved_amount: null,
+        rejection_reason: null,
+        paid_date: null,
+        payment_reference: null,
+        notes: data.notes,
+      },
+      ...prev,
+    ]);
+    setApplyModalOpen(false);
+  };
+
+  const handleApprove = async (reimbursementId: string) => {
+    const result = await showConfirmation(
+      'Approve Reimbursement',
+      'Are you sure you want to approve this reimbursement?'
+    );
+    
+    if (result.isConfirmed) {
+      try {
+        // Update the reimbursement status to Approved
+        setReimbursements(prev => prev.map(item => 
+          item.reimbursement_id === reimbursementId 
+            ? { 
+                ...item, 
+                status: 'Approved' as const,
+                approved_by: 'Current User', // Replace with actual user
+                approved_date: new Date().toISOString().split('T')[0],
+              }
+            : item
+        ));
+        
+        showSuccess('Reimbursement approved successfully!', 'Success');
+      } catch (error) {
+        showError('Failed to approve reimbursement', 'Error');
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -278,9 +305,8 @@ const ReimbursementPage = () => {
                     <th>Approved By</th>
                     <th>Approved Date</th>
                     <th>Status</th>
-                    <th>Approved Amount</th>
+                    <th>Amount</th>
                     <th>Paid Date</th>
-                    <th>Payment Reference</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -299,10 +325,17 @@ const ReimbursementPage = () => {
                           {item.status}
                         </span>
                       </td>
-                      <td>{item.approved_amount ? `₱${item.approved_amount.toFixed(2)}` : '-'}</td>
+                      <td>₱{(item.amount ?? 0).toFixed(2)}</td>
                       <td>{item.paid_date || '-'}</td>
-                      <td>{item.payment_reference || '-'}</td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {item.status === 'Pending' && (
+                          <button 
+                            onClick={() => handleApprove(item.reimbursement_id)}
+                            className="action-btn approve-btn"
+                          >
+                            Approve
+                          </button>
+                        )}
                         {item.status === 'Approved' && (
                           <button 
                             onClick={() => handleReimburse(item.reimbursement_id)}
@@ -313,9 +346,6 @@ const ReimbursementPage = () => {
                         )}
                         {item.status === 'Paid' && (
                           <span className="completed-text">Completed</span>
-                        )}
-                        {item.status === 'Pending' && (
-                          <span className="pending-text">Waiting</span>
                         )}
                         {item.status === 'Rejected' && (
                           <span className="rejected-text">Rejected</span>

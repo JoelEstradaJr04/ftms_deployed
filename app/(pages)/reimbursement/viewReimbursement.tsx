@@ -11,7 +11,7 @@ type Reimbursement = {
   approved_by: string | null;
   approved_date: string | null;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Paid';
-  approved_amount: number | null;
+  amount: number | null;
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
@@ -80,8 +80,8 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
             <div className="detailRow">
               <span className="label">Approved Amount:</span>
               <span className="value">
-                {record.approved_amount !== null
-                  ? `₱${record.approved_amount.toFixed(2)}`
+                {record.amount !== null
+                  ? `₱${record.amount.toFixed(2)}`
                   : "-"}
               </span>
             </div>
