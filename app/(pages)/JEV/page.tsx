@@ -206,7 +206,7 @@ const dummyRecords = [
         <div className="table-wrapper">
           <div className="tableContainer">
             <table className="data-table">
-                <thead>
+                <thead className="JEVhead">
                     <tr>
                         <th rowSpan={3} className="responsibility-center">Responsibility Centers</th>
                         <th colSpan={3}>Accounting Entries</th>
@@ -220,7 +220,7 @@ const dummyRecords = [
                         <th>Credit</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody className="JEVbody">
                     {dummyRecords
                         .filter(
                             (rec) =>

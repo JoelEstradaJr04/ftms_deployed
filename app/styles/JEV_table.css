@@ -101,8 +101,8 @@ tbody tr:hover {
     background-color: var(--table-row-color);
 }
 
-thead th,
-tbody td {
+.JEVhead th,
+.JEVbody td {
     padding: 12.5px 15px;
     text-overflow: ellipsis;
     border: 1px solid var(--border-color)!important;
