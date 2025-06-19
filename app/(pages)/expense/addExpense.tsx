@@ -67,7 +67,7 @@ type AddExpenseProps = {
   currentUser: string;
 };
 
-type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'other_source' | 'total_amount' | 'expense_date';
+type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category';
 
 const AddExpense: React.FC<AddExpenseProps> = ({ 
   onClose, 
@@ -82,14 +82,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receiptLoading, setReceiptLoading] = useState(true);
 
-  const validationRules: Record<FieldName, ValidationRule> = {
-    category: { required: true, label: "Category", pattern: /^(Fuel|Maintenance|Other)$/i },
-    assignment_id: { required: source === 'operations', label: "Assignment" },
-    receipt_id: { required: source === 'receipt', label: "Receipt" },
-    other_source: { required: source === 'other', label: "Source", minLength: 2, maxLength: 50 },
-    total_amount: { required: true, min: 0.01, label: "Amount", custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0." },
-    expense_date: { required: true, label: "Expense Date" },
-  };
+  
   
   const [errors, setErrors] = useState<Record<FieldName, string[]>>({
     category: [],
@@ -98,6 +91,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     other_source: [],
     total_amount: [],
     expense_date: [],
+    other_category: [],
   });
 
   const [formData, setFormData] = useState({
@@ -110,6 +104,18 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     other_source: '',
     other_category: '',
   });
+
+
+  const validationRules: Record<FieldName, ValidationRule> = {
+    category: { required: true, label: "Category", pattern: /^(Fuel|Maintenance|Other)$/i },
+    assignment_id: { required: source === 'operations', label: "Assignment" },
+    receipt_id: { required: source === 'receipt', label: "Receipt" },
+    other_source: { required: source === 'other', label: "Source", minLength: 2, maxLength: 50 },
+    total_amount: { required: true, min: 0.01, label: "Amount", custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0." },
+    expense_date: { required: true, label: "Expense Date" },
+    other_category: { required: formData.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
+  };
+
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -334,45 +340,52 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   <div className="formField">
                     <label htmlFor="sourceDetail">Source<span className='requiredTags'> *</span></label>
                     {source === 'operations' && (
-                      <select
-                        id="sourceDetail"
-                        name="assignment_id"
-                        value={formData.assignment_id}
-                        onChange={handleInputChange}
-                        required
-                        className="formSelect"
-                      >
-                        <option value="">Select Assignment</option>
-                        {filteredAssignments.map((assignment) => (
-                          <option 
-                            key={assignment.assignment_id} 
-                            value={assignment.assignment_id}
-                          >
-                            {formatAssignment(assignment)}
-                          </option>
+                      <>
+                        <select
+                          id="sourceDetail"
+                          name="assignment_id"
+                          value={formData.assignment_id}
+                          onChange={handleInputChange}
+                          required
+                          className={`formSelect${errors.assignment_id.length ? ' input-error' : ''}`}
+                        >
+                          <option value="">Select Assignment</option>
+                          {filteredAssignments.map((assignment) => (
+                            <option 
+                              key={assignment.assignment_id} 
+                              value={assignment.assignment_id}
+                            >
+                              {formatAssignment(assignment)}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.assignment_id.map((msg, i) => (
+                          <div className="error-message" key={i}>{msg}</div>
                         ))}
-                      </select>
+                      </>
                     )}
                     {source === 'receipt' && (
-                      <select
-                        id="sourceDetail"
-                        name="receipt_id"
-                        value={formData.receipt_id}
-                        onChange={handleInputChange}
-                        required
-                        className="formSelect"
-                        disabled={receiptLoading}
-                      >
-                        <option value="">Select Receipt</option>
-                        {receipts.map((receipt) => (
-                          <option 
-                            key={receipt.receipt_id} 
-                            value={receipt.receipt_id}
-                          >
-                            {formatReceipt(receipt)}
-                          </option>
+                      <>
+                        <select
+                          id="sourceDetail"
+                          name="receipt_id"
+                          value={formData.receipt_id}
+                          onChange={handleInputChange}
+                          required
+                          className={`formSelect${errors.receipt_id.length ? ' input-error' : ''}`}
+                          disabled={receiptLoading}
+                        >
+                          <option value="">Select Receipt</option>
+                          {receipts.map((receipt) => (
+                            <option key={receipt.receipt_id} value={receipt.receipt_id}>
+                              {formatReceipt(receipt)}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.receipt_id.map((msg, i) => (
+                          <div className="error-message" key={i}>{msg}</div>
                         ))}
-                      </select>
+                      </>
                     )}
                     {source === 'other' && (
                       <>
@@ -400,6 +413,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   <div className="formField">
                     <label htmlFor="category">Category<span className='requiredTags'> *</span></label>
                     {formData.category === 'Other' ? (
+                      <>
                       <div className="categoryInputWrapper">
                         <input
                           type="text"
@@ -409,7 +423,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                           onChange={handleInputChange}
                           placeholder="Specify category"
                           required
-                          className={`formInput${errors.category.length ? ' input-error' : ''}`}
+                          className={`formInput${errors.other_category.length ? ' input-error' : ''}`}
                         />
                         <button 
                           type="button"
@@ -422,10 +436,11 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         >
                           ×
                         </button>
-                        {errors.category.map((msg, i) => (
-                          <div className="error-message" key={i}>{msg}</div>
-                        ))}
                       </div>
+                      {errors.other_category.map((msg, i) => (
+                          <div className="error-message" key={i}>{msg}</div>
+                      ))}
+                      </>
                     ) : (
                       <select
                         id="category"

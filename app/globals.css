@@ -15,6 +15,14 @@
   font-weight: bold;
 }
 
+input.input-error,
+select.input-error,
+textarea.input-error {
+  outline: 2px solid var(--error-color) !important;
+  /* Or use border for more visibility: */
+  border: 2px solid var(--error-color) !important;
+}
+
 .error-message {
   color: var(--error-color);
   font-size: 0.7em;
