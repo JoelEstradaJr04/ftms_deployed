@@ -213,14 +213,16 @@ button {
 
 
 .tabContent {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    width: 100%;
-    padding: 0rem;
-    background-color: var(--background-color);
-    border-radius: var(--page-button-border-radius);
-    gap: 1rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  padding: 0rem;
+  background-color: var(--background-color);
+  border-radius: var(--page-button-border-radius);
+  gap: 1rem;
+  overflow-y: auto; /* Enable scrolling for tab content */
+  min-height: 0; /* Allow content to scroll */
 }
 
 /* ============ Profit/Loss Content ============ */
@@ -230,11 +232,12 @@ button {
   flex: 1;
   flex-direction: column;
   width: 100%;
-  height: 100% !important;
+  height: auto; /* Change from 100% to auto */
   padding: 1rem;
   background-color: none;
   border-radius: var(--page-button-border-radius);
   gap: 1rem;
+  overflow-y: auto;
 }
 
 .totalPieChart {
