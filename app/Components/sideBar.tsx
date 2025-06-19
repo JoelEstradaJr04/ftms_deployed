@@ -104,6 +104,15 @@ const Sidebar: React.FC = () => {
           </Link>
 
           <Link
+            href="/JEV"
+            className={`nav-item ${activeItem === "JEV" ? "active" : ""}`}
+            onClick={() => setActiveItem("JEV")}
+          >
+            <i className="ri-file-chart-line" />
+            <span>JEV</span>
+          </Link>
+
+          <Link
             href="/audit"
             className={`nav-item ${activeItem === "audit" ? "active" : ""}`}
             onClick={() => setActiveItem("audit")}
