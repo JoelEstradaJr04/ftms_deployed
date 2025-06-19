@@ -14,13 +14,13 @@ const routeToItem: { [key: string]: string } = {
   "/receipt": "receipt",
   "/audit": "audit",
   "/report": "report",
-  "/financial-management/balancePayment": "balancePayment",
-  "/financial-management/payroll": "payroll",
+  "/reimbursement": "reimbursement",
+  "/JEV": "JEV"
 };
 
-const financialSubItems = [
-  "/financial-management/balancePayment",
-  "/financial-management/payroll",
+const expenseSubItems = [
+  "/expense",
+  "/reimbursement",
 ];
 
 const Sidebar: React.FC = () => {
@@ -32,8 +32,8 @@ const Sidebar: React.FC = () => {
     const matched = routeToItem[pathname] || null;
     setActiveItem(matched);
 
-    if (financialSubItems.includes(pathname)) {
-      setOpenSubMenu("financial-management");
+    if (expenseSubItems.includes(pathname)) {
+      setOpenSubMenu("expense-management");
     }
   }, [pathname]);
 
@@ -67,14 +67,38 @@ const Sidebar: React.FC = () => {
             <span>Revenue Management</span>
           </Link>
 
-          <Link
-            href="/expense"
-            className={`nav-item ${activeItem === "expense" ? "active" : ""}`}
-            onClick={() => setActiveItem("expense")}
+          {/* Expenses Submenu */}
+          <div
+            className={`nav-item module ${
+              ["expense", "reimbursement"].includes(activeItem!) ? "active" : ""
+            }`}
+            onClick={() => toggleSubMenu("expense-management")}
           >
             <i className="ri-wallet-3-line"></i>
-            <span>Expense Management</span>
-          </Link>
+            <span>Expenses</span>
+            <i
+              className={`dropdown-arrow ri-arrow-down-s-line ${
+                openSubMenu === "expense-management" ? "rotate" : ""
+              }`}
+            />
+          </div>
+
+          {openSubMenu === "expense-management" && (
+            <div className="sub-menu active">
+              <Link
+                href="/expense"
+                className={`sub-item ${activeItem === "expense" ? "active" : ""}`}
+              >
+                Expenses
+              </Link>
+              <Link
+                href="/reimbursement"
+                className={`sub-item ${activeItem === "reimbursement" ? "active" : ""}`}
+              >
+                Reimbursements
+              </Link>
+            </div>
+          )}
 
           <Link
             href="/receipt"
@@ -108,7 +132,7 @@ const Sidebar: React.FC = () => {
             className={`nav-item ${activeItem === "JEV" ? "active" : ""}`}
             onClick={() => setActiveItem("JEV")}
           >
-            <i className="ri-file-chart-line" />
+            <i className="ri-book-2-line"></i>
             <span>JEV</span>
           </Link>
 
