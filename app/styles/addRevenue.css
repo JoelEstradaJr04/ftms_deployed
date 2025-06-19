@@ -235,3 +235,27 @@
   justify-content: space-between !important;
   align-items: center !important;
 }
+
+
+/* ---------- Error Message for Data Validation ---------- */
+.input-error {
+  border-color: #ff4d4f !important;
+  background-color: #fff6f6;
+}
+
+.error {
+  border: 1px solid #ff4d4f !important;
+  background-color: #fff6f6;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.requiredTags {
+  color: #ff4d4f;
+  margin-left: 2px;
+}
+

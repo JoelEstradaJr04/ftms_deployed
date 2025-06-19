@@ -10,7 +10,7 @@ import {
   showAddSuccess,
   showInvalidAmountAlert
 } from '../../utility/Alerts';
-import { isValidAmount } from '../../utility/validation';
+import { isValidAmount, validateField, ValidationRule } from '../../utility/validation';
 import { formatDate } from '../../utility/dateFormatter';
 import {showError} from '../../utility/Alerts';
 
@@ -39,6 +39,8 @@ type AddRevenueProps = {
   currentUser: string;
 };
 
+type FieldName = 'category' | 'assignment_id' | 'other_source' | 'total_amount' | 'collection_date';
+
 const AddRevenue: React.FC<AddRevenueProps> = ({ 
   onClose, 
   onAddRevenue,
@@ -58,6 +60,32 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     created_by: currentUser,
     other_source: '',
   });
+
+  const [errors, setErrors] = useState<Record<FieldName, string[]>>({
+    category: [],
+    assignment_id: [],
+    other_source: [],
+    total_amount: [],
+    collection_date: [],
+  });
+
+  const validationRules: Record<FieldName, ValidationRule> = {
+    category: { required: true, label: "Category" },
+    assignment_id: { required: formData.category !== 'Other', label: "Assignment" },
+    other_source: { 
+      required: formData.category === 'Other', 
+      label: "Source",
+      minLength: 2,
+      maxLength: 50
+    },
+    total_amount: { 
+      required: true, 
+      min: 0.01, 
+      label: "Amount",
+      custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0"
+    },
+    collection_date: { required: true, label: "Collection Date" }
+  };
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -105,22 +133,21 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'category') {
-      setFormData(prev => ({
+    let newValue: any = value;
+    if (name === 'total_amount') {
+      newValue = parseFloat(value) || 0;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: newValue
+    }));
+
+    // Validate field
+    if (validationRules[name as FieldName]) {
+      setErrors(prev => ({
         ...prev,
-        [name]: value,
-        assignment_id: '',
-        total_amount: 0
-      }));
-    } else if (name === 'total_amount' && formData.category === 'Other') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: parseFloat(value) || 0
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
+        [name]: validateField(newValue, validationRules[name as FieldName])
       }));
     }
   };
@@ -238,8 +265,11 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                           onChange={handleInputChange}
                           placeholder="Please specify"
                           required
-                          className="formInput"
+                          className={`formInput${errors.other_source.length ? ' input-error' : ''}`}
                         />
+                        {errors.other_source.map((msg, i) => (
+                          <div key={i} className="error-message">{msg}</div>
+                        ))}
                       </>
                     ) : (
                       <>
@@ -285,10 +315,13 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                           onChange={handleInputChange}
                           placeholder="Enter amount"
                           required
-                          className="formInput"
+                          className={`formInput${errors.total_amount.length ? ' input-error' : ''}`}
                           min="0"
                           step="0.01"
                         />
+                        {errors.total_amount.map((msg, i) => (
+                          <div key={i} className="error-message">{msg}</div>
+                        ))}
                       </>
                     ) : (
                       <>
