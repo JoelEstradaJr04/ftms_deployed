@@ -1,3 +1,30 @@
+/* Date Range / Filtering */
+
+.filterDate,
+.dateRangePicker,
+.date,
+.filter {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center; /* <-- Add this line */
+  justify-content: center;
+}
+
+.filterDate,
+.dateRangePicker {
+  display: flex;
+  gap: 0.5rem;
+}
+.date, .filter {
+  display: flex;
+  flex-direction: row;
+}
+.date label, .filter label {
+  font-size: var(--input-label-font-size);
+  color: var(--secondary-text-color);
+  margin-right: 0.5rem;
+}
+
 /* ----- OUTER TABLE WRAPPER: for radius + shadow ----- */
 .table-wrapper {
     margin-top: 1rem;

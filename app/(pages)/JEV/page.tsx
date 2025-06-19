@@ -66,6 +66,7 @@ const dummyRecords = [
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tableFilter, setTableFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState(""); // Tracks the selected filter
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -136,31 +137,67 @@ const dummyRecords = [
             />
           </div>
           <div className="filters">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="dateFilter"
-              max={today}
-            />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="dateFilter"
-              max={today}
-            />
-            <select
-              value={tableFilter}
-              onChange={(e) => setTableFilter(e.target.value)}
-              className="categoryFilter"
-              id="categoryFilter"
-            >
-              <option value="">All Tables</option>
-              <option value="ExpenseRecord">Expense Records</option>
-              <option value="RevenueRecord">Revenue Records</option>
-              <option value="Receipt">Receipts</option>
-            </select>
+            <div className="filterDate">
+                {/* DROPDOWN FILTER OF PERIODS */}
+                <div className="filter">
+                    <label htmlFor="dateFilter">Filter By:</label>
+                    <select
+                        value={dateFilter}
+                        id="dateFilter"
+                        onChange={(e) => {
+                        setDateFilter(e.target.value);
+                        if (e.target.value !== 'Custom') {
+                            setDateFrom('');
+                            setDateTo('');
+                        }
+                        }}
+                    >
+                        <option value="">All</option>
+                        <option value="Day">Today</option>
+                        <option value="Month">This Month</option>
+                        <option value="Year">This Year</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+
+                {dateFilter === "Custom" && (
+                    <div className="dateRangePicker">
+                        <div className="date">
+                            <label htmlFor="startDate">Start Date:</label>
+                            <input
+                                type="date"
+                                id="startDate"
+                                name="startDate"
+                                value={dateFrom}
+                                onChange={(e) => {
+                                setDateFrom(e.target.value);
+                                //   if (dateTo) {
+                                //     fetchDashboardData();
+                                //   }
+                                }}
+                                max={today}
+                            />
+                        </div>
+
+                        <div className="date">
+                            <label htmlFor="endDate">End Date:</label>
+                            <input
+                                type="date"
+                                id="endDate"
+                                name="endDate"
+                                value={dateTo}
+                                onChange={(e) => {
+                                setDateTo(e.target.value);
+                                //   if (dateFrom) {
+                                //     fetchDashboardData();
+                                //   }
+                                }}
+                                max={today}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
             <button onClick={handleExport} id="export">
               <i className="ri-receipt-line" /> Export Logs
             </button>
