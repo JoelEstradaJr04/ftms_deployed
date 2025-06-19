@@ -1,0 +1,246 @@
+/* ---------- Base ---------- */
+.reimbursementPage {
+  padding: 20px;
+  font-family: var(--font-sans);
+  color: var(--primary-text-color);
+}
+
+/* ---------- Settings / Filter Bar ---------- */
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 0px;
+  justify-content: space-between;
+}
+
+.settings input[type="date"],
+.settings select {
+  padding: 0 8px;
+  font-size: var(--page-button-font-size);  
+  border: none;
+  border-radius: 4px;
+  background-color: var(--foreground-color);
+  color: var(--primary-text-color);
+  box-shadow: var(--box-shadow);
+  transition: border-color 0.2s;
+  width: 125px;
+  height: var(--search-input-height);
+}
+
+.settings button {
+  font-size: var(--page-button-font-size);
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background-color: var(--secondary-color);
+  color: var(--button-font-color);
+  transition: background-color 0.2s;
+  box-shadow: var(--box-shadow);
+  width: 180px;
+  height: var(--search-input-height);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settings button:hover {
+  background-color: var(--secondary-hover-color);
+}
+
+.searchBar {
+  display: flex;
+  flex-direction: row;
+  padding: var(--search-input-padding-right);
+  justify-content: space-between;
+  align-items: center;
+  width: var(--search-input-width);
+  height: var(--search-input-height);
+  border: 1px solid var(--border-color);
+  border-radius: var(--search-input-border-radius) !important;
+}
+
+.searchBar input[type="text"] {
+  flex: 1;
+  padding-right: 0 8px !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: var(--search-bar-border-radius);
+  font-size: 14px;
+  width: var(--search-input-width);
+  height: var(--search-input-height);
+}
+
+/* ---------- Filter Inputs ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filterDate,
+.dateRangePicker,
+.date,
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter label,
+.date label {
+  font-size: 1rem;
+  color: var(--secondary-text-color);
+  font-weight: 500;
+}
+
+.dateFilter,
+#categoryFilter {
+  padding: 0 8px;
+  gap: var(--page-button-gap);
+  font-size: var(--page-button-font-size);
+  height: var(--page-button-height) !important;
+  width: var(--page-button-width) !important;
+  border-radius: var(--page-button-border-radius)!important;
+  box-shadow: var(--box-shadow) !important;
+}
+
+#categoryFilter {
+  max-width: max-content;
+}
+
+#apply {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+    width: max-content;
+    padding: 5px 10px;
+}
+
+#apply:hover {
+    background-color: var(--primary-hover-color)!important;
+}
+
+/* ---------- Table ---------- */
+
+.data-table thead th {
+  background: var(--table-header-color, #f4f4f4);
+  color: var(--primary-text-color);
+  font-weight: 600;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.data-table tbody td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--primary-text-color);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.noRecords {
+  text-align: center;
+  color: var(--secondary-text-color);
+  padding: 2rem 0;
+  font-size: 1.1rem;
+}
+
+/* ---------- Status Badges ---------- */
+.status {
+  padding: 0.25em 0.75em;
+  border-radius: 12px;
+  font-size: 0.95em;
+  font-weight: 600;
+  display: inline-block;
+}
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+.status.approved {
+  background: #d4edda;
+  color: #155724;
+}
+.status.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+.status.paid {
+  background: #cce5ff;
+  color: #004085;
+}
+
+/* ---------- Actions ---------- */
+.action-btn.reimburse-btn {
+  background: var(--success-color, #28a745);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4em 1em;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.action-btn.reimburse-btn:hover {
+  background: var(--success-hover-color, #218838);
+}
+
+.completed-text {
+  color: #28a745;
+  font-weight: 600;
+}
+.pending-text {
+  color: #ffc107;
+  font-weight: 600;
+}
+.rejected-text {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .reimbursementPage {
+    padding: 1rem;
+  }
+  .settings {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .filters {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .table-wrapper {
+    padding: 0;
+  }
+  .data-table thead th,
+  .data-table tbody td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 1.3rem;
+  }
+  .searchBar {
+    min-width: 0;
+    width: 100%;
+  }
+  .data-table {
+    font-size: 0.95rem;
+  }
+}
