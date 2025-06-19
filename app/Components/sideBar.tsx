@@ -85,32 +85,14 @@ const Sidebar: React.FC = () => {
             <span>Receipt Management</span>
           </Link>
 
-          {/* Financial Submenu */}
-          <div
-            className={`nav-item module ${
-              ["balancePayment", "payroll"].includes(activeItem!) ? "active" : ""
-            }`}
-            onClick={() => toggleSubMenu("financial-management")}
+          <Link
+            href="/financial-management/payroll"
+            className={`nav-item ${activeItem === "payroll" ? "active" : ""}`}
+            onClick={() => setActiveItem("payroll")}
           >
             <i className="ri-group-line" />
-            <span>Employee Financial Mgmt</span>
-            <i
-              className={`dropdown-arrow ri-arrow-down-s-line ${
-                openSubMenu === "financial-management" ? "rotate" : ""
-              }`}
-            />
-          </div>
-
-          {openSubMenu === "financial-management" && (
-            <div className="sub-menu active">
-              <Link
-                href="/financial-management/payroll"
-                className={`sub-item ${activeItem === "payroll" ? "active" : ""}`}
-              >
-                Payroll
-              </Link>
-            </div>
-          )}
+            <span>Payroll</span>
+          </Link>
 
           <Link
             href="/report"
