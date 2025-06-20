@@ -428,12 +428,14 @@ const ReportPage = () => {
                         }
 
                         return (
+                          <>
                           <tr key={item.revenue_id}>
                             <td>{item.collection_date ? formatDate(item.collection_date) : 'N/A'}</td>
                             <td>{source}</td>
                             <td>{item.category === 'Other' ? 'Other' : item.category.replace('_', ' ')}</td>
                             <td>₱{item.total_amount.toLocaleString()}</td>
                           </tr>
+                          </>
                         );
                       })}
                     </tbody>

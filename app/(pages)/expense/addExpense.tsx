@@ -81,6 +81,10 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receiptLoading, setReceiptLoading] = useState(true);
+  // Add Categories
+  const [customCategories, setCustomCategories] = useState<string[]>([]); // Store custom categories
+  const [isAddingCategory, setIsAddingCategory] = useState(false); // Track if in "add mode"
+  const [newCategory, setNewCategory] = useState(''); // Track the new category being entered
 
   
   
@@ -192,6 +196,11 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'category' && value === '__add_new__') {
+      setIsAddingCategory(true);
+      return;
+    }
 
     // Prepare the new value for formData
     let newValue: any = value;
@@ -413,35 +422,76 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   <div className="formField">
                     <label htmlFor="category">Category<span className='requiredTags'> *</span></label>
                     {formData.category === 'Other' ? (
+                      // Your existing Other handling
                       <>
+                        <div className="categoryInputWrapper">
+                          <input
+                            type="text"
+                            id="category"
+                            name="other_category"
+                            value={formData.other_category || ''}
+                            onChange={handleInputChange}
+                            placeholder="Specify category"
+                            required
+                            className={`formInput${errors.other_category.length ? ' input-error' : ''}`}
+                          />
+                          <button 
+                            type="button"
+                            className="clearCategoryBtn"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              category: 'Fuel',
+                              other_category: ''
+                            }))}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {errors.other_category.map((msg, i) => (
+                            <div className="error-message" key={i}>{msg}</div>
+                        ))}
+                      </>
+                    ) : isAddingCategory ? (
+                      // Add category mode - show input field with confirm/cancel buttons
                       <div className="categoryInputWrapper">
                         <input
                           type="text"
-                          id="category"
-                          name="other_category"
-                          value={formData.other_category || ''}
-                          onChange={handleInputChange}
-                          placeholder="Specify category"
-                          required
-                          className={`formInput${errors.other_category.length ? ' input-error' : ''}`}
+                          id="newCategory"
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          placeholder="New category name"
+                          className="formInput"
+                          autoFocus
                         />
-                        <button 
-                          type="button"
-                          className="clearCategoryBtn"
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            category: 'Fuel',
-                            other_category: ''
-                          }))}
-                        >
-                          ×
-                        </button>
+                        <div className="categoryActionBtns">
+                          <button 
+                            type="button"
+                            className="confirmCategoryBtn"
+                            onClick={() => {
+                              if (newCategory.trim()) {
+                                setCustomCategories(prev => [...prev, newCategory.trim()]);
+                                setFormData(prev => ({...prev, category: newCategory.trim()}));
+                                setNewCategory('');
+                                setIsAddingCategory(false);
+                              }
+                            }}
+                          >
+                            <i className="ri-check-line"></i>
+                          </button>
+                          <button 
+                            type="button"
+                            className="cancelCategoryBtn"
+                            onClick={() => {
+                              setNewCategory('');
+                              setIsAddingCategory(false);
+                            }}
+                          >
+                            <i className="ri-close-line"></i>
+                          </button>
+                        </div>
                       </div>
-                      {errors.other_category.map((msg, i) => (
-                          <div className="error-message" key={i}>{msg}</div>
-                      ))}
-                      </>
                     ) : (
+                      // Regular select mode with added "Add Custom" option
                       <select
                         id="category"
                         name="category"
@@ -457,8 +507,42 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         <option value="Tools">Tools</option>
                         <option value="Equipment">Equipment</option>
                         <option value="Supplies">Supplies</option>
+                        {/* Render custom categories */}
+                        {customCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat} {/* Deleting happens outside the select */}
+                          </option>
+                        ))}
                         <option value="Other">Other</option>
+                        <option value="__add_new__">+ Add Custom Category</option>
                       </select>
+                    )}
+                    
+                    {/* Display custom categories with delete option */}
+                    {customCategories.length > 0 && !isAddingCategory && (
+                      <div className="customCategoriesList">
+                        <p className="customCategoriesTitle">Custom Categories:</p>
+                        <div className="customCategoriesChips">
+                          {customCategories.map((cat) => (
+                            <div key={cat} className="categoryChip">
+                              <span>{cat}</span>
+                              <button 
+                                type="button" 
+                                className="deleteCategoryBtn"
+                                onClick={() => {
+                                  setCustomCategories(prev => prev.filter(c => c !== cat));
+                                  // If the current category is being deleted, reset to default
+                                  if (formData.category === cat) {
+                                    setFormData(prev => ({...prev, category: ''}));
+                                  }
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
 
