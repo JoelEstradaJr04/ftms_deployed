@@ -225,7 +225,7 @@ const ReimbursementPage = () => {
           <div className="filters">
             <div className="filterDate">
                 {/* STATUS FILTER */}
-                <div className="filter">
+                <div className="reimbursement-filter">
                     <label htmlFor="statusFilter">Status:</label>
                     <select
                         value={statusFilter}
@@ -241,7 +241,7 @@ const ReimbursementPage = () => {
                 </div>
 
                 {/* DROPDOWN FILTER OF PERIODS */}
-                <div className="filter">
+                <div className="reimbursement-filter">
                     <label htmlFor="dateFilter">Filter By:</label>
                     <select
                         value={dateFilter}

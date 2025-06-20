@@ -77,6 +77,11 @@
   gap: 10px;
 }
 
+.reimbursement-filters {
+  display: flex;
+  flex-direction: row;
+}
+
 .filterDate,
 .dateRangePicker,
 .date,
