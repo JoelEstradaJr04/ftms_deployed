@@ -23,7 +23,7 @@ type ViewPayrollModalProps = {
 
 const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) => (
   <div className="modalOverlay">
-    <div className="modalContent">
+    <div className="viewPayrollModal">
       <div className="modalHeader">
         <h2>View Payroll</h2>
         <button className="closeButton" onClick={onClose}>&times;</button>
