@@ -53,7 +53,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     other_source: { 
       required: record.category === 'Other', 
       label: "Source Detail",
-      minLength: 2,
+      minLength: record.category === 'Other' ? 2 : 0,
       maxLength: 50
     },
     collection_date: { required: true, label: "Collection Date" }
@@ -135,6 +135,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     });
 
     setErrors(newErrors);
+    console.log(newErrors);
 
     // Check if there are any errors
     const hasErrors = Object.values(newErrors).some(fieldErrors => fieldErrors.length > 0);
