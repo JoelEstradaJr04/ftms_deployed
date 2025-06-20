@@ -126,6 +126,42 @@ button {
   background-color: var(--primary-hover-color);
 }
 
+/* ---------- Action Buttons ---------- */
+.actionButtonsContainer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.actionButtons button {
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+  color: var(--secondary-text-color);
+}
+
+.actionButtons button:hover {
+  transform: scale(1.1);
+}
+
+.viewBtn:hover {
+  color: var(--info-color);
+}
+
+.editBtn:hover {
+  color: var(--warning-color);
+}
+
+.deleteBtn:hover {
+  color: var(--error-color);
+}
+
+.actionButtons i {
+  font-size: 1.25rem;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
   .revenuePage {

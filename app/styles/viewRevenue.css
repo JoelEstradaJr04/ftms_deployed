@@ -1,4 +1,4 @@
-/* ---------- viewExpense.css ---------- */
+/* ---------- viewRevenue.css ---------- */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -12,7 +12,7 @@
   z-index: 1000;
 }
 
-.viewExpenseModal {
+.viewRevenueModal {
   background: white;
   padding: 2rem;
   border-radius: 8px;
@@ -64,9 +64,8 @@
   margin-bottom: 2rem;
 }
 
-.operationsDetails,
-.receiptDetails,
-.otherDetails {
+.assignmentDetails,
+.otherSourceDetails {
   margin-bottom: 2rem;
   padding: 1rem;
   background-color: #f8f9fa;
@@ -74,9 +73,8 @@
   border: 1px solid #eee;
 }
 
-.operationsDetails h3,
-.receiptDetails h3,
-.otherDetails h3 {
+.assignmentDetails h3,
+.otherSourceDetails h3 {
   color: #333;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
@@ -100,40 +98,6 @@
 .value {
   color: #333;
   flex: 1;
-}
-
-.itemsSection {
-  margin-top: 2rem;
-  overflow-x: auto;
-}
-
-.itemsSection h4 {
-  color: #333;
-  margin-bottom: 1rem;
-}
-
-.itemsSection table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  min-width: 650px; 
-}
-
-.itemsSection table th,
-.itemsSection table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.itemsSection table th {
-  background-color: #f8f9fa;
-  font-weight: 500;
-  color: #666;
-}
-
-.itemsSection table tr:hover {
-  background-color: #f8f9fa;
 }
 
 .modalFooter {
@@ -162,7 +126,7 @@
 /* ---------- Responsive Styles ---------- */
 
 @media (max-width: 768px) {
-  .viewExpenseModal {
+  .viewRevenueModal {
     width: 90%;
     min-width: 0;
     margin: 1rem;
@@ -190,9 +154,5 @@
   .label {
     width: auto;
     margin-right: 0;
-  }
-
-  .itemsSection table {
-    min-width: auto; 
   }
 }

@@ -317,24 +317,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     </div>
                   </div>
                 )}
-
-                <div className="formRow">
-                  <div className="formField">
-                    <label htmlFor="expense_date">Expense Date<span className='requiredTags'> *</span></label>
-                    <input
-                      type="date"
-                      id="expense_date"
-                      name="expense_date"
-                      value={expenseDate}
-                      onChange={(e) => {setExpenseDate(e.target.value); handleInputChange(e); }}
-                      required
-                      className={`formInput${errors.expense_date.length ? ' input-error' : ''}`}
-                    />
-                    {errors.expense_date.map((msg, i) => (
-                      <div className="error-message" key={i}>{msg}</div>
-                    ))}
-                  </div>
-                </div>
                 
                 <div className="formRow">
                   <div className="formField">
