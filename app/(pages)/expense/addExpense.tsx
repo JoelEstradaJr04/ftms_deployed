@@ -111,7 +111,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
 
   const validationRules: Record<FieldName, ValidationRule> = {
-    category: { required: true, label: "Category", pattern: /^(Fuel|Maintenance|Other)$/i },
+    category: { required: true, label: "Category"},
     assignment_id: { required: source === 'operations', label: "Assignment" },
     receipt_id: { required: source === 'receipt', label: "Receipt" },
     other_source: { required: source === 'other', label: "Source", minLength: 2, maxLength: 50 },
@@ -273,15 +273,21 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
     if (result.isConfirmed) {
       try {
+        const standardCategories = ["Fuel", "Vehicle_Parts", "Tools", "Equipment", "Supplies", "Other"];
+        const isCustomCategory = !standardCategories.includes(category);
+
         await onAddExpense({
-          category,
+          // For custom categories, send "Other" as the category
+          category: isCustomCategory ? "Other" : category,
           total_amount,
           expense_date,
           created_by: currentUser,
           ...(source === 'operations' ? { assignment_id } : {}),
           ...(source === 'receipt' ? { receipt_id } : {}),
           ...(source === 'other' ? { other_source } : {}),
-          ...(category === 'Other' ? { other_category } : {})
+          // Include other_category for both "Other" and custom categories
+          ...((category === 'Other' || isCustomCategory) ? 
+            { other_category: isCustomCategory ? category : other_category } : {})
         });
 
         await showSuccess('Expense added successfully', 'Success');

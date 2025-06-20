@@ -165,7 +165,32 @@ const ExpensePage = () => {
 
   // Filter and pagination logic
   const filteredData = data.filter((item: ExpenseData) => {
-    const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase());
+    // Convert search to lowercase for case-insensitive comparison
+    const searchLower = search.toLowerCase();
+    
+    // Check if search term exists in any field
+    const matchesSearch = search === '' || 
+      // Basic fields
+      item.expense_id.toLowerCase().includes(searchLower) ||
+      (item.category?.toLowerCase() || '').includes(searchLower) ||
+      (item.other_category?.toLowerCase() || '').includes(searchLower) ||
+      item.total_amount.toString().includes(searchLower) ||
+      formatDate(item.expense_date).toLowerCase().includes(searchLower) ||
+      (item.created_by?.toLowerCase() || '').includes(searchLower) ||
+      (item.other_source?.toLowerCase() || '').includes(searchLower) ||
+      
+      // Assignment related fields (if available)
+      (item.assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
+      (item.assignment?.bus_bodynumber?.toLowerCase() || '').includes(searchLower) ||
+      (item.assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
+      (item.assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
+      (item.assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
+      
+      // Receipt related fields (if available)
+      (item.receipt?.supplier?.toLowerCase() || '').includes(searchLower) ||
+      (item.receipt?.payment_status?.toLowerCase() || '').includes(searchLower) ||
+      (item.receipt?.total_amount_due?.toString() || '').includes(searchLower);
+      
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
                       (!dateTo || item.expense_date <= dateTo);
