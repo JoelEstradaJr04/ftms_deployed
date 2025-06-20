@@ -169,11 +169,34 @@ const RevenuePage = () => {
 
   // Filter and pagination logic
   const filteredData = data.filter((item: RevenueData) => {
-    const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase()) ||
-                         (item.category === 'Other' && (item.other_source?.toLowerCase() || '').includes(search.toLowerCase()));
+    // Convert search to lowercase for case-insensitive comparison
+    const searchLower = search.toLowerCase();
+
+    // Lookup the related assignment
+    const assignment = item.assignment_id 
+    ? allAssignments.find(a => a.assignment_id === item.assignment_id)
+    : null;
+
+    // Check if search term exists in any field
+    const matchesSearch = search === '' || 
+    // Basic revenue fields
+    formatDate(item.collection_date).toLowerCase().includes(searchLower) ||
+    (item.category?.toLowerCase() || '').includes(searchLower) ||
+    item.total_amount.toString().includes(searchLower) ||
+    (item.created_by?.toLowerCase() || '').includes(searchLower) ||
+    (item.other_source?.toLowerCase() || '').includes(searchLower) ||
+
+    // Assignment related fields (if available)
+    (assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.bus_bodynumber?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
+
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
-                      (!dateTo || item.collection_date <= dateTo);
+            (!dateTo || item.collection_date <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
   });
 
