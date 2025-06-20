@@ -36,26 +36,30 @@ BEGIN
         DROP TYPE payment_method;
     END IF;
 END$$;
+
 -- Create types
 CREATE TYPE bus_route AS ENUM ('S. Palay to PITX', 'S. Palay to Divisoria');
 CREATE TYPE bus_type AS ENUM ('Airconditioned', 'Ordinary');
 CREATE TYPE assignment_type AS ENUM ('Boundary', 'Percentage');
 CREATE TYPE job_title AS ENUM ('Driver', 'Conductor', 'Mechanic', 'Manager', 'Secretary');
-CREATE TYPE payment_method AS ENUM ('Company Cash', 'Reimbursement');
+CREATE TYPE payment_method AS ENUM ('CASH', 'REIMBURSEMENT');
+
 -- Create sequences
 CREATE SEQUENCE assignment_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE employee_id_seq START WITH 1 INCREMENT BY 1;
+
 -- Create employee table
 CREATE TABLE hr_employees (
     employee_id VARCHAR(10) PRIMARY KEY DEFAULT 'EMP-' || LPAD(nextval('employee_id_seq')::text, 5, '0'),
     name VARCHAR(255) NOT NULL,
     job_title job_title NOT NULL
 );
--- Create bus assignments table aligned with operations department structure
+
+-- Create bus assignments table with proper foreign key references
 CREATE TABLE op_bus_assignments (
     assignment_id VARCHAR(10) PRIMARY KEY DEFAULT 'ASGN-' || LPAD(nextval('assignment_id_seq')::text, 5, '0'),
     bus_route bus_route,
-    date_assigned DATE,
+    date_assigned TIMESTAMP,
     trip_fuel_expense NUMERIC,
     trip_revenue NUMERIC,
     is_expense_recorded BOOLEAN NOT NULL DEFAULT FALSE,
@@ -63,11 +67,12 @@ CREATE TABLE op_bus_assignments (
     assignment_type assignment_type NOT NULL,
     assignment_value NUMERIC NOT NULL,
     payment_method payment_method NOT NULL,
-    driver_name VARCHAR(255),
-    conductor_name VARCHAR(255),
+    driver_id VARCHAR(10) REFERENCES hr_employees(employee_id),
+    conductor_id VARCHAR(10) REFERENCES hr_employees(employee_id),
     bus_plate_number VARCHAR(255),
     bus_type bus_type
 );
+
 -- Insert hr_employees (drivers and conductors from bus assignments + 20 additional hr_employees)
 INSERT INTO hr_employees (name, job_title) VALUES
 -- Drivers from bus assignments
@@ -123,36 +128,27 @@ INSERT INTO hr_employees (name, job_title) VALUES
 ('Melissa Ruiz', 'Secretary'),
 ('Jennifer Castro', 'Secretary'),
 ('Katherine Perez', 'Secretary');
--- Insert 15 records with dates from January to May 2025 with varied assignment values
+
+-- Insert 15 records with timestamps from January to May 2025 with proper employee references
 INSERT INTO op_bus_assignments (
     bus_route, date_assigned, trip_fuel_expense, trip_revenue, is_expense_recorded, is_revenue_recorded,
-    assignment_type, assignment_value, payment_method, driver_name, conductor_name, bus_plate_number, bus_type
+    assignment_type, assignment_value, payment_method, driver_id, conductor_id, bus_plate_number, bus_type
 ) VALUES
 -- Boundary assignments with different quotas
-('S. Palay to PITX', '2025-01-15', 1500.50, 9500.00, FALSE, FALSE, 'Boundary', 8000.00, 'Reimbursement', 'Juan Dela Cruz', 'Pedro Santos', 'ABC-1234', 'Airconditioned'),
-('S. Palay to Divisoria', '2025-01-28', 1350.00, 8200.00, FALSE, FALSE, 'Boundary', 7500.00, 'Reimbursement', 'Maria Lopez', 'Carlos Reyes', 'DEF-5678', 'Airconditioned'),
-('S. Palay to PITX', '2025-02-05', 1600.75, 10200.00, FALSE, FALSE, 'Boundary', 9500.00, 'Company Cash', 'Jose Ramos', 'Ana Garcia', 'GHI-9012', 'Airconditioned'),
-('S. Palay to Divisoria', '2025-02-19', 1400.00, 7800.00, FALSE, FALSE, 'Boundary', 7000.00, 'Reimbursement', 'Pedro Cruz', 'Luisa Mendoza', 'JKL-3456', 'Airconditioned'),
+('S. Palay to PITX', '2025-01-15 07:30:00', 1500.50, 9500.00, FALSE, FALSE, 'Boundary', 8000.00, 'REIMBURSEMENT', 'EMP-00001', 'EMP-00016', 'ABC-1234', 'Airconditioned'),
+('S. Palay to Divisoria', '2025-01-28 08:15:00', 1350.00, 8200.00, FALSE, FALSE, 'Boundary', 7500.00, 'REIMBURSEMENT', 'EMP-00002', 'EMP-00017', 'DEF-5678', 'Airconditioned'),
+('S. Palay to PITX', '2025-02-05 06:45:00', 1600.75, 10200.00, FALSE, FALSE, 'Boundary', 9500.00, 'CASH', 'EMP-00003', 'EMP-00018', 'GHI-9012', 'Airconditioned'),
+('S. Palay to Divisoria', '2025-02-19 07:00:00', 1400.00, 7800.00, FALSE, FALSE, 'Boundary', 7000.00, 'REIMBURSEMENT', 'EMP-00004', 'EMP-00019', 'JKL-3456', 'Airconditioned'),
 -- Percentage assignments with different company shares
-('S. Palay to PITX', '2025-02-27', 1550.30, 8950.00, FALSE, FALSE, 'Percentage', 0.60, 'Reimbursement', 'Rosa Santos', 'Miguel Diaz', 'MNO-7890', 'Ordinary'),
-('S. Palay to Divisoria', '2025-03-08', 1450.20, 9050.00, FALSE, FALSE, 'Percentage', 0.50, 'Company Cash', 'Luis Martinez', 'Carmen Flores', 'PQR-2345', 'Ordinary'),
-('S. Palay to PITX', '2025-03-17', 1380.00, 7900.00, FALSE, FALSE, 'Percentage', 0.42, 'Reimbursement', 'Ana Morales', 'Jose Hernandez', 'STU-6789', 'Ordinary'),
-('S. Palay to Divisoria', '2025-03-24', 1425.50, 8100.00, FALSE, FALSE, 'Percentage', 0.55, 'Company Cash', 'Carlos Gomez', 'Isabel Torres', 'VWX-1234', 'Ordinary'),
+('S. Palay to PITX', '2025-02-27 08:30:00', 1550.30, 8950.00, FALSE, FALSE, 'Percentage', 0.60, 'REIMBURSEMENT', 'EMP-00005', 'EMP-00020', 'MNO-7890', 'Ordinary'),
+('S. Palay to Divisoria', '2025-03-08 07:15:00', 1450.20, 9050.00, FALSE, FALSE, 'Percentage', 0.50, 'CASH', 'EMP-00006', 'EMP-00021', 'PQR-2345', 'Ordinary'),
+('S. Palay to PITX', '2025-03-17 06:30:00', 1380.00, 7900.00, FALSE, FALSE, 'Percentage', 0.42, 'REIMBURSEMENT', 'EMP-00007', 'EMP-00022', 'STU-6789', 'Ordinary'),
+('S. Palay to Divisoria', '2025-03-24 08:00:00', 1425.50, 8100.00, FALSE, FALSE, 'Percentage', 0.55, 'CASH', 'EMP-00008', 'EMP-00023', 'VWX-1234', 'Ordinary'),
 -- Mixed assignment types with various scenarios
-('S. Palay to PITX', '2025-03-30', 1475.00, 9950.00, FALSE, FALSE, 'Boundary', 8500.00, 'Reimbursement', 'Martha Diaz', 'Ramon Cruz', 'YZA-5678', 'Ordinary'),
-('S. Palay to Divisoria', '2025-04-05', 1490.25, 8150.00, FALSE, FALSE, 'Boundary', 7500.00, 'Company Cash', 'Jorge Reyes', 'Sofia Vargas', 'BCD-9012', 'Airconditioned'),
-('S. Palay to PITX', '2025-04-14', 1520.55, 9000.00, FALSE, FALSE, 'Percentage', 0.48, 'Reimbursement', 'Elena Fernandez', 'Alberto Navarro', 'EFG-3456', 'Airconditioned'),
-('S. Palay to Divisoria', '2025-04-22', 1405.75, 8100.00, FALSE, FALSE, 'Percentage', 0.65, 'Reimbursement', 'Ricardo Mendoza', 'Gloria Santos', 'HIJ-7890', 'Airconditioned'),
-('S. Palay to PITX', '2025-04-29', 1410.00, 9950.00, FALSE, FALSE, 'Boundary', 9000.00, 'Company Cash', 'Sandra Lopez', 'Victor Ramirez', 'KLM-2345', 'Airconditioned'),
-('S. Palay to Divisoria', '2025-05-10', 1365.40, 8000.00, FALSE, FALSE, 'Percentage', 0.52, 'Reimbursement', 'Daniel Cruz', 'Laura Guerrero', 'NOP-6789', 'Airconditioned'),
-('S. Palay to PITX', '2025-05-19', 1500.00, 10100.00, FALSE, FALSE, 'Boundary', 8500.00, 'Reimbursement', 'Teresa Alvarez', 'Felipe Gonzales', 'QRS-1234', 'Airconditioned');
-
-CREATE POLICY "Enable read access for all users on assignments"
-ON public.op_bus_assignments
-FOR SELECT
-USING (true);
-
-CREATE POLICY "Enable read access for all users"
-ON public.hr_employees
-FOR SELECT
-USING (true);
+('S. Palay to PITX', '2025-03-30 07:45:00', 1475.00, 9950.00, FALSE, FALSE, 'Boundary', 8500.00, 'REIMBURSEMENT', 'EMP-00009', 'EMP-00024', 'YZA-5678', 'Ordinary'),
+('S. Palay to Divisoria', '2025-04-05 06:00:00', 1490.25, 8150.00, FALSE, FALSE, 'Boundary', 7500.00, 'CASH', 'EMP-00010', 'EMP-00025', 'BCD-9012', 'Airconditioned'),
+('S. Palay to PITX', '2025-04-14 07:30:00', 1520.55, 9000.00, FALSE, FALSE, 'Percentage', 0.48, 'REIMBURSEMENT', 'EMP-00011', 'EMP-00026', 'EFG-3456', 'Airconditioned'),
+('S. Palay to Divisoria', '2025-04-22 08:15:00', 1405.75, 8100.00, FALSE, FALSE, 'Percentage', 0.65, 'REIMBURSEMENT', 'EMP-00012', 'EMP-00027', 'HIJ-7890', 'Airconditioned'),
+('S. Palay to PITX', '2025-04-29 07:00:00', 1410.00, 9950.00, FALSE, FALSE, 'Boundary', 9000.00, 'CASH', 'EMP-00013', 'EMP-00028', 'KLM-2345', 'Airconditioned'),
+('S. Palay to Divisoria', '2025-05-10 06:45:00', 1365.40, 8000.00, FALSE, FALSE, 'Percentage', 0.52, 'REIMBURSEMENT', 'EMP-00014', 'EMP-00029', 'NOP-6789', 'Airconditioned'),
+('S. Palay to PITX', '2025-05-19 08:00:00', 1500.00, 10100.00, FALSE, FALSE, 'Boundary', 8500.00, 'REIMBURSEMENT', 'EMP-00015', 'EMP-00030', 'QRS-1234', 'Airconditioned');
