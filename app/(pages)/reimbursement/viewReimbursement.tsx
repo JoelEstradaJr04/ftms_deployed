@@ -10,12 +10,14 @@ type Reimbursement = {
   submitted_date: string;
   approved_by: string | null;
   approved_date: string | null;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
   amount: number | null;
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
   notes: string;
+  cancelled_by?: string | null;
+  cancelled_date?: string | null;
 };
 
 interface ViewReimbursementProps {
@@ -67,8 +69,22 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
             </div>
             <div className="detailRow">
               <span className="label">Status:</span>
-              <span className={`value viewStatus ${record.status.toLowerCase()}`}>{record.status}</span>
+              <span className={`value viewStatus ${typeof record.status === 'string' ? record.status.toLowerCase() : ''} ${record.status === 'Cancelled' ? 'status-cancelled' : ''}`}>
+                {record.status || '-'}
+              </span>
             </div>
+            {record.status === "Cancelled" && (
+              <>
+                <div className="detailRow">
+                  <span className="label">Cancelled By:</span>
+                  <span className="value">{formatDisplay(record.cancelled_by)}</span>
+                </div>
+                <div className="detailRow">
+                  <span className="label">Cancelled Date:</span>
+                  <span className="value">{formatDisplay(record.cancelled_date ? new Date(record.cancelled_date).toLocaleDateString() : null)}</span>
+                </div>
+              </>
+            )}
             <div className="detailRow">
               <span className="label">Approved By:</span>
               <span className="value">{formatDisplay(record.approved_by)}</span>

@@ -154,27 +154,53 @@
 
 /* ---------- Status Badges ---------- */
 .status {
-  padding: 0.25em 0.75em;
-  border-radius: 12px;
-  font-size: 0.95em;
-  font-weight: 600;
   display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
 }
+
 .status.pending {
-  background: #fff3cd;
-  color: #856404;
+  background-color: #FFA500;
+  color: white;
 }
+
 .status.approved {
-  background: #d4edda;
-  color: #155724;
+  background-color: #28a745;
+  color: white;
 }
+
 .status.rejected {
-  background: #f8d7da;
-  color: #721c24;
+  background-color: #dc3545;
+  color: white;
 }
+
 .status.paid {
-  background: #cce5ff;
-  color: #004085;
+  background-color: #17a2b8;
+  color: white;
+}
+
+.status.cancelled {
+  background-color: #8B0000; /* Dark red - darker than rejected */
+  color: white;
+}
+
+.status.cancelled {
+  background-color: #8B0000; /* Dark red background */
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.cancelled-text {
+  color: #8B0000; /* Dark red text */
+  font-weight: 500;
+  font-style: italic;
 }
 
 /* ---------- Actions ---------- */

@@ -23,7 +23,6 @@ export type Receipt = {
   terms?: string;
   date_paid?: string;
   payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
-  record_status: 'Active' | 'Inactive';
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
