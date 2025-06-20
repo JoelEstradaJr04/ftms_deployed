@@ -139,8 +139,8 @@ tfoot td, tfoot th {
 
 th.responsibility-center,
 td.responsibility-center {
-  max-width: 200px;
-  width: 200px;
+  max-width: 12px;
+  width: 15%;
   min-width: 100px;
   white-space: normal;
 }

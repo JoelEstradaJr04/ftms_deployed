@@ -107,8 +107,8 @@ const dummyRecords = [
   // Dummy export handler
   const handleExport = () => {
     Swal.fire({
-      title: 'Export Logs',
-      text: 'Export functionality not implemented.',
+      title: 'Export JEV',
+      text: 'Export functionality is under construction.',
       icon: 'info'
     });
   };
@@ -199,7 +199,7 @@ const dummyRecords = [
                 )}
             </div>
             <button onClick={handleExport} id="export">
-              <i className="ri-receipt-line" /> Export Logs
+              <i className="ri-receipt-line" /> Export JEV
             </button>
           </div>
         </div>
@@ -237,6 +237,7 @@ const dummyRecords = [
                                 <td>{rec.credit}</td>
                             </tr>
                     ))}
+                    {currentRecords.length === 0 && <p className="noRecords">No entry found.</p>}
                 </tbody>
                 <tfoot>
                     <tr>
@@ -250,7 +251,7 @@ const dummyRecords = [
                     </tr>
                 </tfoot>
             </table>
-            {currentRecords.length === 0 && <p className="noRecords">No entry found.</p>}
+            
           </div>
         </div>
         <PaginationComponent
