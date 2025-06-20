@@ -112,7 +112,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
 
   return (
     <div className="modalOverlay">
-      <div className="modalContent">
+      <div className="viewExpenseModal">
         <div className="modalHeader">
           <h2>View Expense</h2>
           <button className="closeButton" onClick={onClose}>&times;</button>

@@ -8,6 +8,7 @@ import PaginationComponent from "../../Components/pagination";
 import AddRevenue from "./addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "./editRevenue";
+import ViewRevenue from "./viewRevenue"; // Import the new ViewRevenue component
 import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
@@ -35,6 +36,7 @@ interface RevenueData {
   total_amount: number;
   collection_date: string;
   created_by: string;
+  created_at: string;  // Add this line
   assignment_id?: string;
   other_source?: string;
 }
@@ -55,6 +57,8 @@ const RevenuePage = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
 
   // Reuse the same format function from addRevenue.tsx
   const formatAssignment = (assignment: Assignment): string => {
@@ -132,7 +136,8 @@ const RevenuePage = () => {
           category: revenue.category,
           total_amount: Number(revenue.total_amount),
           collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
-          created_by: revenue.created_by,
+          created_by: revenue.created_by, // Add this line to fix the error
+          created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
           other_source: revenue.other_source || undefined
         }));
@@ -236,6 +241,7 @@ const RevenuePage = () => {
       total_amount: Number(result.total_amount),
       collection_date: new Date(result.collection_date).toISOString().split('T')[0],
       created_by: result.created_by,
+      created_at: result.created_at, // Ensure created_at is included
       assignment_id: result.assignment_id,
       other_source: result.other_source || undefined
     }, ...prev]); // Prepend new record instead of appending
@@ -315,13 +321,14 @@ const RevenuePage = () => {
       setData(prev => {
         // Remove the old version of the record
         const filtered = prev.filter(rec => rec.revenue_id !== updatedRecord.revenue_id);
-        // Create the updated record
-        const updated = {
+        // Create the updated record with all required fields
+        const updated: RevenueData = {
           revenue_id: result.revenue_id,
           category: result.category,
           total_amount: Number(result.total_amount),
           collection_date: new Date(result.collection_date).toISOString().split('T')[0],
           created_by: result.created_by,
+          created_at: result.created_at,
           assignment_id: result.assignment_id,
           other_source: result.other_source || undefined
         };
@@ -736,14 +743,37 @@ const RevenuePage = () => {
                       <td>{item.category === 'Other' ? 'Other' : item.category.replace('_', ' ')}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
                       <td className="actionButtons">
-
                         <div className="actionButtonsContainer">
+                          {/* view button */}
+                          <button 
+                            className="viewBtn" 
+                            onClick={() => {
+                              setRecordToView(item);
+                              setViewModalOpen(true);
+                            }} 
+                            title="View Record"
+                          >
+                            <i className="ri-eye-line" />
+                          </button>
+                          
                           {/* edit button */}
-                          <button className="editBtn" onClick={() => {setRecordToEdit(item);setEditModalOpen(true);}} title="Edit Record">
+                          <button 
+                            className="editBtn" 
+                            onClick={() => {
+                              setRecordToEdit(item);
+                              setEditModalOpen(true);
+                            }} 
+                            title="Edit Record"
+                          >
                             <i className="ri-edit-2-line" />
                           </button>
+                          
                           {/* delete button */}
-                          <button className="deleteBtn" onClick={() => handleDelete(item.revenue_id)} title="Delete Record">
+                          <button 
+                            className="deleteBtn" 
+                            onClick={() => handleDelete(item.revenue_id)} 
+                            title="Delete Record"
+                          >
                             <i className="ri-delete-bin-line" />
                           </button>
                         </div>
@@ -792,6 +822,26 @@ const RevenuePage = () => {
               setRecordToEdit(null);
             }}
             onSave={handleSaveEdit}
+          />
+        )}
+
+        {viewModalOpen && recordToView && (
+          <ViewRevenue
+            record={{
+              revenue_id: recordToView.revenue_id,
+              category: recordToView.category,
+              total_amount: recordToView.total_amount,
+              collection_date: recordToView.collection_date,
+              created_at: recordToView.created_at,
+              assignment: recordToView.assignment_id 
+                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
+                : undefined,
+              other_source: recordToView.other_source
+            }}
+            onClose={() => {
+              setViewModalOpen(false);
+              setRecordToView(null);
+            }}
           />
         )}
       </div>
