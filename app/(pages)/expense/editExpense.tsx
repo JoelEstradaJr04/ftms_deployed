@@ -10,7 +10,8 @@ import { getAssignmentById } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
-import { validateField, isValidAmount, ValidationRule } from "../../utility/validation";
+import { validateField, ValidationRule } from "../../utility/validation";
+import { getAllEmployees } from '@/lib/supabase/employees';
 
 
 /* ───── types ──────────────────────────────────────────────── */
@@ -43,6 +44,44 @@ export type ExpenseData = {
   category: string;
   total_amount: number;
   receipt?: Receipt;
+  payment_method?: 'CASH' | 'REIMBURSEMENT';
+};
+
+type Reimbursement = {
+  reimbursement_id: string;
+  expense_id: string;
+  assignment_id?: string;
+  employee_id: string;
+  employee_name: string;
+  job_title?: string;
+  amount: number;
+  status: string;
+  requested_date?: string;
+  approved_by?: string;
+  approved_date?: string;
+  rejection_reason?: string;
+  paid_by?: string;
+  paid_date?: string;
+  payment_reference?: string;
+  payment_method?: string;
+  created_by: string;
+  created_at?: string;
+  updated_by?: string;
+  updated_at?: string;
+  is_deleted?: boolean;
+};
+
+type Assignment = {
+  assignment_id: string;
+  bus_plate_number: string;
+  bus_route: string;
+  bus_type: string;
+  driver_id: string;
+  conductor_id: string;
+  date_assigned: string;
+  trip_fuel_expense: number;
+  driver_name?: string;
+  conductor_name?: string;
 };
 
 type EditExpenseModalProps = {
@@ -50,21 +89,23 @@ type EditExpenseModalProps = {
     expense_id: string;
     expense_date: string;
     category: string;
-    source: string;
-    amount: number;
-    assignment_id?: string;
-    receipt_id?: string;
-    other_source?: string;
     other_category?: string;
+    total_amount: number;
+    assignment?: Assignment;
     receipt?: Receipt;
+    other_source?: string;
+    payment_method?: 'CASH' | 'REIMBURSEMENT';
+    reimbursements?: Reimbursement[];
   };
   onClose: () => void;
   onSave: (updatedRecord: {
     expense_id: string;
     expense_date: string;
     total_amount: number;
+    reimbursements?: { reimbursement_id: string; amount: number }[];
     other_source?: string;
     other_category?: string;
+    payment_method?: 'CASH' | 'REIMBURSEMENT';
   }) => void;
 };
 
@@ -77,14 +118,22 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [expenseDate, setExpenseDate] = useState(record.expense_date);
-  const [amount, setAmount] = useState(record.amount);
+  const [amount, setAmount] = useState(record.total_amount);
   const [otherSource, setOtherSource] = useState(record.other_source || '');
   const [otherCategory, setOtherCategory] = useState(record.other_category || '');
   const [originalTripExpense, setOriginalTripExpense] = useState<number | null>(null);
   const [showDeviationWarning, setShowDeviationWarning] = useState(false);
   const [deviationPercentage, setDeviationPercentage] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'REIMBURSEMENT'>(record.payment_method || 'CASH');
+  const [reimbursementEdits, setReimbursementEdits] = useState<{ [id: string]: string }>({});
+  const [reimbEditMode, setReimbEditMode] = useState(false);
+  const [employeeList, setEmployeeList] = useState<{ employee_id: string; name: string; job_title?: string }[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(record.reimbursements?.[0]?.employee_id || '');
+  const [reimbursableAmount, setReimbursableAmount] = useState(record.reimbursements?.[0]?.amount?.toString() || '');
+  const [employeeName, setEmployeeName] = useState(record.reimbursements?.[0]?.employee_name || '');
+  const isReceiptSource = !!record.receipt && !record.assignment;
 
-  type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'source' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category';
+  type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'source' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category' | 'payment_method';
 
   const validationRules: Record<FieldName, ValidationRule> = {
     expense_date: { required: true, label: "Expense Date" },
@@ -96,6 +145,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
     other_source: { required: record.source === 'other', label: "Other Source", minLength: 2, maxLength: 50 },
     other_category: { required: record.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
     total_amount: { required: false, label: "Total Amount" }, // Added to satisfy FieldName
+    payment_method: { required: false, label: "Payment Method" },
   };
 
   const [errors, setErrors] = useState<Record<FieldName, string[]>>({
@@ -108,24 +158,14 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       total_amount: [],
       expense_date: [],
       other_category: [],
+      payment_method: [],
     });
-
-  const [formData, setFormData] = useState({
-      category: 'Fuel',
-      assignment_id: '',
-      receipt_id: '',
-      total_amount: 0,
-      expense_date: new Date().toISOString().split('T')[0],
-      other_source: '',
-      other_category: '',
-    });
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
   
       // Prepare the new value for formData
-      let newValue: any = value;
+      let newValue: string | number = value;
   
       if (name === 'total_amount') {
         newValue = parseFloat(value) || 0;
@@ -167,12 +207,12 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
   useEffect(() => {
     const fetchOriginalAmount = async () => {
-      if (record.assignment_id) {
+      if (record.assignment && record.assignment.assignment_id) {
         try {
-          const assignmentData = await getAssignmentById(record.assignment_id);
+          const assignmentData = await getAssignmentById(record.assignment.assignment_id);
           if (assignmentData?.trip_fuel_expense) {
             setOriginalTripExpense(assignmentData.trip_fuel_expense);
-            const deviation = Math.abs((record.amount - assignmentData.trip_fuel_expense) / assignmentData.trip_fuel_expense * 100);
+            const deviation = Math.abs((record.total_amount - assignmentData.trip_fuel_expense) / assignmentData.trip_fuel_expense * 100);
             setDeviationPercentage(deviation);
             setShowDeviationWarning(deviation > 10);
           }
@@ -181,9 +221,21 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
         }
       }
     };
-
     fetchOriginalAmount();
-  }, [record.assignment_id, record.amount]);
+  }, [record.assignment, record.total_amount]);
+
+  useEffect(() => {
+    if (isReceiptSource) {
+      getAllEmployees().then((emps) => setEmployeeList(emps || []));
+    }
+  }, [isReceiptSource]);
+
+  useEffect(() => {
+    if (selectedEmployeeId && employeeList.length > 0) {
+      const emp = employeeList.find(e => e.employee_id === selectedEmployeeId);
+      setEmployeeName(emp?.name || '');
+    }
+  }, [selectedEmployeeId, employeeList]);
 
   const handleAmountChange = (newAmount: number) => {
     setAmount(newAmount);
@@ -205,6 +257,17 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       return;
     }
 
+    if (isReceiptSource && paymentMethod === 'REIMBURSEMENT') {
+      if (!selectedEmployeeId) {
+        await showError('Please select an employee for reimbursement.', 'Error');
+        return;
+      }
+      if (!reimbursableAmount || isNaN(Number(reimbursableAmount)) || Number(reimbursableAmount) < 1) {
+        await showError('Please enter a valid reimbursable amount.', 'Error');
+        return;
+      }
+    }
+
     let confirmMessage = 'Do you want to save the changes to this record?';
     if (showDeviationWarning) {
       confirmMessage = `Warning: The amount deviates by ${deviationPercentage.toFixed(2)}% from the original expense amount. Do you want to proceed?`;
@@ -217,15 +280,34 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
 
     if (result.isConfirmed) {
+      let updatedReimbursements = record.reimbursements?.map(r => ({
+        reimbursement_id: r.reimbursement_id,
+        amount: reimbursementEdits[r.reimbursement_id] ? Number(reimbursementEdits[r.reimbursement_id]) : r.amount
+      }));
+      if (isReceiptSource && paymentMethod === 'REIMBURSEMENT') {
+        updatedReimbursements = [{
+          reimbursement_id: record.reimbursements?.[0]?.reimbursement_id || '',
+          amount: Number(reimbursableAmount),
+        }];
+      }
       onSave({
         expense_id: record.expense_id,
         expense_date: expenseDate,
         total_amount: amount,
-        other_source: record.category === 'Other' ? otherSource : undefined,
-        other_category: record.category === 'Other' ? otherCategory : undefined
+        reimbursements: updatedReimbursements,
+        other_source: record.other_source,
+        other_category: record.other_category,
+        payment_method: paymentMethod,
+        ...(isReceiptSource && paymentMethod === 'REIMBURSEMENT' ? {
+          reimbursable_amount: Number(reimbursableAmount),
+          employee_id: selectedEmployeeId,
+        } : {}),
       });
     }
   };
+
+  // Only allow reimbursement editing for operations-sourced expenses
+  const isOperationsSource = !!record.assignment;
 
   return (
     <div className="modalOverlay">
@@ -354,6 +436,63 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                   </div>
                 </div>
 
+                <div className="formField">
+                  {isReceiptSource && (
+                    <>
+                  <label htmlFor="payment_method">Payment Method<span className='requiredTags'> *</span></label>
+                  <select
+                    id="payment_method"
+                    name="payment_method"
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value as 'CASH' | 'REIMBURSEMENT')}
+                    required
+                    className="formSelect"
+                  >
+                    <option value="CASH">Company Paid (CASH)</option>
+                    <option value="REIMBURSEMENT">Employee Reimbursement</option>
+                  </select>
+                    </>
+                  )}
+                  {/* Only show for receipt-based and if toggled to reimbursement */}
+                  {isReceiptSource && paymentMethod === 'REIMBURSEMENT' && (
+                    <>
+                  <div className="formField">
+                        <label htmlFor="employee_id">Employee<span className='requiredTags'> *</span></label>
+                        <select
+                          id="employee_id"
+                          name="employee_id"
+                          value={selectedEmployeeId}
+                          onChange={e => setSelectedEmployeeId(e.target.value)}
+                          required
+                          className='formSelect'
+                        >
+                          <option value="">Select Employee</option>
+                          {employeeList.map(emp => (
+                            <option key={emp.employee_id} value={emp.employee_id}>{emp.name} {emp.job_title ? `(${emp.job_title})` : ''}</option>
+                          ))}
+                        </select>
+                    </div>
+                      <div className="formField">
+                        <label htmlFor="reimbursable_amount">Reimbursable Amount<span className='requiredTags'> *</span></label>
+                        <input
+                          type="number"
+                          id="reimbursable_amount"
+                          name="reimbursable_amount"
+                          value={reimbursableAmount}
+                          onChange={e => setReimbursableAmount(e.target.value)}
+                          min="1"
+                          className="formInput"
+                          required
+                        />
+                  </div>
+                    </>
+                  )}
+                  {/* Show badge if reimbursement exists */}
+                  {isReceiptSource && record.reimbursements && record.reimbursements.length > 0 && (
+                    <span className={`reimb-status-badge ${record.reimbursements[0].status?.toLowerCase()}`}>{record.reimbursements[0].status}</span>
+                )}
+                </div>
+
                 {/* Original Trip Expense Section - Moved below the form fields */}
                 {originalTripExpense !== null && (
                   <div className="originalExpenseSection">
@@ -369,17 +508,99 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                   </div>
                 )}
 
-                <div className="detailRow">
-                  <span className="label">Category:</span>
-                  <span className="value">
-                    {record.category === 'Other' ? formatDisplayText(record.other_category || '') : formatDisplayText(record.category)}
-                  </span>
+                <div className="mainDetails">
+                  <div className="detailRow">
+                    <span className="label">Category:</span>
+                    <span className="value">
+                      {record.category === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category)}
+                      <span className="locked-label">Auto-filled from Operations (locked)</span>
+                    </span>
+                  </div>
+                  <div className="detailRow">
+                    <span className="label">Amount:</span>
+                    <span className="value">₱{Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span className="locked-label">Auto-filled from Operations (locked)</span>
+                    </span>
+                  </div>
+                  <div className="detailRow">
+                    <span className="label">Date:</span>
+                    <span className="value">{formatDate(record.expense_date)}
+                      <span className="locked-label">Auto-filled from Operations (locked)</span>
+                    </span>
+                  </div>
+                  <div className="detailRow">
+                    <span className="label">Payment Method:</span>
+                    <span className="value">{record.payment_method === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}
+                      <span className="locked-label">Auto-filled from Operations (locked)</span>
+                    </span>
+                  </div>
+                  {isOperationsSource && (
+                    <div className="detailRow">
+                      <span className="label">Reimbursement:</span>
+                      {record.payment_method !== 'REIMBURSEMENT' && !reimbEditMode ? (
+                        <button type="button" onClick={() => setReimbEditMode(true)} className="addReimbBtn">Add Reimbursement</button>
+                      ) : (
+                        <>
+                          <select
+                            value={record.reimbursements?.[0]?.employee_id || ''}
+                            onChange={e => setReimbursementEdits(edits => ({ ...edits, employee_id: e.target.value }))}
+                            disabled={!reimbEditMode}
+                          >
+                            {/* Populate with driver/conductor options from assignment */}
+                            <option value={record.assignment?.driver_id}>{record.assignment?.driver_name} (Driver)</option>
+                            <option value={record.assignment?.conductor_id}>{record.assignment?.conductor_name} (Conductor)</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            value={reimbursementEdits.reimbursable_amount || record.reimbursements?.[0]?.amount || ''}
+                            onChange={e => setReimbursementEdits(edits => ({ ...edits, reimbursable_amount: e.target.value }))}
+                            placeholder={record.reimbursements?.[0]?.amount?.toString() || ''}
+                            disabled={!reimbEditMode}
+                          />
+                          <button type="button" onClick={() => setReimbEditMode(false)} className="cancelReimbBtn">Cancel</button>
+                        </>
+                      )}
+                      {/* Show status badge if reimbursement exists */}
+                      {record.reimbursements && record.reimbursements.length > 0 && (
+                        <span className={`reimb-status-badge ${record.reimbursements[0].status?.toLowerCase()}`}>{record.reimbursements[0].status}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                <div className="detailRow">
-                  <span className="label">Terms:</span>
-                  <span className="value">{record.receipt?.terms ? formatDisplayText(record.receipt.terms) : 'N/A'}</span>
-                </div>
+                {record.assignment && (
+                  <div className="operationsDetails">
+                    <h3>Operations Details</h3>
+                    <div className="detailRow">
+                      <span className="label">Bus Plate Number:</span>
+                      <span className="value">{record.assignment.bus_plate_number} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Bus Route:</span>
+                      <span className="value">{record.assignment.bus_route} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Bus Type:</span>
+                      <span className="value">{record.assignment.bus_type} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Driver:</span>
+                      <span className="value">{record.assignment.driver_name || record.assignment.driver_id} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Conductor:</span>
+                      <span className="value">{record.assignment.conductor_name || record.assignment.conductor_id} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Date Assigned:</span>
+                      <span className="value">{formatDate(record.assignment.date_assigned)} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Trip Fuel Expense:</span>
+                      <span className="value">₱{record.assignment.trip_fuel_expense.toLocaleString()} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                    </div>
+                  </div>
+                )}
 
               </div>
             </div>

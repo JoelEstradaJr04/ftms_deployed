@@ -2,7 +2,24 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/client'
-import type { Assignment } from '@/lib/supabase/assignments'
+
+// Local type for cache population
+type AssignmentSupabase = {
+  assignment_id: string;
+  bus_route: string;
+  date_assigned: string;
+  trip_fuel_expense: number;
+  trip_revenue: number;
+  is_expense_recorded: boolean;
+  is_revenue_recorded: boolean;
+  assignment_type: string;
+  assignment_value: number;
+  payment_method: string;
+  driver_id: string;
+  conductor_id: string;
+  bus_plate_number: string;
+  bus_type: string;
+};
 
 // GET - Return all cached assignments
 export async function GET() {
@@ -22,20 +39,21 @@ export async function GET() {
 
       // Populate cache with Supabase data
       await prisma.assignmentCache.createMany({
-        data: supabaseData.map((assignment: Assignment) => ({
+        data: (supabaseData as AssignmentSupabase[]).map((assignment) => ({
           assignment_id: assignment.assignment_id,
-          bus_bodynumber: assignment.bus_bodynumber,
-          bus_platenumber: assignment.bus_platenumber,
           bus_route: assignment.bus_route,
-          bus_type: assignment.bus_type,
-          driver_name: assignment.driver_name,
-          conductor_name: assignment.conductor_name,
           date_assigned: new Date(assignment.date_assigned),
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
-          is_revenue_recorded: assignment.is_revenue_recorded,
           is_expense_recorded: assignment.is_expense_recorded,
-          assignment_type: assignment.assignment_type
+          is_revenue_recorded: assignment.is_revenue_recorded,
+          assignment_type: assignment.assignment_type,
+          assignment_value: assignment.assignment_value,
+          payment_method: assignment.payment_method,
+          driver_id: assignment.driver_id,
+          conductor_id: assignment.conductor_id,
+          bus_plate_number: assignment.bus_plate_number,
+          bus_type: assignment.bus_type,
         }))
       });
 
@@ -68,20 +86,21 @@ export async function POST() {
 
       // Insert new cache entries
       await tx.assignmentCache.createMany({
-        data: supabaseData.map((assignment: Assignment) => ({
+        data: (supabaseData as AssignmentSupabase[]).map((assignment) => ({
           assignment_id: assignment.assignment_id,
-          bus_bodynumber: assignment.bus_bodynumber,
-          bus_platenumber: assignment.bus_platenumber,
           bus_route: assignment.bus_route,
-          bus_type: assignment.bus_type,
-          driver_name: assignment.driver_name,
-          conductor_name: assignment.conductor_name,
           date_assigned: new Date(assignment.date_assigned),
           trip_fuel_expense: assignment.trip_fuel_expense,
           trip_revenue: assignment.trip_revenue,
-          is_revenue_recorded: assignment.is_revenue_recorded,
           is_expense_recorded: assignment.is_expense_recorded,
-          assignment_type: assignment.assignment_type
+          is_revenue_recorded: assignment.is_revenue_recorded,
+          assignment_type: assignment.assignment_type,
+          assignment_value: assignment.assignment_value,
+          payment_method: assignment.payment_method,
+          driver_id: assignment.driver_id,
+          conductor_id: assignment.conductor_id,
+          bus_plate_number: assignment.bus_plate_number,
+          bus_type: assignment.bus_type,
         }))
       });
     });

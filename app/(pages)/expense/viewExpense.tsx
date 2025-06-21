@@ -9,14 +9,39 @@ import type { Receipt } from '../../types/receipt';
 
 type Assignment = {
   assignment_id: string;
-  bus_bodynumber: string;
-  bus_platenumber: string;
+  bus_plate_number: string;
   bus_route: string;
   bus_type: string;
-  driver_name: string;
-  conductor_name: string;
+  driver_id: string;
+  conductor_id: string;
   date_assigned: string;
   trip_fuel_expense: number;
+  driver_name?: string;
+  conductor_name?: string;
+};
+
+type Reimbursement = {
+  reimbursement_id: string;
+  expense_id: string;
+  assignment_id?: string;
+  employee_id: string;
+  employee_name: string;
+  job_title?: string;
+  amount: number;
+  status: string;
+  requested_date?: string;
+  approved_by?: string;
+  approved_date?: string;
+  rejection_reason?: string;
+  paid_by?: string;
+  paid_date?: string;
+  payment_reference?: string;
+  payment_method?: string;
+  created_by: string;
+  created_at?: string;
+  updated_by?: string;
+  updated_at?: string;
+  is_deleted?: boolean;
 };
 
 type ViewExpenseModalProps = {
@@ -29,6 +54,8 @@ type ViewExpenseModalProps = {
     assignment?: Assignment;
     receipt?: Receipt;
     other_source?: string;
+    payment_method?: string;
+    reimbursements?: Reimbursement[];
   };
   onClose: () => void;
 };
@@ -75,12 +102,8 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
       <div className="operationsDetails">
         <h3>Operations Details</h3>
         <div className="detailRow">
-          <span className="label">Bus Body Number:</span>
-          <span className="value">{record.assignment.bus_bodynumber}</span>
-        </div>
-        <div className="detailRow">
           <span className="label">Bus Plate Number:</span>
-          <span className="value">{record.assignment.bus_platenumber}</span>
+          <span className="value">{record.assignment.bus_plate_number}</span>
         </div>
         <div className="detailRow">
           <span className="label">Bus Route:</span>
@@ -92,11 +115,11 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         </div>
         <div className="detailRow">
           <span className="label">Driver:</span>
-          <span className="value">{record.assignment.driver_name}</span>
+          <span className="value">{record.assignment.driver_name || record.assignment.driver_id}</span>
         </div>
         <div className="detailRow">
           <span className="label">Conductor:</span>
-          <span className="value">{record.assignment.conductor_name}</span>
+          <span className="value">{record.assignment.conductor_name || record.assignment.conductor_id}</span>
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
@@ -133,6 +156,21 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
             <span className="label">Date:</span>
             <span className="value">{formatDate(record.expense_date)}</span>
           </div>
+          <div className="detailRow">
+            <span className="label">Payment Method:</span>
+            <span className="value">{record.payment_method === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}</span>
+          </div>
+          {/* Reimbursement breakdown */}
+          {record.payment_method === 'REIMBURSEMENT' && record.reimbursements && record.reimbursements.length > 0 && (
+            <div className="detailRow">
+              <span className="label">Reimbursements:</span>
+              <span className="value">
+                {record.reimbursements.map((r: Reimbursement, idx: number) => (
+                  <div key={idx}>{r.job_title ? r.job_title + ': ' : ''}{r.employee_name} (₱{Number(r.amount).toLocaleString()})</div>
+                ))}
+              </span>
+            </div>
+          )}
         </div>
 
         {record.assignment && renderOperationsDetails()}

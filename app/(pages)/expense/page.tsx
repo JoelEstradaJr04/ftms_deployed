@@ -8,8 +8,8 @@ import AddExpense from "./addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "./editExpense";
 import ViewExpenseModal from "./viewExpense";
-import { getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
-import { formatDate } from '../../utility/dateFormatter';
+import { getAllAssignmentsWithRecorded } from '@/lib/supabase/assignments';
+import { formatDateTime, formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
@@ -30,6 +30,10 @@ interface ExpenseRecord {
   other_source?: string;
   other_category?: string;
   receipt?: Receipt;
+  payment_method: 'REIMBURSEMENT' | 'CASH';
+  reimbursements?: Reimbursement[];
+  payment_method_name?: string;
+  category_name?: string;
 }
 
 interface Receipt {
@@ -66,20 +70,53 @@ interface ReceiptItem {
   total_price: number;
 }
 
-// UI data type that matches your schema exactly
-type ExpenseData = {
-  expense_id: string;       
-  category: string;         
-  total_amount: number;     
-  expense_date: string;             
-  created_by: string;       
-  assignment_id?: string;   
-  receipt_id?: string;
-  other_source?: string;
-  other_category?: string;
-  assignment?: Assignment;
-  receipt?: Receipt;
+type Reimbursement = {
+  reimbursement_id: string;
+  expense_id: string;
+  assignment_id?: string;
+  employee_id: string;
+  employee_name: string;
+  job_title?: string;
+  amount: number;
+  status: string;
+  requested_date?: string;
+  approved_by?: string;
+  approved_date?: string;
+  rejection_reason?: string;
+  paid_by?: string;
+  paid_date?: string;
+  payment_reference?: string;
+  payment_method?: string;
+  created_by: string;
+  created_at?: string;
+  updated_by?: string;
+  updated_at?: string;
+  is_deleted?: boolean;
 };
+
+// UI data type that matches your schema exactly
+type ExpenseData = ExpenseRecord;
+
+// Update Assignment type in this file
+interface Assignment {
+  assignment_id: string;
+  bus_plate_number: string;
+  bus_route: string;
+  bus_type: string;
+  driver_id: string;
+  conductor_id: string;
+  date_assigned: string;
+  trip_fuel_expense: number;
+  is_expense_recorded: boolean;
+  payment_method: string;
+}
+
+// Add Employee type for local use
+interface Employee {
+  employee_id: string;
+  name: string;
+  job_title: string;
+}
 
 const ExpensePage = () => {
   const [data, setData] = useState<ExpenseData[]>([]);
@@ -100,11 +137,14 @@ const ExpensePage = () => {
   const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
 
   // Format assignment for display
   const formatAssignment = (assignment: Assignment): string => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    const driverEmp = allEmployees.find(e => e.employee_id === assignment.driver_id) as Employee | undefined;
+    const conductorEmp = allEmployees.find(e => e.employee_id === assignment.conductor_id) as Employee | undefined;
+    return `${busType} | ${assignment.bus_plate_number} - ${assignment.bus_route} | ${driverEmp?.name} & ${conductorEmp?.name}`;
   };
 
   // Format receipt for display
@@ -137,11 +177,24 @@ const ExpensePage = () => {
     }
   };
 
+  // Fetch employees data
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      const employeesData = await response.json();
+      setAllEmployees(employeesData);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      showError('Failed to load employees', 'Error');
+    }
+  };
+
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchExpenses(), fetchAssignments()]);
+      await Promise.all([fetchExpenses(), fetchAssignments(), fetchEmployees()]);
       setLoading(false);
     };
     loadData();
@@ -180,11 +233,7 @@ const ExpensePage = () => {
       (item.other_source?.toLowerCase() || '').includes(searchLower) ||
       
       // Assignment related fields (if available)
-      (item.assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
-      (item.assignment?.bus_bodynumber?.toLowerCase() || '').includes(searchLower) ||
-      (item.assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
-      (item.assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
-      (item.assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
+      (item.assignment_id?.toLowerCase() || '').includes(searchLower) ||
       
       // Receipt related fields (if available)
       (item.receipt?.supplier?.toLowerCase() || '').includes(searchLower) ||
@@ -202,16 +251,11 @@ const ExpensePage = () => {
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const handleAddExpense = async (newExpense: {
-    category: string;
-    assignment_id?: string;
-    receipt_id?: string;
-    total_amount: number;
-    expense_date: string;
-    created_by: string;
-    other_source?: string;
-    other_category?: string;
-  }) => {
+  const handleAddExpense = async (newExpense: any) => {
+    // Remove employee_id if present and source is operations
+    if (newExpense.assignment_id && newExpense.driver_reimbursement !== undefined && newExpense.conductor_reimbursement !== undefined) {
+      delete newExpense.employee_id;
+    }
     try {
       const response = await fetch('/api/expenses', {
         method: 'POST',
@@ -225,16 +269,9 @@ const ExpensePage = () => {
       
       // Update expenses state and trigger a refresh
       setData(prev => [{
-        expense_id: result.expense_id,
-        category: result.category,
-        total_amount: Number(result.total_amount),
-        expense_date: new Date(result.expense_date).toISOString().split('T')[0],
-        created_by: result.created_by,
-        assignment_id: result.assignment_id,
-        receipt_id: result.receipt_id,
-        other_source: result.other_source,
-        other_category: result.other_category,
-        receipt: result.receipt
+        ...result,
+        created_at: result.created_at || new Date().toISOString(),
+        is_deleted: result.is_deleted ?? false,
       }, ...prev]);
       
       // Trigger immediate data refresh
@@ -295,15 +332,9 @@ const ExpensePage = () => {
         const filtered = prev.filter(rec => rec.expense_id !== updatedRecord.expense_id);
         // Create the updated record
         const updated = {
-          expense_id: result.expense_id,
-          category: result.category,
-          total_amount: Number(result.total_amount),
-          expense_date: new Date(result.expense_date).toISOString().split('T')[0],
-          created_by: result.created_by,
-          assignment_id: result.assignment_id,
-          receipt_id: result.receipt_id,
-          other_source: result.other_source,
-          receipt: result.receipt
+          ...result,
+          created_at: result.created_at || new Date().toISOString(),
+          is_deleted: result.is_deleted ?? false,
         };
         // Add the updated record at the beginning of the array
         return [updated, ...filtered];
@@ -389,7 +420,9 @@ const ExpensePage = () => {
         "Receipt VAT Amount",
         "Receipt Total Due",
         "Other Source Description",
-        "Other Category"
+        "Other Category",
+        "Payment Method",
+        "Employee"
       ];
     }
 
@@ -397,7 +430,9 @@ const ExpensePage = () => {
       return [
         ...baseColumns,
         "Other Source Description",
-        "Other Category"
+        "Other Category",
+        "Payment Method",
+        "Employee"
       ];
     }
 
@@ -415,7 +450,9 @@ const ExpensePage = () => {
       "Receipt Terms",
       "Receipt Status",
       "Receipt VAT Amount",
-      "Receipt Total Due"
+      "Receipt Total Due",
+      "Payment Method",
+      "Employee"
     ];
   };
 
@@ -555,85 +592,55 @@ const ExpensePage = () => {
     const headers = columns.join(",") + "\n";
   
     const rows = recordsToExport.map(item => {
-      const assignment = item.assignment_id 
-        ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-        : null;
-
-      const escapeField = (field: string | undefined | number) => {
-        if (field === undefined || field === null) return '';
-        const stringField = String(field);
-        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-          return `"${stringField.replace(/"/g, '""')}"`;
+      let source: string = '';
+      if (item.assignment_id) {
+        const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+        if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
+          source = formatAssignment(assignment);
+        } else {
+          source = `Assignment ${item.assignment_id} not found`;
         }
-        return stringField;
-      };
+      } else if (item.receipt) {
+        source = formatReceipt(item.receipt);
+      } else {
+        source = item.other_source || 'N/A';
+      }
 
-      const rowData: string[] = [];
-    
-      columns.forEach(col => {
-        switch(col) {
-          case "Expense Date":
-            rowData.push(escapeField(formatDate(item.expense_date)));
-            break;
-          case "Category":
-            rowData.push(escapeField(item.category === 'Other' ? item.other_category || 'Other' : formatDisplayText(item.category)));
-            break;
-          case "Amount":
-            rowData.push(escapeField(Number(item.total_amount).toFixed(2)));
-            break;
-          case "Source Type":
-            rowData.push(escapeField(assignment ? 'Assignment' : item.receipt ? 'Receipt' : 'Other'));
-            break;
-          case "Bus Type":
-            rowData.push(escapeField(assignment?.bus_type));
-            break;
-          case "Body Number":
-            rowData.push(escapeField(assignment?.bus_bodynumber));
-            break;
-          case "Route":
-            rowData.push(escapeField(assignment?.bus_route));
-            break;
-          case "Driver Name":
-            rowData.push(escapeField(assignment?.driver_name));
-            break;
-          case "Conductor Name":
-            rowData.push(escapeField(assignment?.conductor_name));
-            break;
-          case "Assignment Date":
-            rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
-            break;
-          case "Receipt Supplier":
-            rowData.push(escapeField(item.receipt?.supplier));
-            break;
-          case "Receipt Transaction Date":
-            rowData.push(escapeField(item.receipt?.transaction_date ? formatDate(item.receipt.transaction_date) : ''));
-            break;
-          case "Receipt VAT TIN":
-            rowData.push(escapeField(item.receipt?.vat_reg_tin));
-            break;
-          case "Receipt Terms":
-            rowData.push(escapeField(item.receipt?.terms));
-            break;
-          case "Receipt Status":
-            rowData.push(escapeField(item.receipt?.payment_status));
-            break;
-          case "Receipt VAT Amount":
-            rowData.push(escapeField(item.receipt?.vat_amount ? Number(item.receipt.vat_amount).toFixed(2) : ''));
-            break;
-          case "Receipt Total Due":
-            rowData.push(escapeField(item.receipt?.total_amount_due ? Number(item.receipt.total_amount_due).toFixed(2) : ''));
-            break;
-          case "Other Source Description":
-            rowData.push(escapeField(item.other_source));
-            break;
-          case "Other Category":
-            rowData.push(escapeField(item.other_category));
-            break;
-          default:
-            rowData.push('');
-        }
-      });
-      return rowData.join(',');
+      // Reimbursement display logic
+      let reimbursementDisplay = '-';
+      if (item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0) {
+        reimbursementDisplay = item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ');
+      }
+   
+      return (
+        <tr key={item.expense_id}>
+          <td>{formatDate(item.expense_date)}</td>
+          <td>{source}</td>
+          <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
+          <td>₱{item.total_amount.toLocaleString()}</td>
+          <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
+          <td>{item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0
+            ? item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ')
+            : '-'}</td>
+          <td className="actionButtons">
+            <div className="actionButtonsContainer">
+              {/* view button */}
+              <button className="viewBtn" onClick={() => handleViewExpense(item)} title="View Record">
+                <i className="ri-eye-line" />
+              </button>
+              {/* edit button */}
+              <button className="editBtn" onClick={() => {setRecordToEdit(item);setEditModalOpen(true);}} title="Edit Record">
+                <i className="ri-edit-2-line" />
+              </button>
+              {/* delete button */}
+              <button className="deleteBtn" onClick={() => handleDelete(item.expense_id)} title="Delete Record">
+                <i className="ri-delete-bin-line" />
+              </button>
+            </div>
+            
+          </td>
+        </tr>
+      );
     }).join("\n");
   
     const blob = new Blob([generateHeaderComment() + headers + rows], { 
@@ -735,27 +742,39 @@ const ExpensePage = () => {
                   <th>Source</th>
                   <th>Category</th>
                   <th>Amount</th>
+                  <th>Payment Method</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {currentRecords.map(item => {
-                  let source: string;
+                  let source: string = '';
                   if (item.assignment_id) {
                     const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-                    source = assignment ? formatAssignment(assignment) : `Assignment ${item.assignment_id} not found`;
+                    if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
+                      source = formatAssignment(assignment);
+                    } else {
+                      source = `Assignment ${item.assignment_id} not found`;
+                    }
                   } else if (item.receipt) {
                     source = formatReceipt(item.receipt);
                   } else {
                     source = item.other_source || 'N/A';
                   }
-
+               
+                  // Reimbursement display logic
+                  let reimbursementDisplay = '-';
+                  if (item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0) {
+                    reimbursementDisplay = item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ');
+                  }
+               
                   return (
                     <tr key={item.expense_id}>
-                      <td>{formatDate(item.expense_date)}</td>
+                      <td>{formatDateTime(item.expense_date)}</td>
                       <td>{source}</td>
-                      <td>{formatDisplayText(item.category)}</td>
+                      <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
+                      <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
                       <td className="actionButtons">
                         <div className="actionButtonsContainer">
                           {/* view button */}
@@ -805,15 +824,25 @@ const ExpensePage = () => {
               expense_id: recordToEdit.expense_id,
               expense_date: recordToEdit.expense_date,
               category: recordToEdit.category,
-              source: recordToEdit.assignment_id 
-                ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)
-                : recordToEdit.receipt
-                ? formatReceipt(recordToEdit.receipt)
-                : recordToEdit.other_source || 'N/A',
-              amount: recordToEdit.total_amount,
-              assignment_id: recordToEdit.assignment_id,
-              receipt_id: recordToEdit.receipt_id,
-              other_source: recordToEdit.other_source
+              other_category: recordToEdit.other_category,
+              total_amount: recordToEdit.total_amount,
+              assignment: recordToEdit.assignment_id 
+                ? (() => {
+                    const assignment = allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id);
+                    if (!assignment) return undefined;
+                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+                    return {
+                      ...assignment,
+                      driver_name: driver ? driver.name : assignment.driver_id,
+                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
+                    };
+                  })()
+                : undefined,
+              receipt: recordToEdit.receipt,
+              other_source: recordToEdit.other_source,
+              payment_method: recordToEdit.payment_method,
+              reimbursements: recordToEdit.reimbursements,
             }}
             onClose={() => {
               setEditModalOpen(false);
@@ -832,10 +861,22 @@ const ExpensePage = () => {
               total_amount: recordToView.total_amount,
               expense_date: recordToView.expense_date,
               assignment: recordToView.assignment_id 
-                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
+                ? (() => {
+                    const assignment = allAssignments.find(a => a.assignment_id === recordToView.assignment_id);
+                    if (!assignment) return undefined;
+                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+                    return {
+                      ...assignment,
+                      driver_name: driver ? driver.name : assignment.driver_id,
+                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
+                    };
+                  })()
                 : undefined,
               receipt: recordToView.receipt,
-              other_source: recordToView.other_source
+              other_source: recordToView.other_source,
+              payment_method: recordToView.payment_method,
+              reimbursements: recordToView.reimbursements,
             }}
             onClose={handleCloseViewModal}
           />
