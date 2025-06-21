@@ -7,7 +7,7 @@ import "../../../styles/chips.css";
 import PaginationComponent from "../../../Components/pagination";
 import Loading from '../../../Components/loading';
 import Swal from 'sweetalert2';
-import { showSuccess, showConfirmation } from '../../../utility/Alerts';
+import { showSuccess } from '../../../utility/Alerts';
 import ViewPayrollModal from "./viewPayroll";
 
 // Payroll record type
@@ -21,34 +21,40 @@ type PayrollRecord = {
   deduction: number;
   salary: number;
   status: "Released" | "Pending" | string;
+  date_released?: string | null;
+  // Additional fields for detailed view
+  days_of_work?: number;
+  basic_rate?: number;
+  basic_pay?: number;
+  regular?: number;
+  holiday?: number;
+  service_incentive_leave?: number;
+  holiday_pay?: number;
+  thirteenth_month_pay?: number;
+  revenue?: number;
+  safety?: number;
+  additional?: number;
+  philhealth?: number;
+  pag_ibig?: number;
+  sss?: number;
+  cash_advance?: number;
+  damage_shortage?: number;
+  gross_total_earnings?: number;
+  total_deduction?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
-// Dummy data for demonstration
-const dummyPayrolls: PayrollRecord[] = [
-  {
-    payroll_id: "1",
-    employee_name: "Juan Dela Cruz",
-    job_title: "Driver",
-    department: "Operations",
-    payroll_period: "Monthly",
-    net_pay: 18000,
-    deduction: 2000,
-    salary: 20000,
-    status: "Released",
-  },
-  {
-    payroll_id: "2",
-    employee_name: "Maria Santos",
-    job_title: "Conductor",
-    department: "Operations",
-    payroll_period: "Weekly",
-    net_pay: 4500,
-    deduction: 500,
-    salary: 5000,
-    status: "Pending",
-  },
-  // Add more dummy records as needed
-];
+// API Response type
+type ApiResponse = {
+  data: PayrollRecord[];
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalRecords: number;
+    totalPages: number;
+  };
+};
 
 const PayrollPage = () => {
   // Selected Employee IDs
@@ -57,67 +63,125 @@ const PayrollPage = () => {
   // State
   const [data, setData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setError] = useState<string | null>(null); // Fixed: use error state correctly
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [periodFilter, setPeriodFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
-  //vieewPayroll modal
+  // View Payroll modal
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<PayrollRecord | null>(null);
 
-  const handleEdit = (item: PayrollRecord) => {
-    console.log("Editing payroll:", item);
-  };
+  // Fetch payroll data from API
+  const fetchPayrollData = async (isSearch = false) => {
+    try {
+      if (isSearch) {
+        setSearchLoading(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-  // Fetch payroll data (simulate API)
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    // Simulate API delay
-    setTimeout(() => {
-      try {
-        // Replace with real API call
-        setData(dummyPayrolls);
-        setLoading(false);
-      } catch (err) { 
-        console.error("Error fetching payroll data:", err);
-        setError("Error retrieving payroll data.");
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+      });
+
+      if (search.trim()) {
+        params.append('search', search.trim());
+      }
+
+      if (positionFilter) {
+        params.append('position', positionFilter);
+      }
+
+      const response = await fetch(`/api/payroll?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result: ApiResponse = await response.json();
+      
+      setData(result.data);
+      setTotalPages(result.pagination.totalPages);
+      
+      if (isSearch) {
+        setSearchLoading(false);
+      } else {
         setLoading(false);
       }
-    }, 800);
-  }, []); // No need to include setError
+    } catch (err) {
+      console.error("Error fetching payroll data:", err);
+      setError("Error retrieving payroll data.");
+      if (isSearch) {
+        setSearchLoading(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
 
-  // Filter logic
-  const filteredData = data.filter((item) => {
-    const matchesSearch =
-      item.employee_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.job_title.toLowerCase().includes(search.toLowerCase());
-    const matchesDept = departmentFilter
-      ? item.department === departmentFilter
-      : true;
-    const matchesPeriod = periodFilter
-      ? item.payroll_period === periodFilter
-      : true;
-    return matchesSearch && matchesDept && matchesPeriod;
-  });
+  // Fetch data when component mounts or filters change (excluding search)
+  useEffect(() => {
+    fetchPayrollData(false);
+  }, [currentPage, pageSize, positionFilter]);
 
-  // Pagination logic
-  const indexOfLastRecord = currentPage * pageSize;
-  const indexOfFirstRecord = indexOfLastRecord - pageSize;
-  const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
-  const totalPages = Math.ceil(filteredData.length / pageSize);
+  // Separate effect for search with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      // Reset to first page when searching
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchPayrollData(true);
+      }
+    }, 500); // 500ms delay
 
-  // Unique departments and periods for filter dropdowns
-  const departments = Array.from(new Set(data.map((d) => d.department)));
-  const periods = Array.from(new Set(data.map((d) => d.payroll_period)));
+    return () => clearTimeout(timeoutId);
+  }, [search]);
 
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault(); // Prevent any form submission
+    setSearch(e.target.value);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent form submission and page reload
+  };
+
+  // Handle key press in search input
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent form submission on Enter
+    }
+  };
+
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearch("");
+  };
+
+  // Handle retry
+  const handleRetry = () => {
+    fetchPayrollData(false);
+  };
+
+  // Filter logic for client-side filtering
+  const filteredData = data;
+
+  // Unique positions for filter dropdowns
+  const positions = Array.from(new Set(data.map((d) => d.job_title)));
 
   const handleReleaseWithConfirm = (ids: string[]) => {
     Swal.fire({
@@ -138,19 +202,34 @@ const PayrollPage = () => {
     });
   };
 
-
   // Handle release action
-  const handleRelease = (ids: string[]) => {
+  const handleRelease = async (ids: string[]) => {
     if (ids.length === 0) return;
-    setData(prev =>
-      prev.map(item =>
-        ids.includes(item.payroll_id) && item.status === "Pending"
-          ? { ...item, status: "Released" }
-          : item
-      )
-    );
-    setSelectedIds([]);
-    showSuccess('Payroll released!', 'Success');
+    
+    try {
+      // Update status in API
+      for (const id of ids) {
+        await fetch('/api/payroll', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            payroll_id: id,
+            status: 'Released',
+            date_released: new Date().toISOString()
+          })
+        });
+      }
+
+      // Refresh data
+      await fetchPayrollData(false);
+      setSelectedIds([]);
+      showSuccess('Payroll released!', 'Success');
+    } catch (error) {
+      console.error('Error releasing payroll:', error);
+      setError('Failed to release payroll');
+    }
   };
 
   if (loading) {
@@ -158,6 +237,20 @@ const PayrollPage = () => {
       <div className="card">
         <h1 className="title">Payroll Management</h1>
         <Loading />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card">
+        <h1 className="title">Payroll Management</h1>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+          <p>{error}</p>
+          <button onClick={handleRetry} style={{ marginTop: '1rem' }}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -171,38 +264,43 @@ const PayrollPage = () => {
 
         <div className="settings">
           <div className="searchBar">
-            <i className="ri-search-line" />
-            <input
-              type="text"
-              placeholder="Search employee or job title…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <form onSubmit={handleSearchSubmit} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+              <i className="ri-search-line" />
+              <input
+                type="text"
+                placeholder="Search here..."
+                value={search}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyPress}
+                disabled={searchLoading}
+              />
+              {searchLoading && (
+                <div style={{ marginLeft: '8px', color: '#666' }}>
+                  <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+              {search && !searchLoading && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </form>
           </div>
 
           <div className="filters">
             <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
+              value={positionFilter}
+              onChange={(e) => setPositionFilter(e.target.value)}
               className="filterSelect"
             >
-              <option value="">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
-              className="filterSelect"
-            >
-              <option value="">All Payroll Periods</option>
-              {periods.map((period) => (
-                <option key={period} value={period}>
-                  {period}
+              <option value="">All Positions</option>
+              {positions.map((position) => (
+                <option key={position} value={position}>
+                  {position}
                 </option>
               ))}
             </select>
@@ -251,7 +349,7 @@ const PayrollPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentRecords.map((item) => (
+                {filteredData.map((item) => (
                   <tr key={item.payroll_id}
                     style={{ cursor: "pointer" }}
                     onClick={() => {
@@ -291,7 +389,10 @@ const PayrollPage = () => {
                         {item.status === "Pending" ? (
                           <button
                             className="releaseBtn"
-                            onClick={() => handleReleaseWithConfirm([item.payroll_id])}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReleaseWithConfirm([item.payroll_id]);
+                            }}
                             title="Release Payroll"
                           >
                             <i className="ri-check-double-line" />
@@ -302,12 +403,15 @@ const PayrollPage = () => {
                           </button>
                         )}
                         <button
-                          className="editBtn"
-                          onClick={() => handleEdit(item)}
-                          title="Edit Payroll"
-                          disabled={item.status !== "Pending"} // Disable if not pending
+                          className="viewBtn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecordToView(item);
+                            setViewModalOpen(true);
+                          }}
+                          title="View Payroll"
                         >
-                          <i className="ri-edit-2-line" />
+                          <i className="ri-eye-line" />
                         </button>
                       </div>
                     </td>

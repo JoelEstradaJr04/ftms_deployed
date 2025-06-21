@@ -9,7 +9,6 @@ async function main() {
     { name: 'Tools', modules: ['expense', 'receipt'] },
     { name: 'Equipment', modules: ['expense', 'receipt'] },
     { name: 'Supplies', modules: ['expense', 'receipt'] },
-    { name: 'Other', modules: ['expense', 'receipt'] },
     { name: 'Multiple_Categories', modules: ['expense', 'receipt'] },
     { name: 'Boundary', modules: ['revenue'] },
     { name: 'Percentage', modules: ['revenue'] },
@@ -54,6 +53,9 @@ async function main() {
     { name: 'Manual_Entry', modules: ['receipt'] },
     { name: 'OCR_Camera', modules: ['receipt'] },
     { name: 'OCR_File', modules: ['receipt'] },
+    { name: 'Boundary_Assignment', modules: ['revenue'] },
+    { name: 'Percentage_Assignment', modules: ['revenue'] },
+    { name: 'Bus_Rental_Assignment', modules: ['revenue'] },
   ];
   for (const { name, modules } of sources) {
     await prisma.globalSource.upsert({

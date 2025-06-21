@@ -9,8 +9,8 @@ import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  // Add other_source to the destructured properties
-  const { assignment_id, category, total_amount, collection_date, created_by, other_source } = data;
+  // Updated to use category_id and source_id instead of string fields
+  const { assignment_id, category_id, source_id, total_amount, collection_date, created_by } = data;
 
   try {
     let finalAmount = total_amount;
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
+          category_id,
           collection_date: new Date(collection_date),
         },
       });
@@ -41,20 +42,38 @@ export async function POST(req: NextRequest) {
       }
 
       finalAmount = assignmentData.trip_revenue;
+    } else {
+      // For non-assignment records, check unique constraint with source_id
+      const duplicate = await prisma.revenueRecord.findFirst({
+        where: {
+          category_id,
+          source_id,
+          total_amount: finalAmount,
+          collection_date: new Date(collection_date),
+        },
+      });
+
+      if (duplicate) {
+        console.log(`Duplicate record found for category_id: ${category_id}, source_id: ${source_id} on collection_date: ${collection_date}`);
+        return NextResponse.json(
+          { error: 'Revenue record for this category, source, amount and collection_date already exists.' },
+          { status: 409 }
+        );
+      }
     }
 
     const newRevenue = await prisma.revenueRecord.create({
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
-        category,
+        category_id,
+        source_id: source_id ?? null,
         total_amount: finalAmount,
         collection_date: new Date(collection_date),
         created_by,
         created_at: new Date(),
         updated_at: null,
         is_deleted: false,
-        other_source: category === 'Other' ? other_source : null // Now properly defined
       }
     });
 
@@ -132,6 +151,10 @@ export async function GET(req: NextRequest) {
     where: { 
       is_deleted: false,
       ...dateCondition
+    },
+    include: {
+      category: true,
+      source: true,
     },
     orderBy: { created_at: 'desc' }
   });

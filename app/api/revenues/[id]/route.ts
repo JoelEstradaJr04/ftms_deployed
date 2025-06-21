@@ -9,7 +9,7 @@ import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  const { assignment_id, category, total_amount, collection_date, created_by } = data;
+  const { assignment_id, category_id, source_id, total_amount, collection_date, created_by } = data;
 
   try {
     let finalAmount = total_amount;
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
+          category_id,
           collection_date: new Date(collection_date),
         },
       });
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest) {
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
-        category,
+        category_id,
+        source_id: source_id ?? null,
         total_amount: finalAmount,
         collection_date: new Date(collection_date),
         created_by,
@@ -81,6 +83,10 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const revenues = await prisma.revenueRecord.findMany({ 
     where: { is_deleted: false },
+    include: {
+      category: true,
+      source: true,
+    },
     orderBy: { created_at: 'desc' }
   })
   return NextResponse.json(revenues)
@@ -93,7 +99,7 @@ export async function PUT(
   try {
     const { id } = await params; // Await the params promise
     const data = await req.json();
-    const { total_amount, collection_date, other_source } = data;
+    const { total_amount, collection_date, source_id } = data;
     const revenue_id = id; // Use the awaited id
 
     // Get the original record for comparison and validation
@@ -127,7 +133,7 @@ export async function PUT(
       data: {
         total_amount,
         collection_date: new Date(collection_date),
-        other_source: originalRecord.category === 'Other' ? other_source : null,
+        source_id: source_id ?? null,
         updated_at: new Date()
       }
     });

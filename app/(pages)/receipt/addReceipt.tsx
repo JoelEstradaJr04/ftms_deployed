@@ -755,7 +755,6 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 {itemUnits.map(unit => (
                                   <option key={unit.id} value={unit.id}>{unit.name}</option>
                                 ))}
-                                <option value="Other">Other</option>
                               </select>
                             )}
                           </td>

@@ -18,28 +18,52 @@ import { showSuccess, showError} from '../../utility/Alerts';
 interface RevenueRecord {
   revenue_id: string;        
   assignment_id?: string;    
-  category: 'Boundary' | 'Percentage' | 'Bus_Rental' | 'Other'; 
+  category_id: string;
+  source_id?: string;
+  category: {
+    category_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
+  source?: {
+    source_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
   total_amount: number;      
   collection_date: string;              
   created_by: string;        
   created_at: string;        
   updated_at?: string;       
   is_deleted: boolean;
-  other_source?: string; // Add this line
 }
 
 // Updated Assignment interface to include assignment_type and is_revenue_recorded
 // Update the Assignment interface
 interface RevenueData {
   revenue_id: string;
-  category: string;
+  category: {
+    category_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
+  source?: {
+    source_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
   total_amount: number;
   collection_date: string;
   created_by: string;
   created_at: string;  // Add this line
   assignment_id?: string;
-  other_source?: string;
 }
+
+type Employee = {
+  employee_id: string;
+  name: string;
+  job_title: string;
+};
 
 const RevenuePage = () => {
   const [data, setData] = useState<RevenueData[]>([]);
@@ -59,11 +83,14 @@ const RevenuePage = () => {
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
 
   // Reuse the same format function from addRevenue.tsx
   const formatAssignment = (assignment: Assignment): string => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+    return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_revenue} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
   };
 
   // Fetch assignments with periodic refresh and error handling
@@ -113,6 +140,13 @@ const RevenuePage = () => {
       setAssignmentsLoading(true);
       
       try {
+        // Fetch employees for displaying driver and conductor names
+        const employeesResponse = await fetch('/api/employees');
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json();
+          setAllEmployees(employeesData);
+        }
+
         // Fetch all assignments for displaying in the table
         const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
         if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
@@ -134,12 +168,12 @@ const RevenuePage = () => {
         const transformedData: RevenueData[] = revenues.map(revenue => ({
           revenue_id: revenue.revenue_id,
           category: revenue.category,
+          source: revenue.source,
           total_amount: Number(revenue.total_amount),
           collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
           created_by: revenue.created_by, // Add this line to fix the error
           created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
-          other_source: revenue.other_source || undefined
         }));
         
         setData(transformedData);
@@ -159,7 +193,13 @@ const RevenuePage = () => {
       fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`)
         .then(response => response.json())
         .then(({ data }) => {
-          if (data) setAssignments(data);
+          if (data) {
+            // Filter out recorded assignments for the AddRevenue modal
+            const unrecordedAssignments = data.filter((a: Assignment) => !a.is_revenue_recorded);
+            setAssignments(unrecordedAssignments);
+            // Store all assignments for table display
+            setAllAssignments(data);
+          }
         })
         .catch(error => console.error('Background refresh failed:', error));
     }, 30000); // Refresh every 30 seconds
@@ -181,20 +221,20 @@ const RevenuePage = () => {
     const matchesSearch = search === '' || 
     // Basic revenue fields
     formatDate(item.collection_date).toLowerCase().includes(searchLower) ||
-    (item.category?.toLowerCase() || '').includes(searchLower) ||
+    (item.category?.name?.toLowerCase() || '').includes(searchLower) ||
+    (item.source?.name?.toLowerCase() || '').includes(searchLower) ||
     item.total_amount.toString().includes(searchLower) ||
     (item.created_by?.toLowerCase() || '').includes(searchLower) ||
-    (item.other_source?.toLowerCase() || '').includes(searchLower) ||
 
     // Assignment related fields (if available)
     (assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.bus_bodynumber?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.bus_plate_number?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.driver_id?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.conductor_id?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
 
-    const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
+    const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
     const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
             (!dateTo || item.collection_date <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
@@ -206,16 +246,16 @@ const RevenuePage = () => {
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
   const handleAddRevenue = async (newRevenue: {
-    category: string;
+    category_id: string;
+    source_id?: string;
     assignment_id?: string;
     total_amount: number;
     collection_date: string;
     created_by: string;
-    other_source?: string;
   }) => {
     try {
-      // Check for duplicates if category is not "Other"
-      if (newRevenue.category !== 'Other') {
+      // Check for duplicates if assignment is provided
+      if (newRevenue.assignment_id) {
       const duplicate = data.find(item => {
         const assignment = assignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
         const itemAssignment = item.assignment_id 
@@ -226,10 +266,10 @@ const RevenuePage = () => {
 
         return (
           new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
-          assignment.bus_bodynumber === itemAssignment.bus_bodynumber &&
-          item.category === newRevenue.category &&
-          assignment.driver_name === itemAssignment.driver_name &&
-          assignment.conductor_name === itemAssignment.conductor_name
+          assignment.bus_plate_number === itemAssignment.bus_plate_number &&
+          item.category.name === 'Boundary' && // This will need to be updated based on the category
+          assignment.driver_id === itemAssignment.driver_id &&
+          assignment.conductor_id === itemAssignment.conductor_id
         );
       });
 
@@ -244,12 +284,12 @@ const RevenuePage = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        category: newRevenue.category,
+        category_id: newRevenue.category_id,
+        source_id: newRevenue.source_id,
         total_amount: newRevenue.total_amount,
         collection_date: new Date(newRevenue.collection_date).toISOString(),
         created_by: newRevenue.created_by,
         assignment_id: newRevenue.assignment_id || null,
-        other_source: newRevenue.category === 'Other' ? newRevenue.other_source : null
       })
     });
 
@@ -261,12 +301,12 @@ const RevenuePage = () => {
     setData(prev => [{
       revenue_id: result.revenue_id,
       category: result.category,
+      source: result.source,
       total_amount: Number(result.total_amount),
       collection_date: new Date(result.collection_date).toISOString().split('T')[0],
       created_by: result.created_by,
       created_at: result.created_at, // Ensure created_at is included
       assignment_id: result.assignment_id,
-      other_source: result.other_source || undefined
     }, ...prev]); // Prepend new record instead of appending
 
     // Update assignments state locally instead of re-fetching
@@ -327,7 +367,7 @@ const RevenuePage = () => {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
-    other_source?: string;
+    source_id?: string;
   }) => {
     try {
       const response = await fetch(`/api/revenues/${updatedRecord.revenue_id}`, {
@@ -348,12 +388,12 @@ const RevenuePage = () => {
         const updated: RevenueData = {
           revenue_id: result.revenue_id,
           category: result.category,
+          source: result.source,
           total_amount: Number(result.total_amount),
           collection_date: new Date(result.collection_date).toISOString().split('T')[0],
           created_by: result.created_by,
           created_at: result.created_at,
           assignment_id: result.assignment_id,
-          other_source: result.other_source || undefined
         };
         // Add the updated record at the beginning of the array
         return [updated, ...filtered];
@@ -395,37 +435,29 @@ const RevenuePage = () => {
     const baseColumns = [
       "Collection Date",
       "Category",
-      "Amount",
-      "Source Type"
+      "Source",
+      "Amount"
     ];
 
     if (!categoryFilter) {
       return [
         ...baseColumns,
         "Bus Type",
-        "Body Number",
+        "Plate Number",
         "Route",
-        "Driver Name",
-        "Conductor Name",
-        "Assignment Date",
-        "Other Source Description"
-      ];
-    }
-
-    if (categoryFilter === 'Other') {
-      return [
-        ...baseColumns,
-        "Other Source Description"
+        "Driver ID",
+        "Conductor ID",
+        "Assignment Date"
       ];
     }
 
     return [
       ...baseColumns,
       "Bus Type",
-      "Body Number",
+      "Plate Number",
       "Route",
-      "Driver Name",
-      "Conductor Name",
+      "Driver ID",
+      "Conductor ID",
       "Assignment Date"
     ];
   };
@@ -609,34 +641,31 @@ const RevenuePage = () => {
                 rowData.push(escapeField(formatDate(item.collection_date)));
                 break;
               case "Category":
-                rowData.push(escapeField(item.category));
+                rowData.push(escapeField(item.category.name));
+                break;
+              case "Source":
+                rowData.push(escapeField(item.source?.name));
                 break;
               case "Amount":
                 rowData.push(item.total_amount.toFixed(2));
                 break;
-              case "Source Type":
-                rowData.push(assignment ? 'Assignment' : 'Other');
-                break;
               case "Bus Type":
                 rowData.push(escapeField(assignment?.bus_type));
                 break;
-              case "Body Number":
-                rowData.push(escapeField(assignment?.bus_bodynumber));
+              case "Plate Number":
+                rowData.push(escapeField(assignment?.bus_plate_number));
                 break;
               case "Route":
                 rowData.push(escapeField(assignment?.bus_route));
                 break;
-              case "Driver Name":
-                rowData.push(escapeField(assignment?.driver_name));
+              case "Driver ID":
+                rowData.push(escapeField(assignment?.driver_id));
                 break;
-              case "Conductor Name":
-                rowData.push(escapeField(assignment?.conductor_name));
+              case "Conductor ID":
+                rowData.push(escapeField(assignment?.conductor_id));
                 break;
               case "Assignment Date":
                 rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
-                break;
-                        case "Other Source Description":
-                rowData.push(escapeField(item.other_source));
                 break;
               default:
                 rowData.push('');
@@ -713,7 +742,6 @@ const RevenuePage = () => {
               <option value="Boundary">Boundary</option>
               <option value="Percentage">Percentage</option>
               <option value="Bus_Rental">Bus Rental</option>
-              <option value="Other">Other</option>
             </select>
 
             {/* Export CSV */}
@@ -746,24 +774,20 @@ const RevenuePage = () => {
                   console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
 
                   let source: string;
-                  if (item.category === 'Other') {
-                    source = item.other_source || 'N/A';
-                  } else if (assignmentsLoading) {
+                  if (assignmentsLoading) {
                     source = 'Loading...';
                   } else if (assignment) {
                     source = formatAssignment(assignment);
                   } else {
-                    // More descriptive message when assignment is not found
-                    source = item.assignment_id 
-                      ? `Assignment ${item.assignment_id} not found`
-                      : 'No assignment linked';
+                    // Show source name if no assignment
+                    source = item.source?.name || 'N/A';
                   }
 
                   return (
                     <tr key={item.revenue_id}>
                       <td>{formatDate(item.collection_date)}</td>
                       <td>{source}</td>
-                      <td>{item.category === 'Other' ? 'Other' : item.category.replace('_', ' ')}</td>
+                      <td>{item.category.name}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
                       <td className="actionButtons">
                         <div className="actionButtonsContainer">
@@ -832,13 +856,13 @@ const RevenuePage = () => {
             record={{
               revenue_id: recordToEdit.revenue_id,
               collection_date: recordToEdit.collection_date,
-              category: recordToEdit.category,
+              category: recordToEdit.category.name,
               source: recordToEdit.assignment_id 
                 ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)
-                : recordToEdit.other_source || 'N/A',
+                : recordToEdit.source?.name || 'N/A',
               amount: recordToEdit.total_amount,
               assignment_id: recordToEdit.assignment_id,
-              other_source: recordToEdit.other_source
+              source_id: recordToEdit.source?.source_id
             }}
             onClose={() => {
               setEditModalOpen(false);
@@ -853,13 +877,13 @@ const RevenuePage = () => {
             record={{
               revenue_id: recordToView.revenue_id,
               category: recordToView.category,
+              source: recordToView.source,
               total_amount: recordToView.total_amount,
               collection_date: recordToView.collection_date,
               created_at: recordToView.created_at,
               assignment: recordToView.assignment_id 
                 ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
                 : undefined,
-              other_source: recordToView.other_source
             }}
             onClose={() => {
               setViewModalOpen(false);

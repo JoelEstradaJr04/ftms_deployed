@@ -1,39 +1,79 @@
 // app/(pages)/expense/viewRevenue.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/viewRevenue.css';
 import { formatDate } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
 
 type Assignment = {
   assignment_id: string;
-  bus_bodynumber: string;
+  bus_plate_number: string;
   bus_route: string;
   bus_type: string;
-  driver_name: string;
-  conductor_name: string;
+  driver_id: string;
+  conductor_id: string;
   date_assigned: string;
   trip_revenue: number;
-  assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
+  assignment_type: string;
+};
+
+type GlobalCategory = {
+  category_id: string;
+  name: string;
+  applicable_modules: string[];
+};
+
+type GlobalSource = {
+  source_id: string;
+  name: string;
+  applicable_modules: string[];
+};
+
+type Employee = {
+  employee_id: string;
+  name: string;
+  job_title: string;
 };
 
 type ViewRevenueProps = {
   record: {
     revenue_id: string;
-    category: string;
+    category: GlobalCategory;
+    source?: GlobalSource;
     total_amount: number;
     collection_date: string;
     created_at: string;
     assignment?: Assignment;
-    other_source?: string;
   };
   onClose: () => void;
 };
 
 const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+
+  // Fetch employees on component mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const response = await fetch('/api/employees');
+        if (response.ok) {
+          const employeesData = await response.json();
+          setAllEmployees(employeesData);
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
   const renderAssignmentDetails = () => {
     if (!record.assignment) return null;
+
+    const driver = allEmployees.find(e => e.employee_id === record.assignment!.driver_id);
+    const conductor = allEmployees.find(e => e.employee_id === record.assignment!.conductor_id);
 
     return (
       <div className="assignmentDetails">
@@ -44,7 +84,7 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
         <div className="detailRow">
           <span className="label">Bus Number:</span>
-          <span className="value">{record.assignment.bus_bodynumber}</span>
+          <span className="value">{record.assignment.bus_plate_number}</span>
         </div>
         <div className="detailRow">
           <span className="label">Route:</span>
@@ -56,11 +96,11 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
         <div className="detailRow">
           <span className="label">Driver:</span>
-          <span className="value">{record.assignment.driver_name}</span>
+          <span className="value">{driver?.name || record.assignment.driver_id || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Conductor:</span>
-          <span className="value">{record.assignment.conductor_name}</span>
+          <span className="value">{conductor?.name || record.assignment.conductor_id || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
@@ -85,7 +125,11 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Category:</span>
-            <span className="value">{formatDisplayText(record.category)}</span>
+            <span className="value">{record.category.name}</span>
+          </div>
+          <div className="detailRow">
+            <span className="label">Source:</span>
+            <span className="value">{record.source?.name || 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Amount:</span>
@@ -102,16 +146,6 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
 
         {record.assignment && renderAssignmentDetails()}
-
-        {record.category === 'Other' && record.other_source && (
-          <div className="otherSourceDetails">
-            <h3>Other Source Details</h3>
-            <div className="detailRow">
-              <span className="label">Description:</span>
-              <span className="value">{record.other_source}</span>
-            </div>
-          </div>
-        )}
 
         <div className="modalFooter">
           <button className="closeBtn" onClick={onClose}>Close</button>

@@ -10,36 +10,52 @@ import {
   showAddSuccess,
   showInvalidAmountAlert
 } from '../../utility/Alerts';
-import { isValidAmount, validateField, ValidationRule } from '../../utility/validation';
+import { isValidAmount } from '../../utility/validation';
 import { formatDate } from '../../utility/dateFormatter';
 import {showError} from '../../utility/Alerts';
+
+type GlobalCategory = {
+  category_id: string;
+  name: string;
+  applicable_modules: string[];
+};
+
+type GlobalSource = {
+  source_id: string;
+  name: string;
+  applicable_modules: string[];
+};
+
+type Employee = {
+  employee_id: string;
+  name: string;
+  job_title: string;
+};
 
 type AddRevenueProps = {
   onClose: () => void;
   onAddRevenue: (formData: {
-    category: string;
+    category_id: string;
+    source_id?: string;
     assignment_id?: string;
     total_amount: number;
     collection_date: string;
     created_by: string;
-    other_source?: string;
   }) => void;
   assignments: {
     assignment_id: string;
-    bus_bodynumber: string;
+    bus_plate_number: string;
     bus_route: string;
     bus_type: string;
-    driver_name: string;
-    conductor_name: string;
+    driver_id: string;
+    conductor_id: string;
     date_assigned: string;
     trip_revenue: number;
-    assignment_type: 'Boundary' | 'Percentage' | 'Bus_Rental';
+    assignment_type: string;
     is_revenue_recorded: boolean;
   }[];
   currentUser: string;
 };
-
-type FieldName = 'category' | 'assignment_id' | 'other_source' | 'total_amount' | 'collection_date';
 
 const AddRevenue: React.FC<AddRevenueProps> = ({ 
   onClose, 
@@ -51,41 +67,56 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   const [currentDate, setCurrentDate] = useState('');
   const today = new Date().toISOString().split('T')[0];
   const [filteredAssignments, setFilteredAssignments] = useState(assignments.filter(a => !a.is_revenue_recorded));
+  const [categories, setCategories] = useState<GlobalCategory[]>([]);
+  const [sources, setSources] = useState<GlobalSource[]>([]);
+  const [filteredSources, setFilteredSources] = useState<GlobalSource[]>([]);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   
   const [formData, setFormData] = useState({
-    category: 'Boundary',
+    category_id: '',
+    source_id: '',
     assignment_id: '',
     total_amount: 0,
     collection_date: new Date().toISOString().split('T')[0],
     created_by: currentUser,
-    other_source: '',
   });
 
-  const [errors, setErrors] = useState<Record<FieldName, string[]>>({
-    category: [],
-    assignment_id: [],
-    other_source: [],
-    total_amount: [],
-    collection_date: [],
-  });
+  // Fetch categories, sources, and employees on component mount
+  useEffect(() => {
+    const fetchGlobals = async () => {
+      try {
+        const [categoriesResponse, sourcesResponse, employeesResponse] = await Promise.all([
+          fetch('/api/globals/categories'),
+          fetch('/api/globals/sources'),
+          fetch('/api/employees')
+        ]);
 
-  const validationRules: Record<FieldName, ValidationRule> = {
-    category: { required: true, label: "Category" },
-    assignment_id: { required: formData.category !== 'Other', label: "Assignment" },
-    other_source: { 
-      required: formData.category === 'Other', 
-      label: "Source",
-      minLength: 2,
-      maxLength: 50
-    },
-    total_amount: { 
-      required: true, 
-      min: 0.01, 
-      label: "Amount",
-      custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0"
-    },
-    collection_date: { required: true, label: "Collection Date" }
-  };
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          setCategories(categoriesData);
+          // Set first category as default if available
+          if (categoriesData.length > 0) {
+            setFormData(prev => ({ ...prev, category_id: categoriesData[0].category_id }));
+          }
+        }
+
+        if (sourcesResponse.ok) {
+          const sourcesData = await sourcesResponse.json();
+          setSources(sourcesData);
+          setFilteredSources(sourcesData);
+        }
+
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json();
+          setAllEmployees(employeesData);
+        }
+      } catch (error) {
+        console.error('Error fetching globals:', error);
+      }
+    };
+
+    fetchGlobals();
+  }, []);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -98,28 +129,40 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Filter assignments based on selected category
   useEffect(() => {
-    if (formData.category === 'Other') {
-      setFilteredAssignments([]);
-      setFormData(prev => ({
-        ...prev,
-        assignment_id: '',
-        total_amount: 0
-      }));
-    } else {
-      const filtered = assignments.filter(a => {
-        if (a.is_revenue_recorded) return false;
-        if (formData.category === 'Boundary') return a.assignment_type === 'Boundary';
-        if (formData.category === 'Percentage') return a.assignment_type === 'Percentage';
-        if (formData.category === 'Bus_Rental') return a.assignment_type === 'Bus_Rental';
-        return false;
-      }).sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
-      setFilteredAssignments(filtered);
+    if (formData.category_id) {
+      const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
+      if (selectedCategory) {
+        const filtered = assignments.filter(a => {
+          if (a.is_revenue_recorded) return false; // Filter out already recorded assignments
+          // Map category names to assignment types
+          if (selectedCategory.name === 'Boundary') return a.assignment_type === 'Boundary';
+          if (selectedCategory.name === 'Percentage') return a.assignment_type === 'Percentage';
+          if (selectedCategory.name === 'Bus_Rental') return a.assignment_type === 'Bus_Rental';
+          return false; // No other categories supported
+        }).sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
+        setFilteredAssignments(filtered);
+      }
     }
-  }, [formData.category, assignments]);
+  }, [formData.category_id, assignments, categories]);
+
+  // Filter sources based on selected category - all sources are assignment-based
+  useEffect(() => {
+    if (formData.category_id) {
+      const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
+      if (selectedCategory) {
+        // For all revenue categories, filter sources that are applicable to revenue
+        const filtered = sources.filter(source => 
+          source.applicable_modules.includes('revenue')
+        );
+        setFilteredSources(filtered);
+      }
+    }
+  }, [formData.category_id, sources, categories]);
 
   useEffect(() => {
-    if (formData.assignment_id && formData.category !== 'Other') {
+    if (formData.assignment_id && formData.category_id) {
       const selectedAssignment = assignments.find(a => a.assignment_id === formData.assignment_id);
       if (selectedAssignment) {
         setFormData(prev => ({
@@ -128,12 +171,12 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         }));
       }
     }
-  }, [formData.assignment_id, assignments, formData.category]);
+  }, [formData.assignment_id, assignments, formData.category_id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    let newValue: any = value;
+    let newValue: string | number = value;
     if (name === 'total_amount') {
       newValue = parseFloat(value) || 0;
     }
@@ -142,32 +185,14 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
       ...prev,
       [name]: newValue
     }));
-
-    // Validate field
-    if (validationRules[name as FieldName]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: validateField(newValue, validationRules[name as FieldName])
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { category, assignment_id, total_amount, collection_date, other_source } = formData;
+    const { category_id, source_id, assignment_id, total_amount, collection_date } = formData;
 
-    if (!category || !collection_date || !currentUser ) {
-      await showEmptyFieldWarning();
-      return;
-    }
-
-    if (category !== 'Other' && !assignment_id) {
-      await showEmptyFieldWarning();
-      return;
-    }
-
-    if (category === 'Other' && !other_source) {
+    if (!category_id || !source_id || !assignment_id || !collection_date || !currentUser) {
       await showEmptyFieldWarning();
       return;
     }
@@ -182,11 +207,12 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     if (result.isConfirmed) {
       try {
         await onAddRevenue({
-          category,
+          category_id,
+          source_id,
+          assignment_id,
           total_amount,
           collection_date,
           created_by: currentUser,
-          ...(category !== 'Other' ? { assignment_id } : { other_source })
         });
 
         // Update is_revenue_recorded in Supabase if assignment is used
@@ -206,10 +232,12 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     }
   };
 
-  // Format assignment for display
+  // Format assignment for display - similar to expense module
   const formatAssignment = (assignment: typeof assignments[0]) => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `₱ ${assignment.trip_revenue} | ${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+    return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_revenue} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
   };
 
   return (
@@ -236,107 +264,89 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                 <div className="formRow">
                   {/* CATEGORY */}
                   <div className="formField">
-                    <label htmlFor="category">Category<span className='requiredTags'> *</span></label>
+                    <label htmlFor="category_id">Category<span className='requiredTags'> *</span></label>
                     <select
-                      id="category"
-                      name="category"
-                      value={formData.category}
+                      id="category_id"
+                      name="category_id"
+                      value={formData.category_id}
                       onChange={handleInputChange}
                       required
                       className="formSelect"
                     >
-                      <option value="Boundary">Boundary</option>
-                      <option value="Percentage">Percentage</option>
-                      <option value="Bus_Rental">Bus Rental</option>
-                      <option value="Other">Other</option>
+                      <option value="">Select Category</option>
+                      {categories.map((category) => (
+                        <option key={category.category_id} value={category.category_id}>
+                          {category.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   {/* SOURCE */}
                   <div className="formField">
-                    <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
-                    {formData.category === 'Other' ? (
-                      <>
-                        <input
-                          type="text"
-                          id="other_source"
-                          name="other_source"
-                          value={formData.other_source}
-                          onChange={handleInputChange}
-                          placeholder="Please specify"
-                          required
-                          className={`formInput${errors.other_source.length ? ' input-error' : ''}`}
-                        />
-                        {errors.other_source.map((msg, i) => (
-                          <div key={i} className="error-message">{msg}</div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        <select
-                          id="assignment_id"
-                          name="assignment_id"
-                          value={formData.assignment_id}
-                          onChange={handleInputChange}
-                          required
-                          className="formSelect"
-                          disabled={filteredAssignments.length === 0}
-                        >
-                          <option value="">Select {formData.category} Assignment</option>
-                          {filteredAssignments.map((assignment) => (
-                            <option 
-                              key={assignment.assignment_id} 
-                              value={assignment.assignment_id}
-                            >
-                              {formatAssignment(assignment)}
-                            </option>
-                          ))}
-                        </select>
-                      </>
-                    )}
-
-                    {formData.category !== 'Other' && filteredAssignments.length === 0 && (
-                      <div className="noAssignments">No {formData.category} assignments available</div>
-                    )}
+                    <label htmlFor="source_id">Source<span className='requiredTags'> *</span></label>
+                    <select
+                      id="source_id"
+                      name="source_id"
+                      value={formData.source_id}
+                      onChange={handleInputChange}
+                      required
+                      className="formSelect"
+                      disabled={filteredSources.length === 0}
+                    >
+                      <option value="">Select Source</option>
+                      {filteredSources.map((source) => (
+                        <option key={source.source_id} value={source.source_id}>
+                          {source.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div className="formRow">
-                  {/* AMOUNT */}
+                  {/* ASSIGNMENT (required for all categories) */}
                   <div className="formField">
-                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
-                    {formData.category === 'Other' ? (
-                      <>
-                        <input
-                          type="number"
-                          id="total_amount"
-                          name="total_amount"
-                          value={formData.total_amount || ''}
-                          onChange={handleInputChange}
-                          placeholder="Enter amount"
-                          required
-                          className={`formInput${errors.total_amount.length ? ' input-error' : ''}`}
-                          min="0"
-                          step="0.01"
-                        />
-                        {errors.total_amount.map((msg, i) => (
-                          <div key={i} className="error-message">{msg}</div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        <input
-                          type="text"
-                          id="total_amount"
-                          name="total_amount"
-                          value={formData.total_amount.toLocaleString()}
-                          readOnly
-                          className="formInput"
-                        />
-                      </>
+                    <label htmlFor="assignment_id">Assignment<span className='requiredTags'> *</span></label>
+                    <select
+                      id="assignment_id"
+                      name="assignment_id"
+                      value={formData.assignment_id}
+                      onChange={handleInputChange}
+                      required
+                      className="formSelect"
+                      disabled={filteredAssignments.length === 0}
+                    >
+                      <option value="">Select Assignment</option>
+                      {filteredAssignments.map((assignment) => (
+                        <option 
+                          key={assignment.assignment_id} 
+                          value={assignment.assignment_id}
+                        >
+                          {formatAssignment(assignment)}
+                        </option>
+                      ))}
+                    </select>
+                    {filteredAssignments.length === 0 && (
+                      <div className="noAssignments">No assignments available for selected category</div>
                     )}
                   </div>
 
+                  {/* AMOUNT (read-only, auto-filled from assignment) */}
+                  <div className="formField">
+                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
+                    <input
+                      type="text"
+                      id="total_amount"
+                      name="total_amount"
+                      value={formData.total_amount.toLocaleString()}
+                      readOnly
+                      className="formInput"
+                    />
+                  </div>
+                </div>
+
+                <div className="formRow">
                   {/* DATE */}
                   <div className="formField">
                     <label htmlFor="collection_date">Collection Date <span className='requiredTags'> *</span></label>

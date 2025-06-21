@@ -545,7 +545,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   >
                     <option value="operations">{formatDisplayText('Operations')}</option>
                     <option value="receipt">{formatDisplayText('Receipt')}</option>
-                    <option value="other">{formatDisplayText('Other')}</option>
                   </select>
                   </div>
 
