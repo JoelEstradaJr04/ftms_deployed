@@ -11,17 +11,14 @@ type EditProps = {
     revenue_id: string;
     collection_date: string;
     category: string;
-    source: string;
     amount: number;
     assignment_id?: string;
-    source_id?: string;
   };
   onClose: () => void;
   onSave: (updatedRecord: {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
-    source_id?: string;
   }) => void;
 };
 
@@ -151,7 +148,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
         revenue_id: record.revenue_id,
         collection_date,
         total_amount: amount,
-        source_id: record.source_id
       });
     }
   };
@@ -186,19 +182,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                       id="category"
                       name="category"
                       value={record.category}
-                      readOnly
-                      className="formInput"
-                    />
-                  </div>
-
-                  {/* SOURCE */}
-                  <div className="formField">
-                    <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
-                    <input
-                      type="text"
-                      id="source"
-                      name="source"
-                      value={record.source}
                       readOnly
                       className="formInput"
                     />

@@ -13,6 +13,7 @@ import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type As
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError} from '../../utility/Alerts';
+import { formatDateTime } from "../../utility/dateFormatter";
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
@@ -54,7 +55,7 @@ interface RevenueData {
   };
   total_amount: number;
   collection_date: string;
-  created_by: string;
+  created_by: string;  // Add this line
   created_at: string;  // Add this line
   assignment_id?: string;
 }
@@ -79,24 +80,14 @@ const RevenuePage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<RevenueData | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
 
-  // Reuse the same format function from addRevenue.tsx
-  const formatAssignment = (assignment: Assignment): string => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
-    return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_revenue} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
-  };
-
   // Fetch assignments with periodic refresh and error handling
   const fetchAssignments = async () => {
     try {
-      setAssignmentsLoading(true);
       // Get unrecorded revenue assignments for the dropdown
       const unrecordedAssignments = await getUnrecordedRevenueAssignments();
       setAssignments(unrecordedAssignments);
@@ -108,8 +99,6 @@ const RevenuePage = () => {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       console.error('Error fetching assignments:', errorMessage);
       // Don't show error toast here as it might be too frequent with auto-refresh
-    } finally {
-      setAssignmentsLoading(false);
     }
   };
 
@@ -137,10 +126,9 @@ const RevenuePage = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
-      setAssignmentsLoading(true);
       
       try {
-        // Fetch employees for displaying driver and conductor names
+        // Fetch employees for assignment display
         const employeesResponse = await fetch('/api/employees');
         if (employeesResponse.ok) {
           const employeesData = await employeesResponse.json();
@@ -182,7 +170,6 @@ const RevenuePage = () => {
         showError('Failed to load data', 'Error');
       } finally {
         setLoading(false);
-        setAssignmentsLoading(false);
       }
     };
     
@@ -247,7 +234,6 @@ const RevenuePage = () => {
 
   const handleAddRevenue = async (newRevenue: {
     category_id: string;
-    source_id?: string;
     assignment_id?: string;
     total_amount: number;
     collection_date: string;
@@ -285,7 +271,6 @@ const RevenuePage = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         category_id: newRevenue.category_id,
-        source_id: newRevenue.source_id,
         total_amount: newRevenue.total_amount,
         collection_date: new Date(newRevenue.collection_date).toISOString(),
         created_by: newRevenue.created_by,
@@ -367,7 +352,6 @@ const RevenuePage = () => {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
-    source_id?: string;
   }) => {
     try {
       const response = await fetch(`/api/revenues/${updatedRecord.revenue_id}`, {
@@ -435,7 +419,6 @@ const RevenuePage = () => {
     const baseColumns = [
       "Collection Date",
       "Category",
-      "Source",
       "Amount"
     ];
 
@@ -641,10 +624,7 @@ const RevenuePage = () => {
                 rowData.push(escapeField(formatDate(item.collection_date)));
                 break;
               case "Category":
-                rowData.push(escapeField(item.category.name));
-                break;
-              case "Source":
-                rowData.push(escapeField(item.source?.name));
+                rowData.push(escapeField(item.category?.name || 'N/A'));
                 break;
               case "Amount":
                 rowData.push(item.total_amount.toFixed(2));
@@ -741,7 +721,6 @@ const RevenuePage = () => {
               <option value="">All Categories</option>
               <option value="Boundary">Boundary</option>
               <option value="Percentage">Percentage</option>
-              <option value="Bus_Rental">Bus Rental</option>
             </select>
 
             {/* Export CSV */}
@@ -759,8 +738,8 @@ const RevenuePage = () => {
               <thead>
                 <tr>
                   <th>Collection Date</th>
-                  <th>Source</th>
                   <th>Category</th>
+                  <th>Assignment</th>
                   <th>Amount</th>
                   <th>Action</th>
                 </tr>
@@ -773,21 +752,28 @@ const RevenuePage = () => {
 
                   console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
 
-                  let source: string;
-                  if (assignmentsLoading) {
-                    source = 'Loading...';
-                  } else if (assignment) {
-                    source = formatAssignment(assignment);
-                  } else {
-                    // Show source name if no assignment
-                    source = item.source?.name || 'N/A';
-                  }
+                  // Format assignment for display
+                  const formatAssignment = (assignment: Assignment | null | undefined) => {
+                    if (!assignment) return 'N/A';
+                    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+                    
+                    // Calculate display amount based on category
+                    const selectedCategory = item.category;
+                    let displayAmount = assignment.trip_revenue;
+                    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
+                      displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                    }
+                    
+                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
+                  };
 
                   return (
                     <tr key={item.revenue_id}>
-                      <td>{formatDate(item.collection_date)}</td>
-                      <td>{source}</td>
-                      <td>{item.category.name}</td>
+                      <td>{formatDateTime(item.collection_date)}</td>
+                      <td>{item.category?.name || 'N/A'}</td>
+                      <td>{formatAssignment(assignment)}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
                       <td className="actionButtons">
                         <div className="actionButtonsContainer">
@@ -857,12 +843,8 @@ const RevenuePage = () => {
               revenue_id: recordToEdit.revenue_id,
               collection_date: recordToEdit.collection_date,
               category: recordToEdit.category.name,
-              source: recordToEdit.assignment_id 
-                ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)
-                : recordToEdit.source?.name || 'N/A',
               amount: recordToEdit.total_amount,
               assignment_id: recordToEdit.assignment_id,
-              source_id: recordToEdit.source?.source_id
             }}
             onClose={() => {
               setEditModalOpen(false);
@@ -877,7 +859,6 @@ const RevenuePage = () => {
             record={{
               revenue_id: recordToView.revenue_id,
               category: recordToView.category,
-              source: recordToView.source,
               total_amount: recordToView.total_amount,
               collection_date: recordToView.collection_date,
               created_at: recordToView.created_at,

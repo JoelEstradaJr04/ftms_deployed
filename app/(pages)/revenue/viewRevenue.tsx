@@ -24,12 +24,6 @@ type GlobalCategory = {
   applicable_modules: string[];
 };
 
-type GlobalSource = {
-  source_id: string;
-  name: string;
-  applicable_modules: string[];
-};
-
 type Employee = {
   employee_id: string;
   name: string;
@@ -40,7 +34,6 @@ type ViewRevenueProps = {
   record: {
     revenue_id: string;
     category: GlobalCategory;
-    source?: GlobalSource;
     total_amount: number;
     collection_date: string;
     created_at: string;
@@ -126,10 +119,6 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">{record.category.name}</span>
-          </div>
-          <div className="detailRow">
-            <span className="label">Source:</span>
-            <span className="value">{record.source?.name || 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Amount:</span>
