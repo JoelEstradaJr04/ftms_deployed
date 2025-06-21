@@ -112,6 +112,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     });
 
     setErrors(newErrors);
+    console.log(newErrors);
 
     // Check if there are any errors
     const hasErrors = Object.values(newErrors).some(fieldErrors => fieldErrors.length > 0);
