@@ -2,7 +2,6 @@
 import React from 'react';
 import '../../../styles/viewPayroll.css';
 
-
 type PayrollRecord = {
   payroll_id: string;
   employee_name: string;
@@ -14,6 +13,25 @@ type PayrollRecord = {
   salary: number;
   status: "Released" | "Pending" | string;
   date_released?: string | null;
+  // Additional fields for detailed view
+  days_of_work?: number;
+  basic_rate?: number;
+  basic_pay?: number;
+  regular?: number;
+  holiday?: number;
+  service_incentive_leave?: number;
+  holiday_pay?: number;
+  thirteenth_month_pay?: number;
+  revenue?: number;
+  safety?: number;
+  additional?: number;
+  philhealth?: number;
+  pag_ibig?: number;
+  sss?: number;
+  cash_advance?: number;
+  damage_shortage?: number;
+  gross_total_earnings?: number;
+  total_deduction?: number;
 };
 
 type ViewPayrollModalProps = {
@@ -58,19 +76,19 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                     <tbody>
                         <tr>
                             <td>POS</td>
-                            <td>C</td>
+                            <td>{record.job_title?.charAt(0) || 'C'}</td>
                         </tr>
                         <tr>
                             <td>Days of Work</td>
-                            <td>3</td>
+                            <td>{record.days_of_work || 0}</td>
                         </tr>
                         <tr>
                             <td>Basic Rate</td>
-                            <td>550</td>
+                            <td>₱{(record.basic_rate || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>Basic Pay</td>
-                            <td>1,650</td>
+                            <td>₱{(record.basic_pay || 0).toLocaleString()}</td>
                         </tr>
 
                         <tr>
@@ -78,11 +96,11 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                         </tr>
                         <tr>
                             <td>Regular Days</td>
-                            <td>343.72</td>
+                            <td>₱{(record.regular || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>Holidays</td>
-                            <td>-</td>
+                            <td>₱{(record.holiday || 0).toLocaleString()}</td>
                         </tr>
         
                         <tr>
@@ -90,15 +108,15 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                         </tr>
                         <tr>
                             <td>Service Incentive Leave Pay</td>
-                            <td>12.44</td>
+                            <td>₱{(record.service_incentive_leave || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>Holiday Pay</td>
-                            <td>29.86</td>
+                            <td>₱{(record.holiday_pay || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>13th Month Pay</td>
-                            <td>45.83</td>
+                            <td>₱{(record.thirteenth_month_pay || 0).toLocaleString()}</td>
                         </tr>
 
                         <tr>
@@ -106,20 +124,20 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                         </tr>
                         <tr>
                             <td>Revenue</td>
-                            <td>600</td>
+                            <td>₱{(record.revenue || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>Safety</td>
-                            <td>600</td>
+                            <td>₱{(record.safety || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td>Additional</td>
-                            <td>-</td>
+                            <td>₱{(record.additional || 0).toLocaleString()}</td>
                         </tr>
 
                         <tr>
                             <td>GROSS TOTAL EARNINGS:</td>
-                            <td>₱2,000.00</td>
+                            <td>₱{(record.gross_total_earnings || 0).toLocaleString()}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -134,27 +152,27 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                     <tbody>
                         <tr>
                             <td className="deductionLabel">SSS:</td>
-                            <td className="deductionValue">₱0.00</td>
+                            <td className="deductionValue">₱{(record.sss || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td className="deductionLabel">PhilHealth:</td>
-                            <td className="deductionValue">₱0.00</td>
+                            <td className="deductionValue">₱{(record.philhealth || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td className="deductionLabel">Pag-IBIG:</td>
-                            <td className="deductionValue">₱0.00</td>
+                            <td className="deductionValue">₱{(record.pag_ibig || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td className="deductionLabel">Cash Advance:</td>
-                            <td className="deductionValue">₱0.00</td>
+                            <td className="deductionValue">₱{(record.cash_advance || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td className="deductionLabel">Damage/Short:</td>
-                            <td className="deductionValue">₱0.00</td>
+                            <td className="deductionValue">₱{(record.damage_shortage || 0).toLocaleString()}</td>
                         </tr>
                         <tr>
                             <td className="deductionLabel"><strong>Total Deduction:</strong></td>
-                            <td className="deductionValue"><strong>₱0.00</strong></td>
+                            <td className="deductionValue"><strong>₱{(record.total_deduction || 0).toLocaleString()}</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -168,15 +186,15 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ record, onClose }) 
                     <tbody>
                         <tr>
                             <td className="bonusLabel"><strong>Total Gross Earnings:</strong></td>
-                            <td className="bonusValue"><strong>₱0.00</strong></td>
+                            <td className="bonusValue"><strong>₱{(record.gross_total_earnings || 0).toLocaleString()}</strong></td>
                         </tr>
                         <tr>
                             <td className="bonusLabel"><strong>Total Deduction:</strong></td>
-                            <td className="bonusValue"><strong>₱0.00</strong></td>
+                            <td className="bonusValue"><strong>₱{(record.total_deduction || 0).toLocaleString()}</strong></td>
                         </tr>
                         <tr>
                             <td className="bonusLabel"><strong>Net Pay:</strong></td>
-                            <td className="bonusValue"><strong>₱0.00</strong></td>
+                            <td className="bonusValue"><strong>₱{(record.net_pay || 0).toLocaleString()}</strong></td>
                         </tr>
                     </tbody>
                 </table>

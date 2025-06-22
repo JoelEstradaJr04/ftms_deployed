@@ -11,17 +11,14 @@ type EditProps = {
     revenue_id: string;
     collection_date: string;
     category: string;
-    source: string;
     amount: number;
     assignment_id?: string;
-    other_source?: string;
   };
   onClose: () => void;
   onSave: (updatedRecord: {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
-    other_source?: string;
   }) => void;
 };
 
@@ -31,14 +28,11 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
   const [collection_date, setDate] = useState(record.collection_date);
   const today = new Date().toISOString().split('T')[0];
   const [amount, setAmount] = useState(record.amount);
-  const [otherSource, setOtherSource] = useState(record.other_source || '');
   const [originalTripRevenue, setOriginalTripRevenue] = useState<number | null>(null);
   const [deviationPercentage, setDeviationPercentage] = useState<number>(0);
   const [showDeviationWarning, setShowDeviationWarning] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
   const [errors, setErrors] = useState<Record<string, string[]>>({
     amount: [],
-    other_source: [],
     collection_date: []
   });
 
@@ -49,12 +43,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
       min: 0.01, 
       label: "Amount",
       custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0"
-    },
-    other_source: { 
-      required: record.category === 'Other', 
-      label: "Source Detail",
-      minLength: record.category === 'Other' ? 2 : 0,
-      maxLength: 50
     },
     collection_date: { required: true, label: "Collection Date" }
   };
@@ -91,16 +79,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     fetchAssignmentData();
   }, [record.assignment_id, record.amount]);
 
-  const validateAmount = (value: number): string => {
-    if (!value || value === 0 || isNaN(value)) {
-      return 'Amount is required and must be greater than 0.';
-    }
-    if (value < 0.01) {
-      return 'Amount must be at least 0.01.';
-    }
-    return '';
-  };
-
   const handleAmountChange = (newAmount: number) => {
     if (!newAmount && newAmount !== 0) {
       setErrors(prev => ({
@@ -129,8 +107,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     const newErrors: Record<string, string[]> = {};
     Object.keys(validationRules).forEach(fieldName => {
       const value = fieldName === 'amount' ? amount :
-                    fieldName === 'collection_date' ? collection_date :
-                    fieldName === 'other_source' ? otherSource : '';
+                    fieldName === 'collection_date' ? collection_date : '';
       newErrors[fieldName] = validateField(value, validationRules[fieldName]);
     });
 
@@ -172,7 +149,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
         revenue_id: record.revenue_id,
         collection_date,
         total_amount: amount,
-        other_source: record.category === 'Other' ? otherSource : undefined
       });
     }
   };
@@ -206,20 +182,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                       type="text"
                       id="category"
                       name="category"
-                      value={record.category === 'Other' ? record.other_source || 'Other' : record.category}
-                      readOnly
-                      className="formInput"
-                    />
-                  </div>
-
-                  {/* SOURCE */}
-                  <div className="formField">
-                    <label htmlFor="source">Source<span className='requiredTags'> *</span></label>
-                    <input
-                      type="text"
-                      id="source"
-                      name="source"
-                      value={record.source}
+                      value={record.category}
                       readOnly
                       className="formInput"
                     />
@@ -273,36 +236,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                           Deviation: {deviationPercentage.toFixed(2)}%
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {record.category === 'Other' && (
-                  <div className="formRow">
-                    <div className="formField">
-                      <label htmlFor="other_source">Source Detail<span className='requiredTags'> *</span></label>
-                      <input
-                        type="text"
-                        id="other_source"
-                        name="other_source"
-                        value={otherSource}
-                        onChange={(e) => {
-                          setOtherSource(e.target.value);
-                          setErrors(prev => ({
-                            ...prev,
-                            other_source: validateField(e.target.value, validationRules.other_source)
-                          }));
-                        }}
-                        placeholder="Specify source"
-                        required
-                        className={`formInput${errors.other_source?.length ? ' input-error' : ''}`}
-                      />
-                      {errors.other_source?.map((msg, i) => (
-                        <div key={i} className="error-message">{msg}</div>
-                      ))}
-                    </div>
-                    <div className="formField">
-                      {/* Empty field for spacing */}
                     </div>
                   </div>
                 )}

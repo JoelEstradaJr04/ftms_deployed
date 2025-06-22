@@ -38,6 +38,15 @@ button {
   border-radius: var(--search-input-border-radius);
   background-color: var(--foreground-color);
   box-shadow: var(--box-shadow);
+  position: relative;
+}
+
+.searchBar form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .searchBar input[type="text"] {
@@ -49,6 +58,23 @@ button {
   color: var(--primary-text-color);
   background: transparent;
   box-shadow: none;
+}
+
+.searchBar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 8px;
+  color: var(--secondary-text-color);
+  font-size: 16px;
+  transition: color 0.2s;
+}
+
+.searchBar button:hover {
+  color: var(--primary-text-color);
 }
 
 /* ---------- Filter Inputs ---------- */
@@ -346,5 +372,15 @@ button {
 
   .itemsSection {
     overflow-x: auto;
+  }
+}
+
+/* ---------- Spin animation for loading indicator ---------- */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }

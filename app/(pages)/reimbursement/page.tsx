@@ -3,12 +3,11 @@ import React, { useState, useEffect } from "react";
 import '../../styles/table.css';
 import "../../styles/reimbursement.css";
 import PaginationComponent from "../../Components/pagination";
-import Swal from "sweetalert2";
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
-import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReimbursement from "./viewReimbursement";
-import ApplyReimbursement from "./applyReimbursement"; 
+import styles from '../../styles/ExportConfirmationModal.module.css';
+import { formatDateTime } from '../../utility/dateFormatter';
 
 // REIMBURSEMENT TYPE
 type Reimbursement = {
@@ -16,29 +15,51 @@ type Reimbursement = {
   expense_id: string;
   employee_id: string;
   employee_name: string;
+  created_at: string;
   submitted_date: string;
   approved_by: string | null;
   approved_date: string | null;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
   amount: number | null;
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
   notes: string;
+  cancelled_by?: string | null;
+  cancelled_date?: string | null;
+  updated_at?: string | null;
 };
 
+type ApiReimbursement = {
+  reimbursement_id: string;
+  expense_id: string;
+  employee_id: string;
+  employee_name: string;
+  created_at: string;
+  requested_date: string;
+  approved_by: string | null;
+  approved_date: string | null;
+  status: string;
+  amount: number | null;
+  rejection_reason: string | null;
+  paid_date: string | null;
+  payment_reference: string | null;
+  cancelled_by?: string | null;
+  cancelled_date?: string | null;
+  updated_at?: string | null;
+};
 
-// Dummy formatDateTime function
-const formatDateTime = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleString();
+// Fix status type for Reimbursement - ADD CANCELLED mapping
+const statusMap = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  PAID: 'Paid',
+  CANCELLED: 'Cancelled',
 };
 
 const ReimbursementPage = () => {
-
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [applyModalOpen, setApplyModalOpen] = useState(false);
-
   const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -51,47 +72,65 @@ const ReimbursementPage = () => {
   const [selectedReimbursement, setSelectedReimbursement] = useState<Reimbursement | null>(null);
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
   
+  // Add state for reject modal
+  const [rejectModal, setRejectModal] = useState<{ open: boolean, id: string | null }>({ open: false, id: null });
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Fetch reimbursements (replace with your actual fetch logic)
-  useEffect(() => {
+  const fetchReimbursements = async (
+    setLoading: (b: boolean) => void,
+    setReimbursements: (r: Reimbursement[]) => void
+  ) => {
     setLoading(true);
-    // Simulate fetch with dummy data
-    setTimeout(() => {
-      const dummyData: Reimbursement[] = [
-        {
-          reimbursement_id: 'R001',
-          expense_id: 'E001',
-          employee_id: 'EMP001',
-          employee_name: 'Buboy',
-          submitted_date: '2024-06-15',
-          approved_by: 'MGR001',
-          approved_date: '2024-06-16',
-          status: 'Approved',
-          amount: 150.00,
-          rejection_reason: null,
-          paid_date: null,
-          payment_reference: null,
-          notes: 'Travel expense for client meeting'
-        },
-        {
-          reimbursement_id: 'R002',
-          expense_id: 'E002',
-          employee_id: 'EMP002',
-          employee_name: 'Bubay',
-          submitted_date: '2024-06-17',
-          approved_by: null,
-          approved_date: null,
-          status: 'Pending',
-          amount: null,
-          rejection_reason: null,
-          paid_date: null,
-          payment_reference: null,
-          notes: 'Office supplies purchase'
-        }
-      ];
-      setReimbursements(dummyData);
+    try {
+      const res = await fetch('/api/reimbursement');
+      console.log('API response status:', res.status);
+      const text = await res.text();
+      console.log('API response text:', text);
+      if (!res.ok) throw new Error('Failed to fetch reimbursements');
+      const data: ApiReimbursement[] = JSON.parse(text);
+      setReimbursements(
+        data.map((item) => {
+          // Robust status mapping
+          const statusKey = (item.status_name || '').toUpperCase() as keyof typeof statusMap;
+          const mappedStatus = statusMap[statusKey] ||
+            (item.status_name ? item.status_name.charAt(0).toUpperCase() + item.status_name.slice(1).toLowerCase() : 'Unknown');
+          return {
+            reimbursement_id: item.reimbursement_id,
+            expense_id: item.expense_id,
+            employee_id: item.employee_id,
+            employee_name: item.employee_name,
+            created_at: item.created_at ? item.created_at : '',
+            submitted_date: item.requested_date ? item.requested_date : '',
+            approved_by: item.approved_by,
+            approved_date: item.approved_date ? item.approved_date : null,
+            status: mappedStatus as Reimbursement['status'],
+            amount: Number(item.amount),
+            rejection_reason: item.rejection_reason,
+            paid_date: item.paid_date ? item.paid_date : null,
+            payment_reference: item.payment_reference,
+            notes: '',
+            cancelled_by: item.cancelled_by ?? null,
+            cancelled_date: item.cancelled_date ? item.cancelled_date : null,
+            updated_at: item.updated_at ? item.updated_at : null,
+          };
+        })
+        // Sort by updated_at (or created_at if updated_at is null) descending (latest first)
+        .sort((a, b) => {
+          const dateA = new Date(a.updated_at || a.created_at).getTime();
+          const dateB = new Date(b.updated_at || b.created_at).getTime();
+          return dateB - dateA;
+        })
+      );
+    } catch {
+      showError('Failed to fetch reimbursements', 'Error');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  useEffect(() => {
+    fetchReimbursements(setLoading, setReimbursements);
   }, []);
 
   // Handle reimburse action
@@ -103,39 +142,87 @@ const ReimbursementPage = () => {
     
     if (result.isConfirmed) {
       try {
-        // Update the reimbursement status
-        setReimbursements(prev => prev.map(item => 
-          item.reimbursement_id === reimbursementId 
-            ? { 
-                ...item, 
-                status: 'Paid' as const,
-                paid_date: new Date().toISOString().split('T')[0],
-                payment_reference: `PAY${Date.now()}`
-              }
-            : item
-        ));
-        
-        showSuccess('Reimbursement processed successfully!','Success');
-      } catch (error) {
+        const res = await fetch('/api/reimbursement', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reimbursement_id: reimbursementId,
+            action: 'PAY',
+            performed_by: 'ftms_user', // Replace with actual user
+            payment_reference: `PAY${Date.now()}`,
+            payment_method: 'CASH', // Or get from UI if needed
+          })
+        });
+        if (!res.ok) throw new Error('Failed to process reimbursement');
+        showSuccess('Reimbursement processed successfully!', 'Success');
+        fetchReimbursements(setLoading, setReimbursements);
+      } catch {
         showError('Failed to process reimbursement', 'Error');
       }
     }
   };
 
-  // Filter and paginate reimbursements
   const filteredReimbursements = reimbursements.filter(reimbursement => {
+    const searchLower = search.toLowerCase();
+    const matchesEmployee = (reimbursement.employee_name ?? '').toLowerCase().includes(searchLower);
+    const matchesSubmittedDate = reimbursement.submitted_date
+      ? formatDateTime(reimbursement.submitted_date).toLowerCase().includes(searchLower)
+      : false;
+    
+    // Finalized By / Finalized Date
+    let finalizedBy = 'N/A';
+    let finalizedDate = 'N/A';
+    if (reimbursement.status === 'Approved' || reimbursement.status === 'Rejected') {
+      finalizedBy = reimbursement.approved_by || 'N/A';
+      finalizedDate = reimbursement.approved_date ? formatDateTime(reimbursement.approved_date) : 'N/A';
+    } else if (reimbursement.status === 'Cancelled') {
+      finalizedBy = reimbursement.cancelled_by || 'N/A';
+      finalizedDate = reimbursement.cancelled_date ? formatDateTime(reimbursement.cancelled_date) : 'N/A';
+    } else if (reimbursement.status === 'Paid') {
+      finalizedBy = reimbursement.paid_date ? 'ftms_user' : 'N/A';
+      finalizedDate = reimbursement.paid_date ? formatDateTime(reimbursement.paid_date) : 'N/A';
+    }
+
+    const matchesFinalized =
+      (finalizedBy ?? '').toLowerCase().includes(searchLower) ||
+      (finalizedDate ?? '').toLowerCase().includes(searchLower);
+    const matchesStatusText = (reimbursement.status ?? '').toLowerCase().includes(searchLower);
+      
+    // Amount
+    const matchesAmount = (reimbursement.amount ?? 0).toFixed(2).includes(search);
+    // Paid Date
+    const matchesPaidDate = reimbursement.paid_date
+      ? formatDateTime(reimbursement.paid_date).toLowerCase().includes(searchLower)
+      : false;
+
     const matchesSearch =
       search === "" ||
-      reimbursement.reimbursement_id.toLowerCase().includes(search.toLowerCase()) ||
-      reimbursement.expense_id.toLowerCase().includes(search.toLowerCase()) ||
-      reimbursement.employee_id.toLowerCase().includes(search.toLowerCase()) ||
-      (reimbursement.notes && reimbursement.notes.toLowerCase().includes(search.toLowerCase()));
-    
+      matchesEmployee ||
+      matchesSubmittedDate ||
+      matchesFinalized ||
+      matchesStatusText ||
+      matchesAmount ||
+      matchesPaidDate;
+
     const matchesStatus = statusFilter === "" || reimbursement.status === statusFilter;
-    const matchesDateFrom = !dateFrom || reimbursement.submitted_date >= dateFrom;
-    const matchesDateTo = !dateTo || reimbursement.submitted_date <= dateTo;
-    
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+
+    // Date filter using submitted_date
+    let matchesDate = true;
+    if (dateFilter === "Day") {
+      matchesDate = reimbursement.submitted_date === today;
+    } else if (dateFilter === "Month") {
+      const [year, month] = today.split('-');
+      matchesDate = reimbursement.submitted_date.startsWith(`${year}-${month}`);
+    } else if (dateFilter === "Year") {
+      const [year] = today.split('-');
+      matchesDate = reimbursement.submitted_date.startsWith(year);
+    } else if (dateFilter === "Custom") {
+      matchesDate =
+        (!dateFrom || reimbursement.submitted_date >= dateFrom) &&
+        (!dateTo || reimbursement.submitted_date <= dateTo);
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalPages = Math.ceil(filteredReimbursements.length / pageSize);
@@ -143,34 +230,6 @@ const ReimbursementPage = () => {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
-
-  // Apply for reimbursement handler
-  const handleApplyReimbursement = () => {
-    setApplyModalOpen(true);
-  };
-
- const handleSubmitReimbursement = (data: any) => {
-    setReimbursements(prev => [
-      {
-        reimbursement_id: `R${String(prev.length + 1).padStart(3, "0")}`,
-        expense_id: data.expense_id,
-        employee_id: data.employee_id,
-        employee_name: data.employeeDetails?.employee_name || "Unknown",
-        submitted_date: new Date().toISOString().split("T")[0],
-        approved_by: null,
-        approved_date: null,
-        status: "Pending",
-        amount: data.amount, // <-- ADD THIS LINE to store original amount
-        approved_amount: null,
-        rejection_reason: null,
-        paid_date: null,
-        payment_reference: null,
-        notes: data.notes,
-      },
-      ...prev,
-    ]);
-    setApplyModalOpen(false);
-  };
 
   const handleApprove = async (reimbursementId: string) => {
     const result = await showConfirmation(
@@ -180,22 +239,74 @@ const ReimbursementPage = () => {
     
     if (result.isConfirmed) {
       try {
-        // Update the reimbursement status to Approved
-        setReimbursements(prev => prev.map(item => 
-          item.reimbursement_id === reimbursementId 
-            ? { 
-                ...item, 
-                status: 'Approved' as const,
-                approved_by: 'Current User', // Replace with actual user
-                approved_date: new Date().toISOString().split('T')[0],
-              }
-            : item
-        ));
-        
+        const res = await fetch('/api/reimbursement', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reimbursement_id: reimbursementId,
+            action: 'APPROVE',
+            performed_by: 'ftms_user', // Replace with actual user
+          })
+        });
+        if (!res.ok) throw new Error('Failed to approve reimbursement');
         showSuccess('Reimbursement approved successfully!', 'Success');
-      } catch (error) {
+        fetchReimbursements(setLoading, setReimbursements);
+      } catch {
         showError('Failed to approve reimbursement', 'Error');
       }
+    }
+  };
+
+  // Add cancel handler
+  const handleCancel = async (reimbursementId: string) => {
+    const result = await showConfirmation(
+      'Cancel Reimbursement',
+      'Are you sure you want to cancel this reimbursement?'
+    );
+    if (result.isConfirmed) {
+      try {
+        const res = await fetch('/api/reimbursement', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reimbursement_id: reimbursementId,
+            action: 'CANCEL',
+            performed_by: 'ftms_user', // Replace with actual user
+          })
+        });
+        if (!res.ok) throw new Error('Failed to cancel reimbursement');
+        showSuccess('Reimbursement cancelled successfully!', 'Success');
+        fetchReimbursements(setLoading, setReimbursements);
+      } catch {
+        showError('Failed to cancel reimbursement', 'Error');
+      }
+    }
+  };
+
+  // Add reject handler
+  const handleReject = async (reimbursementId: string, reason: string) => {
+    if (!reason) {
+      showError('Rejection reason is required', 'Error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/reimbursement', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reimbursement_id: reimbursementId,
+          action: 'REJECT',
+          performed_by: 'ftms_user', // Replace with actual user
+          rejection_reason: reason,
+        })
+      });
+      if (!res.ok) throw new Error('Failed to reject reimbursement');
+      showSuccess('Reimbursement rejected successfully!', 'Success');
+      setRejectModal({ open: false, id: null });
+      setRejectionReason('');
+      fetchReimbursements(setLoading, setReimbursements);
+    } catch {
+      showError('Failed to reject reimbursement', 'Error');
     }
   };
 
@@ -237,9 +348,9 @@ const ReimbursementPage = () => {
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
                         <option value="Paid">Paid</option>
+                        <option value="Cancelled">Cancelled</option>
                     </select>
                 </div>
-
                 {/* DROPDOWN FILTER OF PERIODS */}
                 <div className="reimbursement-filter">
                     <label htmlFor="dateFilter">Filter By:</label>
@@ -261,7 +372,6 @@ const ReimbursementPage = () => {
                         <option value="Custom">Custom</option>
                     </select>
                 </div>
-
                 {dateFilter === "Custom" && (
                     <div className="dateRangePicker">
                         <div className="date">
@@ -275,7 +385,6 @@ const ReimbursementPage = () => {
                                 max={today}
                             />
                         </div>
-
                         <div className="date">
                             <label htmlFor="endDate">End Date:</label>
                             <input
@@ -290,9 +399,6 @@ const ReimbursementPage = () => {
                     </div>
                 )}
             </div>
-            <button onClick={handleApplyReimbursement} id="apply">
-              <i className="ri-add-line" /> Apply for Reimbursement
-            </button>
           </div>
         </div>
         <div className="table-wrapper">
@@ -302,8 +408,7 @@ const ReimbursementPage = () => {
                   <tr>
                     <th>Employee</th>
                     <th>Submitted Date</th>
-                    <th>Approved By</th>
-                    <th>Approved Date</th>
+                    <th>Finalized By / Finalized Date</th>
                     <th>Status</th>
                     <th>Amount</th>
                     <th>Paid Date</th>
@@ -311,48 +416,95 @@ const ReimbursementPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentRecords.map((item) => (
-                    <tr key={item.reimbursement_id} onClick={() => {
-                      setSelectedReimbursement(item);
-                      setViewModalOpen(true);
-                    }}>
-                      <td>{item.employee_name}</td>
-                      <td>{item.submitted_date}</td>
-                      <td>{item.approved_by || '-'}</td>
-                      <td>{item.approved_date || '-'}</td>
-                      <td>
-                        <span className={`status ${item.status.toLowerCase()}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td>₱{(item.amount ?? 0).toFixed(2)}</td>
-                      <td>{item.paid_date || '-'}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {item.status === 'Pending' && (
-                          <button 
-                            onClick={() => handleApprove(item.reimbursement_id)}
-                            className="action-btn approve-btn"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {item.status === 'Approved' && (
-                          <button 
-                            onClick={() => handleReimburse(item.reimbursement_id)}
-                            className="action-btn reimburse-btn"
-                          >
-                            Reimburse
-                          </button>
-                        )}
-                        {item.status === 'Paid' && (
-                          <span className="completed-text">Completed</span>
-                        )}
-                        {item.status === 'Rejected' && (
-                          <span className="rejected-text">Rejected</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {currentRecords.map((item) => {
+                    // Compute finalized by/date based on status
+                    let finalizedBy = 'N/A';
+                    let finalizedDate = 'N/A';
+                    if (item.status === 'Approved' || item.status === 'Rejected') {
+                      finalizedBy = item.approved_by || 'N/A';
+                      finalizedDate = item.approved_date ? formatDateTime(item.approved_date) : 'N/A';
+                    } else if (item.status === 'Cancelled') {
+                      finalizedBy = item.cancelled_by || 'N/A';
+                      finalizedDate = item.cancelled_date ? formatDateTime(item.cancelled_date) : 'N/A';
+                    } else if (item.status === 'Paid') {
+                      finalizedBy = item.paid_date ? 'ftms_user' : 'N/A';
+                      finalizedDate = item.paid_date ? formatDateTime(item.paid_date) : 'N/A';
+                    }
+
+                    // Action buttons logic
+                    const renderActions = () => {
+                      const normalizedStatus = (item.status || '').toLowerCase();
+                      switch (normalizedStatus) {
+                        case 'pending':
+                          return (
+                            <>
+                              <button
+                                onClick={e => { e.stopPropagation(); handleApprove(item.reimbursement_id); }}
+                                className="action-btn approve-btn"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); setRejectModal({ open: true, id: item.reimbursement_id }); }}
+                                className="action-btn reject-btn"
+                                style={{ marginLeft: 8 }}
+                              >
+                                Reject
+                              </button>
+                              <button
+                                onClick={e => { e.stopPropagation(); handleCancel(item.reimbursement_id); }}
+                                className="action-btn cancel-btn"
+                                style={{ marginLeft: 8 }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          );
+                        case 'approved':
+                          return (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleReimburse(item.reimbursement_id); }}
+                              className="action-btn reimburse-btn"
+                            >
+                              Reimburse
+                            </button>
+                          );
+                        case 'paid':
+                          return <span className="completed-text">Completed</span>;
+                        case 'rejected':
+                          return <span className="rejected-text">Rejected</span>;
+                        case 'cancelled':
+                          return <span className="cancelled-text">Cancelled</span>;
+                        default:
+                          return null;
+                      }
+                    };
+
+                    return (
+                      <tr key={item.reimbursement_id} onClick={() => {
+                        setSelectedReimbursement(item);
+                        setViewModalOpen(true);
+                      }}>
+                        <td>{item.employee_name}</td>
+                        <td>{formatDateTime(item.submitted_date)}</td>
+                        <td>{finalizedBy} | {finalizedDate}</td>
+                        <td>
+                          <span className={`status ${typeof item.status === 'string' ? item.status.toLowerCase() : ''}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>₱{(item.amount ?? 0).toFixed(2)}</td>
+                        <td>
+                          {item.status === 'Paid'
+                            ? (item.paid_date ? formatDateTime(item.paid_date) : 'N/A')
+                            : 'N/A'}
+                        </td>
+                        <td onClick={e => e.stopPropagation()}>
+                          {renderActions()}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
             </table>
             {currentRecords.length === 0 && <p className="noRecords">No reimbursements found.</p>}
@@ -366,18 +518,35 @@ const ReimbursementPage = () => {
           onPageSizeChange={setPageSize}
         />
       </div>
-
       <ViewReimbursement
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
         record={selectedReimbursement}
       />
-
-      <ApplyReimbursement
-        isOpen={applyModalOpen}
-        onClose={() => setApplyModalOpen(false)}
-        onSubmit={handleSubmitReimbursement}
-      />
+      {rejectModal.open && (
+        <div className={styles.modalOverlay} onClick={() => setRejectModal({ open: false, id: null })}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <h2>Reject Reimbursement</h2>
+            <div style={{ margin: '1rem 0' }}>
+              <label htmlFor="rejectionReason" style={{ display: 'block', marginBottom: 8 }}>Rejection Reason<span style={{ color: '#961C1E' }}>*</span></label>
+              <textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={e => setRejectionReason(e.target.value)}
+                rows={3}
+                required
+                style={{ width: '100%', borderRadius: 4, border: '1px solid #ccc', padding: 8 }}
+              />
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelButton} onClick={() => setRejectModal({ open: false, id: null })}>Cancel</button>
+              <button className={styles.confirmButton} onClick={() => handleReject(rejectModal.id!, rejectionReason)} disabled={!rejectionReason.trim()}>
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
