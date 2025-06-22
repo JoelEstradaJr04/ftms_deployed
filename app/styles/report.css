@@ -327,6 +327,30 @@ button {
   box-shadow: var(--box-shadow);
 }
 
+#exportData {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--secondary-color);
+  color: var(--button-font-color);
+  border: none;
+  border-radius: var(--page-button-border-radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: var(--page-button-font-size);
+  font-weight: 500;
+  box-shadow: var(--box-shadow);
+}
+
+#exportData:hover {
+  background-color: var(--secondary-hover-color);
+  transform: translateY(-1px);
+}
+
+#exportData i {
+  font-size: 1.2rem;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
