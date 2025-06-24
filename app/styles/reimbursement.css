@@ -91,11 +91,14 @@
   gap: 0.5rem !important;
 }
 
+.reimbursement-filter label,
 .filter label,
 .date label {
   font-size: 1rem !important;
   color: var(--secondary-text-color) !important;
   font-weight: 500 !important;
+  margin-right: 1rem;
+  margin-left:1rem;
 }
 
 .dateFilter,

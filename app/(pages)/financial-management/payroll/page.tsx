@@ -69,6 +69,8 @@ const PayrollPage = () => {
   // Filters
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,6 +84,7 @@ const PayrollPage = () => {
   // Fetch payroll data from API
   const fetchPayrollData = async (isSearch = false) => {
     try {
+
       if (isSearch) {
         setSearchLoading(true);
       } else {
@@ -101,6 +104,10 @@ const PayrollPage = () => {
 
       if (positionFilter) {
         params.append('position', positionFilter);
+      }
+
+      if (statusFilter) {
+        params.append('status', statusFilter);
       }
 
       const response = await fetch(`/api/payroll?${params}`);
@@ -133,7 +140,7 @@ const PayrollPage = () => {
   // Fetch data when component mounts or filters change (excluding search)
   useEffect(() => {
     fetchPayrollData(false);
-  }, [currentPage, pageSize, positionFilter]);
+  }, [currentPage, pageSize, positionFilter, statusFilter]);
 
   // Separate effect for search with debouncing
   useEffect(() => {
@@ -292,6 +299,17 @@ const PayrollPage = () => {
           </div>
 
           <div className="filters">
+            {/*FILTERS*/}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="filterSelect"
+            >
+              <option value="">All Status</option>
+              <option key="pending" value="pending">Pending</option>
+              <option key="released" value="released">Released</option>
+            </select>
+
             <select
               value={positionFilter}
               onChange={(e) => setPositionFilter(e.target.value)}

@@ -104,6 +104,8 @@ button {
 /* ---------- Add Expense button ---------- */
 .releaseAllBtn {
   padding:0 !important;
+  align-content: center !important;
+  align-items: center !important;
   background-color: var(--success-color) !important;
   color: var(--foreground-color) !important;
   border: none !important;

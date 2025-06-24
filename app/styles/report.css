@@ -102,6 +102,8 @@ button {
 .date, .filter {
   display: flex !important;
   flex-direction: column !important;
+  align-content: center !important;
+  margin-right:1rem;
 }
 .date label, .filter label {
   font-size: var(--input-label-font-size) !important;
@@ -341,6 +343,8 @@ button {
   font-size: var(--page-button-font-size) !important;
   font-weight: 500 !important;
   box-shadow: var(--box-shadow) !important;
+  width: var(--page-button-width) !important;
+  height: var(--page-button-height) !important;
 }
 
 #exportData:hover {
