@@ -127,6 +127,8 @@ const Sidebar: React.FC = () => {
             <span>Financial Reports</span>
           </Link>
 
+
+{/* 
           <Link
             href="/JEV"
             className={`nav-item ${activeItem === "JEV" ? "active" : ""}`}
@@ -135,6 +137,8 @@ const Sidebar: React.FC = () => {
             <i className="ri-book-2-line"></i>
             <span>JEV</span>
           </Link>
+*/}
+
 
           <Link
             href="/audit"

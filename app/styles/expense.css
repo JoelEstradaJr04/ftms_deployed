@@ -9,60 +9,60 @@ button {
 }
 
 .expensePage {
-  padding: 20px;
-  background-color: var(--background-color);
-  min-height: calc(100vh - 40px);
-  font-family: var(--font-sans);
-  color: var(--primary-text-color);
+  padding: 20px !important;
+  background-color: var(--background-color) !important;
+  min-height: calc(100vh - 40px) !important;
+  font-family: var(--font-sans) !important;
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Settings (filters) ---------- */
 .settings {
-  display: flex;
-  width: 100%;
-  flex-wrap: wrap;
-  gap: 0;
-  margin-bottom: 0px;
-  justify-content: space-between;
-  background-color: none;
+  display: flex !important;
+  width: 100% !important;
+  flex-wrap: wrap !important;
+  gap: 0 !important;
+  margin-bottom: 0px !important;
+  justify-content: space-between !important;
+  background-color: none !important;
 }
 
 /* Search bar */
 .searchBar {
-  display: flex;
-  align-items: center;
-  width: auto;
-  padding: var(--search-input-padding-right);
+  display: flex !important;
+  align-items: center !important;
+  width: auto !important;
+  padding: var(--search-input-padding-right) !important;
   height: var(--search-input-height) !important;
-  border: 1px solid var(--border-color);
-  border-radius: var(--search-input-border-radius);
-  background-color: var(--foreground-color);
-  box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--search-input-border-radius) !important;
+  background-color: var(--foreground-color) !important;
+  box-shadow: var(--box-shadow) !important;
 }
 
 .searchBar input[type="text"] {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 0 8px;
-  font-size: 14px;
-  color: var(--primary-text-color);
-  background: transparent;
-  box-shadow: none;
+  flex: 1 !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 8px !important;
+  font-size: 14px !important;
+  color: var(--primary-text-color) !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 /* ---------- Filter Inputs ---------- */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
 }
 
 .dateFilter,
 #categoryFilter {
-  padding: 0 8px;
-  gap: var(--page-button-gap);
-  font-size: var(--page-button-font-size);
+  padding: 0 8px !important;
+  gap: var(--page-button-gap) !important;
+  font-size: var(--page-button-font-size) !important;
   height: var(--page-button-height) !important;
   width: var(--page-button-width) !important;
   border-radius: var(--page-button-border-radius)!important;
@@ -70,122 +70,122 @@ button {
 }
 
 #categoryFilter {
-  max-width: max-content;
+  max-width: max-content !important;
 }
 
 /* ---------- Add Expense button ---------- */
 #addExpense {
-  padding:0;
-  background-color: var(--primary-color);
-  color: var(--foreground-color);
+  padding:0 !important;
+  background-color: var(--primary-color) !important;
+  color: var(--foreground-color) !important;
   border: none !important;
   outline: none !important;
-  border-radius: var(--search-input-border-radius);
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  border-radius: var(--search-input-border-radius) !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s !important;
   height: var(--page-button-height) !important;
   width: var(--page-button-width) !important;
   font-size: var(--page-button-font-size) !important;
   gap: var(--page-button-gap) !important;
 }
 #addExpense:hover {
-  background-color: var(--primary-hover-color);
+  background-color: var(--primary-hover-color) !important;
 }
 
 /* ---------- Loading indicator ---------- */
 .loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 1.2rem;
-  color: var(--secondary-text-color);
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 200px !important;
+  font-size: 1.2rem !important;
+  color: var(--secondary-text-color) !important;
 }
 
 /* ---------- Category Input w/ clear button ---------- */
 .categoryInputWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
 }
 
 .categoryInputWrapper input {
-  width: 100%;
-  padding-right: 30px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 14px;
+  width: 100% !important;
+  padding-right: 30px !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+  font-size: 14px !important;
 }
 
 .categoryInputWrapper input:focus {
-  outline: none;
-  border-color: var(--info-color);
-  box-shadow: 0 0 0 2px rgba(45, 142, 255, 0.2);
+  outline: none !important;
+  border-color: var(--info-color) !important;
+  box-shadow: 0 0 0 2px rgba(45, 142, 255, 0.2) !important;
 }
 
 .clearCategoryBtn {
-  position: absolute;
-  right: 5px;
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: var(--secondary-text-color);
-  cursor: pointer;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+  position: absolute !important;
+  right: 5px !important;
+  background: none !important;
+  border: none !important;
+  font-size: 18px !important;
+  color: var(--secondary-text-color) !important;
+  cursor: pointer !important;
+  padding: 0 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
 }
 .clearCategoryBtn:hover {
-  color: var(--primary-text-color);
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- View Modal ---------- */
 .modalOverlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  position: fixed !important;
+  inset: 0 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1000 !important;
 }
 
 .modalContent {
-  background-color: var(--foreground-color);
-  padding: 2rem;
-  border-radius: var(--modal-border-radius);
-  max-width: 1200px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  background-color: var(--foreground-color) !important;
+  padding: 2rem !important;
+  border-radius: var(--modal-border-radius) !important;
+  max-width: 1200px !important;
+  width: 90% !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
 }
 
 .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 1.5rem !important;
 }
 
 .modalHeader h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--primary-text-color);
+  margin: 0 !important;
+  font-size: 1.5rem !important;
+  color: var(--primary-text-color) !important;
 }
 
 .closeButton {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--secondary-text-color);
+  background: none !important;
+  border: none !important;
+  font-size: 1.5rem !important;
+  cursor: pointer !important;
+  color: var(--secondary-text-color) !important;
 }
 .closeButton:hover {
-  color: var(--primary-text-color);
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Detail sections ---------- */
@@ -193,79 +193,79 @@ button {
 .operationsDetails,
 .receiptDetails,
 .otherDetails {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  margin-bottom: 2rem !important;
+  padding: 1rem !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
 }
 
 .mainDetails h3,
 .operationsDetails h3,
 .receiptDetails h3,
 .otherDetails h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: var(--primary-text-color);
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
+  color: var(--primary-text-color) !important;
 }
 
 .detailRow {
-  display: flex;
-  margin-bottom: 0.75rem;
-  align-items: baseline;
+  display: flex !important;
+  margin-bottom: 0.75rem !important;
+  align-items: baseline !important;
 }
 .detailRow .label {
-  min-width: 150px;
-  font-weight: 500;
-  color: var(--secondary-text-color);
+  min-width: 150px !important;
+  font-weight: 500 !important;
+  color: var(--secondary-text-color) !important;
 }
 .detailRow .value {
-  flex: 1;
-  color: var(--primary-text-color);
+  flex: 1 !important;
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Items (receipt list) ---------- */
 .itemsSection {
-  margin-top: 1.5rem;
+  margin-top: 1.5rem !important;
 }
 .itemsSection h4 {
-  margin-bottom: 1rem;
-  color: var(--primary-text-color);
+  margin-bottom: 1rem !important;
+  color: var(--primary-text-color) !important;
 }
 .itemsSection table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.5rem;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 0.5rem !important;
 }
 .itemsSection th,
 .itemsSection td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem !important;
+  text-align: left !important;
+  border-bottom: 1px solid var(--border-color) !important;
 }
 .itemsSection th {
-  background-color: var(--table-header-color);
-  font-weight: 500;
-  color: var(--secondary-text-color);
+  background-color: var(--table-header-color) !important;
+  font-weight: 500 !important;
+  color: var(--secondary-text-color) !important;
 }
 
 /* ---------- Modal footer ---------- */
 .modalFooter {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
+  margin-top: 2rem !important;
+  display: flex !important;
+  justify-content: flex-end !important;
 }
 .closeBtn {
-  padding: 0.5rem 1rem;
-  background-color: var(--secondary-text-color);
-  color: var(--foreground-color);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  padding: 0.5rem 1rem !important;
+  background-color: var(--secondary-text-color) !important;
+  color: var(--foreground-color) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s !important;
 }
 .closeBtn:hover {
-  background-color: var(--primary-hover-color);
+  background-color: var(--primary-hover-color) !important;
 }
 
 /* ---------- Import / Export ---------- */
@@ -275,12 +275,12 @@ button {
   width: var(--page-button-width) !important;
   font-size: var(--page-button-font-size) !important;
   border-radius: var(--page-button-border-radius)!important;
-  cursor: pointer;
+  cursor: pointer !important;
   border: none !important;
   outline: none !important;
   background-color: var(--secondary-color) !important;
-  color: var(--button-font-color);
-  transition: background-color 0.3s;
+  color: var(--button-font-color) !important;
+  transition: background-color 0.3s !important;
 }
 
  #export:hover {
@@ -291,43 +291,43 @@ button {
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
   .expensePage {
-    padding: 1rem;
+    padding: 1rem !important;
   }
 
   .filters {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
 
   .filters input[type="date"],
   .filters select,
   #addExpense {
-    width: 100%;
+    width: 100% !important;
   }
 
   th,
   td {
-    padding: 0.75rem;
+    padding: 0.75rem !important;
   }
 
   .actionButtons {
-    flex-direction: column;
+    flex-direction: column !important;
   }
 
   .modalContent {
-    width: 95%;
-    padding: 1rem;
+    width: 95% !important;
+    padding: 1rem !important;
   }
 
   .detailRow {
-    flex-direction: column;
-    margin-bottom: 1rem;
+    flex-direction: column !important;
+    margin-bottom: 1rem !important;
   }
   .detailRow .label {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.25rem !important;
   }
 
   .itemsSection {
-    overflow-x: auto;
+    overflow-x: auto !important;
   }
 }
