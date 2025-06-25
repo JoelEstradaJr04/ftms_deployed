@@ -118,7 +118,6 @@ model Receipt {
   ocr_confidence     Float?
   ocr_file_path      String?
   is_expense_recorded Boolean  @default(false)
-  is_inventory_processed Boolean @default(false)
   items              ReceiptItem[]
   transactions       ItemTransaction[]
   expense            ExpenseRecord?
@@ -144,6 +143,7 @@ model ReceiptItem {
   updated_by         String?
   is_deleted         Boolean   @default(false)
   ocr_confidence     Float?
+  is_inventory_processed Boolean @default(false)
   @@unique([receipt_id, item_id])
 }
 
