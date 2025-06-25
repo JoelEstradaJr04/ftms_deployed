@@ -159,64 +159,64 @@ const ReportPage = () => {
     return `${fileName}_${dateStamp}_${timeStamp}.csv`;
   };
 
-  const handleExport = async () => {
-    const reportType = activeTab === 'expense' ? 'expense' : 'revenue';
-    const dateRange = dateFilter === 'Custom' && dateFrom && dateTo
-      ? `${formatDate(dateFrom)} to ${formatDate(dateTo)}`
-      : 'All dates';
+  // const handleExport = async () => {
+  //   const reportType = activeTab === 'expense' ? 'expense' : 'revenue';
+  //   const dateRange = dateFilter === 'Custom' && dateFrom && dateTo
+  //     ? `${formatDate(dateFrom)} to ${formatDate(dateTo)}`
+  //     : 'All dates';
 
-    const result = await Swal.fire({
-      title: 'Confirm Export',
-      html: `
-        <div style="text-align: left; margin-top: 1rem;">
-          <strong>Report Type:</strong> ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report<br>
-          <strong>Date Range:</strong> ${dateRange}<br>
-          <strong>Total Records:</strong> ${filteredData.length}<br>
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
-      confirmButtonText: 'Export CSV',
-      cancelButtonText: 'Cancel',
-    });
+  //   const result = await Swal.fire({
+  //     title: 'Confirm Export',
+  //     html: `
+  //       <div style="text-align: left; margin-top: 1rem;">
+  //         <strong>Report Type:</strong> ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report<br>
+  //         <strong>Date Range:</strong> ${dateRange}<br>
+  //         <strong>Total Records:</strong> ${filteredData.length}<br>
+  //       </div>
+  //     `,
+  //     icon: 'question',
+  //     showCancelButton: true,
+  //     confirmButtonColor: '#13CE66',
+  //     cancelButtonColor: '#961C1E',
+  //     confirmButtonText: 'Export CSV',
+  //     cancelButtonText: 'Cancel',
+  //   });
 
-    if (result.isConfirmed) {
-      if (filteredData.length === 0) {
-        Swal.fire({
-          title: 'No Data',
-          text: 'There are no records to export.',
-          icon: 'warning',
-          confirmButtonColor: '#13CE66',
-        });
-        return;
-      }
+  //   if (result.isConfirmed) {
+  //     if (filteredData.length === 0) {
+  //       Swal.fire({
+  //         title: 'No Data',
+  //         text: 'There are no records to export.',
+  //         icon: 'warning',
+  //         confirmButtonColor: '#13CE66',
+  //       });
+  //       return;
+  //     }
 
-      try {
-        const dataToExport = activeTab === 'expense' ? 
-          await prepareExpenseData() : 
-          await prepareRevenueData();
+  //     try {
+  //       const dataToExport = activeTab === 'expense' ? 
+  //         await prepareExpenseData() : 
+  //         await prepareRevenueData();
 
-        exportToCSV(dataToExport, activeTab as 'expense' | 'revenue');
+  //       exportToCSV(dataToExport, activeTab as 'expense' | 'revenue');
 
-        Swal.fire({
-          title: 'Success!',
-          text: 'Report exported successfully',
-          icon: 'success',
-          confirmButtonColor: '#13CE66',
-        });
-      } catch (error) {
-        console.error('Export error:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'Failed to export report.',
-          icon: 'error',
-          confirmButtonColor: '#961C1E',
-        });
-      }
-    }
-  };
+  //       Swal.fire({
+  //         title: 'Success!',
+  //         text: 'Report exported successfully',
+  //         icon: 'success',
+  //         confirmButtonColor: '#13CE66',
+  //       });
+  //     } catch (error) {
+  //       console.error('Export error:', error);
+  //       Swal.fire({
+  //         title: 'Error',
+  //         text: 'Failed to export report.',
+  //         icon: 'error',
+  //         confirmButtonColor: '#961C1E',
+  //       });
+  //     }
+  //   }
+  // };
 
   const prepareExpenseData = async () => {
     const headers = [

@@ -35,43 +35,10 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
   //state for the employee selector
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // TODO: Replace this with your actual employee fetching logic or props
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      employee_id: "EMP001",
-      employee_name: "Alice Johnson",
-      job: "Accountant",
-      department: "Finance",
-    },
-    {
-      employee_id: "EMP002",
-      employee_name: "Bobay",
-      job: "Office Clerk",
-      department: "Administration",
-    },
-    {
-      employee_id: "EMP003",
-      employee_name: "Carlos Dela Cruz",
-      job: "IT Specialist",
-      department: "IT",
-    },
-    {
-      employee_id: "EMP004",
-      employee_name: "Diana Santos",
-      job: "HR Manager",
-      department: "Human Resources",
-    },
-    {
-      employee_id: "EMP005",
-      employee_name: "Eugene Lim",
-      job: "Procurement Officer",
-      department: "Purchasing",
-    },
-  ]);
 
   // Example: useEffect to fetch employees from API
   // React.useEffect(() => {
@@ -88,11 +55,11 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setReceiptFile(e.target.files[0]);
-    }
-  };
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files && e.target.files[0]) {
+  //     setReceiptFile(e.target.files[0]);
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -134,7 +101,8 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
     
     showSuccess('Reimbursement application submitted successfully!', 'Success');
     onClose();
-  } catch (error) {
+  } catch(error) {
+      setError('Failed to submit reimbursement application');
       showError('Failed to submit reimbursement application', 'Error');
     } finally {
       setIsSubmitting(false);

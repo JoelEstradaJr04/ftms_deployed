@@ -136,7 +136,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [employeeList, setEmployeeList] = useState<{ employee_id: string; name: string; job_title?: string }[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(record.reimbursements?.[0]?.employee_id || '');
   const [reimbursableAmount, setReimbursableAmount] = useState(record.reimbursements?.[0]?.amount?.toString() || '');
-  const [employeeName, setEmployeeName] = useState(record.reimbursements?.[0]?.employee_name || '');
+  const [, setEmployeeName] = useState(record.reimbursements?.[0]?.employee_name || '');
   const isReceiptSource = !!record.receipt && !record.assignment;
 
   type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category' | 'payment_method';
