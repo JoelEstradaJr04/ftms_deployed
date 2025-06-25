@@ -347,3 +347,64 @@ model GlobalReimbursementStatus {
   updated_at DateTime?
   reimbursements Reimbursement[]
 }
+
+model PayrollRecord {
+  payroll_id        String   @id @default(uuid())
+  employee_number   String
+  employee_name     String
+  first_name        String
+  middle_name       String?
+  last_name         String
+  suffix            String?
+  employee_status   String
+  hire_date         DateTime
+  termination_date  DateTime?
+  job_title         String
+  department        String
+  payroll_period    String   // "Monthly" | "Weekly"
+  payroll_start_date DateTime
+  payroll_end_date   DateTime
+  basic_rate        Decimal  @db.Decimal(20, 4)
+  days_worked       Int      @default(0)
+  
+  // Earnings
+  basic_pay                 Decimal @db.Decimal(20, 4) @default(0)
+  overtime_regular          Decimal @db.Decimal(20, 4) @default(0)
+  overtime_holiday          Decimal @db.Decimal(20, 4) @default(0)
+  service_incentive_leave   Decimal @db.Decimal(20, 4) @default(0)
+  holiday_pay              Decimal @db.Decimal(20, 4) @default(0)
+  thirteenth_month_pay     Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Benefits
+  revenue_benefit          Decimal @db.Decimal(20, 4) @default(0)
+  safety_benefit           Decimal @db.Decimal(20, 4) @default(0)
+  additional_benefits      Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Deductions
+  sss_deduction            Decimal @db.Decimal(20, 4) @default(0)
+  philhealth_deduction     Decimal @db.Decimal(20, 4) @default(0)
+  pag_ibig_deduction       Decimal @db.Decimal(20, 4) @default(0)
+  cash_advance             Decimal @db.Decimal(20, 4) @default(0)
+  damage_shortage          Decimal @db.Decimal(20, 4) @default(0)
+  other_deductions         Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Totals
+  gross_total_earnings     Decimal @db.Decimal(20, 4) @default(0)
+  total_deductions         Decimal @db.Decimal(20, 4) @default(0)
+  net_pay                  Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Status and dates
+  status                   String   @default("Pending") // "Released" | "Pending"
+  date_released            DateTime?
+  
+  // Metadata
+  created_by               String
+  created_at               DateTime @default(now())
+  updated_by               String?
+  updated_at               DateTime?
+  is_deleted               Boolean  @default(false)
+  
+  @@unique([employee_number, payroll_start_date, payroll_end_date])
+  @@index([payroll_start_date, payroll_end_date])
+  @@index([employee_number, is_deleted])
+}

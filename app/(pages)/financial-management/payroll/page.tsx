@@ -14,53 +14,50 @@ import ViewPayrollModal from "./viewPayroll";
 // Payroll record type
 type PayrollRecord = {
   payroll_id: string;
+  employee_number: string;
   employee_name: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  suffix?: string;
+  employee_status: string;
+  hire_date: string;
+  termination_date?: string | null;
   job_title: string;
   department: string;
   payroll_period: "Monthly" | "Weekly";
+  payroll_start_date: string;
+  payroll_end_date: string;
+  basic_rate: number;
+  days_worked: number;
+  // Earnings
+  basic_pay: number;
+  overtime_regular: number;
+  overtime_holiday: number;
+  service_incentive_leave: number;
+  holiday_pay: number;
+  thirteenth_month_pay: number;
+  // Benefits
+  revenue_benefit: number;
+  safety_benefit: number;
+  additional_benefits: number;
+  // Deductions
+  sss_deduction: number;
+  philhealth_deduction: number;
+  pag_ibig_deduction: number;
+  cash_advance: number;
+  damage_shortage: number;
+  other_deductions: number;
+  // Totals
+  gross_total_earnings: number;
+  total_deductions: number;
   net_pay: number;
-  deduction: number;
-  salary: number;
+  // Status
   status: "Released" | "Pending" | string;
   date_released?: string | null;
-  // Additional fields for detailed view
-  days_of_work?: number;
-  basic_rate?: number;
-  basic_pay?: number;
-  regular?: number;
-  holiday?: number;
-  service_incentive_leave?: number;
-  holiday_pay?: number;
-  thirteenth_month_pay?: number;
-  revenue?: number;
-  safety?: number;
-  additional?: number;
-  philhealth?: number;
-  pag_ibig?: number;
-  sss?: number;
-  cash_advance?: number;
-  damage_shortage?: number;
-  gross_total_earnings?: number;
-  total_deduction?: number;
-  created_at?: string;
-  updated_at?: string;
-};
-
-// API Response type
-type ApiResponse = {
-  data: PayrollRecord[];
-  pagination: {
-    currentPage: number;
-    pageSize: number;
-    totalRecords: number;
-    totalPages: number;
-  };
 };
 
 const PayrollPage = () => {
-  // Selected Employee IDs
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    
   // State
   const [data, setData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +69,6 @@ const PayrollPage = () => {
   const [positionFilter, setPositionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -82,37 +78,47 @@ const PayrollPage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<PayrollRecord | null>(null);
 
+  // Add state for start/end date
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1); // default to first of month
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
+
   // Fetch payroll data from API
   const fetchPayrollData = async (isSearch = false) => {
     try {
-
       if (isSearch) {
         setSearchLoading(true);
       } else {
         setLoading(true);
       }
       setError(null);
-
-      // Build query parameters
+      
+      // Build query parameters with proper date formatting
       const params = new URLSearchParams({
         page: currentPage.toString(),
         pageSize: pageSize.toString(),
+        start: startDate, // Already in YYYY-MM-DD format
+        end: endDate,     // Already in YYYY-MM-DD format
       });
-
+      
       if (search.trim()) {
         params.append('search', search.trim());
       }
-
-      const response = await fetch(`/api/payroll?${params}`);
       
+      const response = await fetch(`/api/payroll?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const result: ApiResponse = await response.json();
       
+      const result = await response.json();
       setData(result.data);
-      setTotalPages(result.pagination.totalPages);
+      setTotalPages(result.pagination?.totalPages || 1);
       
       if (isSearch) {
         setSearchLoading(false);
@@ -133,7 +139,7 @@ const PayrollPage = () => {
   // Fetch data when component mounts or filters change (excluding search)
   useEffect(() => {
     fetchPayrollData(false);
-  }, [currentPage, pageSize, positionFilter]);
+  }, [startDate, endDate, currentPage, pageSize]); // Added currentPage and pageSize dependencies
 
   // Separate effect for search with debouncing
   useEffect(() => {
@@ -148,6 +154,13 @@ const PayrollPage = () => {
 
     return () => clearTimeout(timeoutId);
   }, [search]);
+
+  // Effect to handle page changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      fetchPayrollData(false);
+    }
+  }, [currentPage, pageSize]);
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,7 +245,6 @@ const PayrollPage = () => {
 
       // Refresh data
       await fetchPayrollData(false);
-      setSelectedIds([]);
       showSuccess('Payroll released!', 'Success');
     } catch (error) {
       console.error('Error releasing payroll:', error);
@@ -300,6 +312,22 @@ const PayrollPage = () => {
           </div>
 
           <div className="filters">
+            <label style={{marginRight: 8}}>Start Date:
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                style={{marginLeft: 4, marginRight: 16}}
+              />
+            </label>
+            <label style={{marginRight: 8}}>End Date:
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                style={{marginLeft: 4, marginRight: 16}}
+              />
+            </label>
             {/*FILTERS*/}
             <select
               value={statusFilter}
@@ -341,13 +369,15 @@ const PayrollPage = () => {
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Employee Number</th>
                   <th>Employee Name</th>
                   <th>Job Title</th>
                   <th>Department</th>
+                  <th>Employee Status</th>
                   <th>Payroll Period</th>
                   <th>Net Pay</th>
-                  <th>Deduction</th>
-                  <th>Salary</th>
+                  <th>Total Deductions</th>
+                  <th>Gross Earnings</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -357,18 +387,20 @@ const PayrollPage = () => {
                   <tr key={item.payroll_id}
                     style={{ cursor: "pointer" }}
                     onClick={() => {
-                    setRecordToView(item);
-                    setViewModalOpen(true);
+                      setRecordToView(item);
+                      setViewModalOpen(true);
                     }}
                   >
                     <td>{(currentPage - 1) * pageSize + index + 1}</td>
+                    <td>{item.employee_number}</td>
                     <td>{item.employee_name}</td>
                     <td>{item.job_title}</td>
                     <td>{item.department}</td>
+                    <td>{item.employee_status}</td>
                     <td>{item.payroll_period}</td>
                     <td className="netPay">₱{item.net_pay.toLocaleString()}</td>
-                    <td className="deduction">₱{item.deduction.toLocaleString()}</td>
-                    <td className="salary">₱{item.salary.toLocaleString()}</td>
+                    <td className="deduction">₱{item.total_deductions.toLocaleString()}</td>
+                    <td className="salary">₱{item.gross_total_earnings.toLocaleString()}</td>
                     <td>
                       <span className={`chip ${item.status}`}>
                         {item.status}
