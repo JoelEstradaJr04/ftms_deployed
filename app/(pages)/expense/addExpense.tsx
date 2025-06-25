@@ -12,6 +12,7 @@ import { formatDisplayText } from '../../utils/formatting';
 
 type Receipt = OriginalReceipt & {
   category_name?: string;
+  category_id?: string;
   terms_name?: string;
 };
 
@@ -36,7 +37,8 @@ type Employee = {
 type AddExpenseProps = {
   onClose: () => void;
   onAddExpense: (formData: {
-    category: string;
+    category?: string;
+    category_id?: string;
     assignment_id?: string;
     receipt_id?: string;
     total_amount: number;
@@ -64,7 +66,7 @@ type AddExpenseProps = {
   currentUser: string;
 };
 
-type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category' | 'payment_method';
+type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category';
 
 const AddExpense: React.FC<AddExpenseProps> = ({ 
   onClose, 
@@ -86,13 +88,13 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     total_amount: [],
     expense_date: [],
     other_category: [],
-    payment_method: [],
   });
 
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'REIMBURSEMENT'>('CASH');
 
   const [formData, setFormData] = useState({
     category: 'Fuel',
+    category_id: '',
     assignment_id: '',
     receipt_id: '',
     total_amount: 0,
@@ -100,7 +102,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     created_by: currentUser,
     other_source: '',
     other_category: '',
-    payment_method: '',
   });
 
   // New state for driver/conductor reimbursement amounts
@@ -196,7 +197,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     total_amount: { required: true, min: 0.01, label: "Amount", custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0." },
     expense_date: { required: true, label: "Expense Date" },
     other_category: { required: formData.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
-    payment_method: { required: true, label: "Payment Method" },
   };
 
 
@@ -260,7 +260,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
       category: source === 'operations' ? 'Fuel' : '',
       other_source: '',
       other_category: '',
-      payment_method: '',
       expense_date: new Date().toISOString().split('T')[0],
     }));
     setPaymentMethod('CASH');
@@ -284,6 +283,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
           ...prev,
           total_amount: selectedReceipt.total_amount_due,
           category: selectedReceipt.category_name || '',
+          category_id: selectedReceipt.category_id || '',
           expense_date: selectedReceipt.transaction_date.split('T')[0],
         }));
       }
@@ -381,7 +381,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { category, assignment_id, receipt_id, total_amount, expense_date, other_source, other_category, payment_method } = formData;
+    const { category, assignment_id, receipt_id, total_amount, expense_date, other_source, other_category } = formData;
 
     if (!category || !expense_date || !currentUser) {
       await showError('Please fill in all required fields', 'Error');
@@ -462,8 +462,8 @@ const AddExpense: React.FC<AddExpenseProps> = ({
         const standardCategories = ["Fuel", "Vehicle_Parts", "Tools", "Equipment", "Supplies", "Other"];
         const isCustomCategory = !standardCategories.includes(category);
         const payload = {
-          // For custom categories, send "Other" as the category
-          category: isCustomCategory ? "Other" : category,
+          // For receipt-sourced expenses, send category_id instead of category
+          ...(source === 'receipt' ? { category_id: formData.category_id } : { category: isCustomCategory ? "Other" : category }),
           total_amount,
           expense_date,
           created_by: currentUser,
@@ -471,7 +471,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
           ...(source === 'receipt' ? { receipt_id } : {}),
           ...(source === 'other' ? { other_source } : {}),
           ...(category === 'Other' ? { other_category } : {}),
-          payment_method,
+          payment_method: paymentMethod,
           driver_reimbursement: paymentMethod === 'REIMBURSEMENT' && source === 'operations' ? Number(driverReimb) : undefined,
           conductor_reimbursement: paymentMethod === 'REIMBURSEMENT' && source === 'operations' ? Number(conductorReimb) : undefined,
           ...(source === 'other' && paymentMethod === 'REIMBURSEMENT' ? { employee_id: selectedEmployeeId } : {}),
@@ -679,7 +679,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                       value={paymentMethod}
                       onChange={e => {
                         setPaymentMethod(e.target.value as 'CASH' | 'REIMBURSEMENT');
-                        setFormData(prev => ({ ...prev, payment_method: e.target.value }));
                         if (e.target.value === 'REIMBURSEMENT') setReimbursementRows([{ employee_id: '', job_title: '', amount: '', error: '' }]);
                       }}
                       required
@@ -693,7 +692,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                       type="text"
                       id="payment_method"
                       name="payment_method"
-                      value={formData.payment_method}
+                      value={paymentMethod}
                       readOnly
                       className="formInput"
                     />

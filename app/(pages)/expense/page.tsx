@@ -20,20 +20,33 @@ interface ExpenseRecord {
   expense_id: string;        
   assignment_id?: string;    
   receipt_id?: string;
-  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other';
+  category_id: string;
+  source_id?: string;
+  payment_method_id: string;
+  category: {
+    category_id: string;
+    name: string;
+  };
+  source?: {
+    source_id: string;
+    name: string;
+  };
+  payment_method: {
+    id: string;
+    name: string;
+  };
   total_amount: number;      
   expense_date: string;              
   created_by: string;        
   created_at: string;        
   updated_at?: string;       
   is_deleted: boolean;
-  other_source?: string;
-  other_category?: string;
   receipt?: Receipt;
-  payment_method: 'REIMBURSEMENT' | 'CASH';
   reimbursements?: Reimbursement[];
-  payment_method_name?: string;
+  // Legacy fields for backward compatibility
   category_name?: string;
+  payment_method_name?: string;
+  source_name?: string;
 }
 
 interface Receipt {
@@ -41,45 +54,78 @@ interface Receipt {
   supplier: string;
   transaction_date: string;
   vat_reg_tin?: string;
-  terms?: string;
+  terms?: {
+    id: string;
+    name: string;
+  };
   date_paid?: string;
-  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
-  record_status: 'Active' | 'Inactive';
+  payment_status: {
+    id: string;
+    name: string;
+  };
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
-  category: 'Fuel' | 'Vehicle_Parts' | 'Tools' | 'Equipment' | 'Supplies' | 'Other' | 'Multiple_Categories';
-  other_category?: string;
+  category: {
+    category_id: string;
+    name: string;
+  };
+  remarks?: string;
+  ocr_confidence?: number;
+  ocr_file_path?: string;
+  is_expense_recorded: boolean;
   items: ReceiptItem[];
-  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
+  source?: {
+    source_id: string;
+    name: string;
+  };
   created_by: string;
   created_at: string;
+  updated_at?: string;
+  updated_by?: string;
+  is_deleted: boolean;
 }
 
 interface ReceiptItem {
   receipt_item_id: string;
+  receipt_id: string;
   item_id: string;
   item: {
     item_id: string;
     item_name: string;
-    unit: string;
-    category: string;
+    unit: {
+      id: string;
+      name: string;
+    };
+    category: {
+      category_id: string;
+      name: string;
+    };
+    other_unit?: string;
   };
   quantity: number;
   unit_price: number;
   total_price: number;
+  created_at: string;
+  updated_at?: string;
+  created_by: string;
+  updated_by?: string;
+  is_deleted: boolean;
+  ocr_confidence?: number;
 }
 
 type Reimbursement = {
   reimbursement_id: string;
   expense_id: string;
-  assignment_id?: string;
   employee_id: string;
   employee_name: string;
   job_title?: string;
   amount: number;
-  status: string;
-  requested_date?: string;
+  status: {
+    id: string;
+    name: string;
+  };
+  requested_date: string;
   approved_by?: string;
   approved_date?: string;
   rejection_reason?: string;
@@ -88,10 +134,12 @@ type Reimbursement = {
   payment_reference?: string;
   payment_method?: string;
   created_by: string;
-  created_at?: string;
+  created_at: string;
   updated_by?: string;
   updated_at?: string;
-  is_deleted?: boolean;
+  is_deleted: boolean;
+  cancelled_by?: string;
+  cancelled_date?: string;
 };
 
 // UI data type that matches your schema exactly
@@ -149,7 +197,8 @@ const ExpensePage = () => {
 
   // Format receipt for display
   const formatReceipt = (receipt: Receipt): string => {
-    return `${receipt.supplier} - ${new Date(receipt.transaction_date).toLocaleDateString()} - ₱${receipt.total_amount_due} (${receipt.payment_status})`
+    const paymentStatusName = receipt.payment_status?.name || 'Unknown';
+    return `${receipt.supplier} - ${new Date(receipt.transaction_date).toLocaleDateString()} - ₱${receipt.total_amount_due} (${paymentStatusName})`
   };
 
   // Fetch expenses data
@@ -217,34 +266,34 @@ const ExpensePage = () => {
   }, [lastUpdate, loading, showModal, editModalOpen]);
 
   // Filter and pagination logic
-  const filteredData = data.filter((item: ExpenseData) => {
-    // Convert search to lowercase for case-insensitive comparison
-    const searchLower = search.toLowerCase();
+const filteredData = data.filter((item: ExpenseData) => {
+  // Convert search to lowercase for case-insensitive comparison
+  const searchLower = search.toLowerCase();
+  
+  // Check if search term exists in any field
+  const matchesSearch = search === '' || 
+    // Basic fields
+    item.expense_id.toLowerCase().includes(searchLower) ||
+    (item.category?.name?.toLowerCase() || item.category_name?.toLowerCase() || '').includes(searchLower) ||
+    item.total_amount.toString().includes(searchLower) ||
+    formatDate(item.expense_date).toLowerCase().includes(searchLower) ||
+    (item.created_by?.toLowerCase() || '').includes(searchLower) ||
+    (item.source?.name?.toLowerCase() || item.source_name?.toLowerCase() || '').includes(searchLower) ||
     
-    // Check if search term exists in any field
-    const matchesSearch = search === '' || 
-      // Basic fields
-      item.expense_id.toLowerCase().includes(searchLower) ||
-      (item.category?.toLowerCase() || '').includes(searchLower) ||
-      (item.other_category?.toLowerCase() || '').includes(searchLower) ||
-      item.total_amount.toString().includes(searchLower) ||
-      formatDate(item.expense_date).toLowerCase().includes(searchLower) ||
-      (item.created_by?.toLowerCase() || '').includes(searchLower) ||
-      (item.other_source?.toLowerCase() || '').includes(searchLower) ||
-      
-      // Assignment related fields (if available)
-      (item.assignment_id?.toLowerCase() || '').includes(searchLower) ||
-      
-      // Receipt related fields (if available)
-      (item.receipt?.supplier?.toLowerCase() || '').includes(searchLower) ||
-      (item.receipt?.payment_status?.toLowerCase() || '').includes(searchLower) ||
-      (item.receipt?.total_amount_due?.toString() || '').includes(searchLower);
-      
-    const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
-    const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
-                      (!dateTo || item.expense_date <= dateTo);
-    return matchesSearch && matchesCategory && matchesDate;
-  });
+    // Assignment related fields (if available)
+    (item.assignment_id?.toLowerCase() || '').includes(searchLower) ||
+    
+    // Receipt related fields (if available)
+    (item.receipt?.supplier?.toLowerCase() || '').includes(searchLower) ||
+    (item.receipt?.payment_status?.name?.toLowerCase() || '').includes(searchLower) ||
+    (item.receipt?.total_amount_due?.toString() || '').includes(searchLower);
+    
+  const matchesCategory = categoryFilter ? 
+    (item.category?.name === categoryFilter || item.category_name === categoryFilter) : true;
+  const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
+                    (!dateTo || item.expense_date <= dateTo);
+  return matchesSearch && matchesCategory && matchesDate;
+});
 
   const indexOfLastRecord = currentPage * pageSize;
   const indexOfFirstRecord = indexOfLastRecord - pageSize;
@@ -350,14 +399,19 @@ const ExpensePage = () => {
   };
 
   const handleViewExpense = (expense: ExpenseData) => {
+    console.log('handleViewExpense called with:', expense);
+    console.log('expense.receipt:', expense.receipt);
+    
     // If the expense is linked to a receipt, show the receipt view
     if (expense.receipt) {
+      console.log('Setting receipt to view:', expense.receipt);
       setReceiptToView(expense.receipt);
       setViewReceiptModalOpen(true);
       return;
     }
     
     // For other types of expenses, show the expense modal
+    console.log('Setting record to view:', expense);
     setRecordToView(expense);
     setViewModalOpen(true);
   };
@@ -614,14 +668,11 @@ const ExpensePage = () => {
    
       return (
         <tr key={item.expense_id}>
-          <td>{formatDate(item.expense_date)}</td>
+          <td>{formatDateTime(item.expense_date)}</td>
           <td>{source}</td>
           <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
-          <td>₱{item.total_amount.toLocaleString()}</td>
-          <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
-          <td>{item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0
-            ? item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ')
-            : '-'}</td>
+          <td>₱{Number(item.total_amount).toLocaleString()}</td>
+          <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method?.name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
           <td className="actionButtons">
             <div className="actionButtonsContainer">
               {/* view button */}
@@ -637,7 +688,6 @@ const ExpensePage = () => {
                 <i className="ri-delete-bin-line" />
               </button>
             </div>
-            
           </td>
         </tr>
       );
@@ -773,8 +823,8 @@ const ExpensePage = () => {
                       <td>{formatDateTime(item.expense_date)}</td>
                       <td>{source}</td>
                       <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
-                      <td>₱{item.total_amount.toLocaleString()}</td>
-                      <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
+                      <td>₱{Number(item.total_amount).toLocaleString()}</td>
+                      <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method?.name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
                       <td className="actionButtons">
                         <div className="actionButtonsContainer">
                           {/* view button */}
@@ -790,7 +840,6 @@ const ExpensePage = () => {
                             <i className="ri-delete-bin-line" />
                           </button>
                         </div>
-                        
                       </td>
                     </tr>
                   );

@@ -23,13 +23,15 @@ type Assignment = {
 type Reimbursement = {
   reimbursement_id: string;
   expense_id: string;
-  assignment_id?: string;
   employee_id: string;
   employee_name: string;
   job_title?: string;
   amount: number;
-  status: string;
-  requested_date?: string;
+  status: {
+    id: string;
+    name: string;
+  };
+  requested_date: string;
   approved_by?: string;
   approved_date?: string;
   rejection_reason?: string;
@@ -38,23 +40,31 @@ type Reimbursement = {
   payment_reference?: string;
   payment_method?: string;
   created_by: string;
-  created_at?: string;
+  created_at: string;
   updated_by?: string;
   updated_at?: string;
-  is_deleted?: boolean;
+  is_deleted: boolean;
+  cancelled_by?: string;
+  cancelled_date?: string;
 };
 
 type ViewExpenseModalProps = {
   record: {
     expense_id: string;
-    category: string;
+    category: {
+      category_id: string;
+      name: string;
+    };
     other_category?: string;
     total_amount: number;
     expense_date: string;
     assignment?: Assignment;
     receipt?: Receipt;
     other_source?: string;
-    payment_method?: string;
+    payment_method: {
+      id: string;
+      name: string;
+    };
     reimbursements?: Reimbursement[];
   };
   onClose: () => void;
@@ -75,18 +85,16 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         item: item.item ? {
           ...item.item,
           // Provide fallbacks for required fields
-          item_name: item.item.item_name || '', // Use only nested item property
-          unit: item.item.unit || '',           // Use only nested item property
-          category: item.item.category || '',
-          other_unit: item.item.other_unit || '',
-          other_category: item.item.other_category || ''
+          item_name: item.item.item_name || '',
+          unit: item.item.unit || { id: '', name: '' },
+          category: item.item.category || { category_id: '', name: '' },
+          other_unit: item.item.other_unit || ''
         } : {
           item_id: item.item_id || '',
-          item_name: '',    // ReceiptItem does not have top-level item_name
-          unit: '',         // ReceiptItem does not have top-level unit
-          category: '',
-          other_unit: '',
-          other_category: ''
+          item_name: '',
+          unit: { id: '', name: '' },
+          category: { category_id: '', name: '' },
+          other_unit: ''
         }
       }))
     };
@@ -145,7 +153,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {record.category === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category)}
+              {record.category.name === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category.name)}
             </span>
           </div>
           <div className="detailRow">
@@ -158,10 +166,10 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           </div>
           <div className="detailRow">
             <span className="label">Payment Method:</span>
-            <span className="value">{record.payment_method === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}</span>
+            <span className="value">{record.payment_method.name === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}</span>
           </div>
           {/* Reimbursement breakdown */}
-          {record.payment_method === 'REIMBURSEMENT' && record.reimbursements && record.reimbursements.length > 0 && (
+          {record.payment_method.name === 'REIMBURSEMENT' && record.reimbursements && record.reimbursements.length > 0 && (
             <div className="detailRow">
               <span className="label">Reimbursements:</span>
               <span className="value">

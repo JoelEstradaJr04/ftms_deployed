@@ -509,7 +509,7 @@ const getDisplayCategory = (receipt: Receipt) => {
 
         {viewModalOpen && recordToView && (
           <ViewReceiptModal
-            receipt={recordToView}
+            record={recordToView}
             onClose={() => setViewModalOpen(false)}
           />
         )}

@@ -56,6 +56,9 @@ async function main() {
     { name: 'Boundary_Assignment', modules: ['revenue'] },
     { name: 'Percentage_Assignment', modules: ['revenue'] },
     { name: 'Bus_Rental_Assignment', modules: ['revenue'] },
+    { name: 'Receipt', modules: ['expense'] },
+    { name: 'Operations', modules: ['expense'] },
+    { name: 'Other', modules: ['expense'] },
   ];
   for (const { name, modules } of sources) {
     await prisma.globalSource.upsert({

@@ -14,8 +14,8 @@ type ReceiptItem = {
   item: {
     item_id: string;
     item_name: string;
-    unit: { id: string, name: string };
-    category: { category_id: string, name: string };
+    unit: { id: string; name: string };
+    category: { category_id: string; name: string };
     other_unit?: string;
   };
 };
@@ -25,34 +25,68 @@ type Receipt = {
   supplier: string;
   transaction_date: string;
   vat_reg_tin?: string;
-  terms_id: string;
-  terms_name: string;
+  terms?: {
+    id: string;
+    name: string;
+  } | string;
   date_paid?: string;
-  payment_status_id: string;
-  payment_status_name: string;
+  payment_status?: {
+    id: string;
+    name: string;
+  } | string;
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
-  created_at: string;
-  updated_at?: string;
-  created_by: string;
-  updated_by?: string;
-  source_id: string;
-  source_name: string;
-  category_id: string;
-  category_name: string;
-  other_category?: string;
+  category?: {
+    category_id: string;
+    name: string;
+  } | string;
+  source?: {
+    source_id: string;
+    name: string;
+  } | string;
   remarks?: string;
   is_expense_recorded: boolean;
   items: ReceiptItem[];
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+  updated_by?: string;
+  is_deleted: boolean;
 };
 
 type ViewReceiptModalProps = {
-  receipt: Receipt;
+  record: Receipt;
   onClose: () => void;
 };
 
-const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ receipt, onClose }): React.ReactElement => {
+const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }): React.ReactElement => {
+  console.log('ViewReceiptModal received record:', record);
+  
+  // Add defensive check for undefined record
+  if (!record) {
+    console.log('ViewReceiptModal: record is undefined or null');
+    return (
+      <div className="viewReceipt__modalOverlay">
+        <div className="viewReceipt__modalContent">
+          <div className="viewReceipt__modalHeader">
+            <h2>View Receipt</h2>
+            <button className="closeButton" onClick={onClose}>&times;</button>
+          </div>
+          <div className="mainDetails">
+            <div className="detailRow">
+              <span className="label">Error:</span>
+              <span className="value">Receipt data not available</span>
+            </div>
+          </div>
+          <div className="modalFooter">
+            <button className="closeBtn" onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const getStatusBadgeClass = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'paid': return 'statusBadge paid';
@@ -72,15 +106,28 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ receipt, onClose })
   };
 
   const getDisplayCategory = (receipt: Receipt) => {
-    if (receipt.category_name === 'Other' && receipt.other_category) {
-      return formatDisplayText(receipt.other_category);
+    const categoryName = typeof receipt.category === 'string' ? receipt.category : receipt.category?.name;
+    if (categoryName === 'Other') {
+      return formatDisplayText('Other'); // You might want to add other_category field if needed
     }
-    return formatDisplayText(receipt.category_name);
+    return formatDisplayText(categoryName || '');
   };
 
   const getItemDisplayCategory = (item: ReceiptItem) => {
     if (!item.item) return '';
     return formatDisplayText(item.item.category.name);
+  };
+
+  const getStatusName = (receipt: Receipt) => {
+    return typeof receipt.payment_status === 'string' ? receipt.payment_status : receipt.payment_status?.name;
+  };
+
+  const getTermsName = (receipt: Receipt) => {
+    return typeof receipt.terms === 'string' ? receipt.terms : receipt.terms?.name;
+  };
+
+  const getSourceName = (receipt: Receipt) => {
+    return typeof receipt.source === 'string' ? receipt.source : receipt.source?.name;
   };
 
   return (
@@ -94,18 +141,19 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ receipt, onClose })
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Supplier:</span>
-            <span className="value">{formatDisplayText(receipt.supplier)}</span>
+            <span className="value">{formatDisplayText(record.supplier)}</span>
           </div>
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {getDisplayCategory(receipt)}
+              {getDisplayCategory(record)}
             </span>
           </div>
           <div className="detailRow">
             <span className="label">Status:</span>
-            <span className={getStatusBadgeClass(receipt.payment_status_name)}>
-              {formatDisplayText(receipt.payment_status_name)}
+            <span className={getStatusBadgeClass(getStatusName(record))}
+              title={getStatusName(record)}>
+              {formatDisplayText(getStatusName(record) || 'N/A')}
             </span>
           </div>
         </div>
@@ -114,47 +162,47 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ receipt, onClose })
           <h3>Receipt Details</h3>
           <div className="detailRow">
             <span className="label">Transaction Date:</span>
-            <span className="value">{formatDate(receipt.transaction_date)}</span>
+            <span className="value">{formatDate(record.transaction_date)}</span>
           </div>
           <div className="detailRow">
             <span className="label">VAT Reg TIN:</span>
-            <span className="value">{formatDisplayText(receipt.vat_reg_tin || 'N/A')}</span>
+            <span className="value">{formatDisplayText(record.vat_reg_tin || 'N/A')}</span>
           </div>
           <div className="detailRow">
             <span className="label">Terms:</span>
-            <span className="value">{formatDisplayText(receipt.terms_name)}</span>
+            <span className="value">{formatDisplayText(getTermsName(record) || 'N/A')}</span>
           </div>
           <div className="detailRow">
             <span className="label">Date Paid:</span>
-            <span className="value">{receipt.date_paid ? formatDate(new Date(receipt.date_paid)) : 'N/A'}</span>
+            <span className="value">{record.date_paid ? formatDate(new Date(record.date_paid)) : 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Total Amount:</span>
-            <span className="value">₱{Number(receipt.total_amount).toLocaleString()}</span>
+            <span className="value">₱{Number(record.total_amount).toLocaleString()}</span>
           </div>
           <div className="detailRow">
             <span className="label">VAT Amount:</span>
-            <span className="value">₱{receipt.vat_amount ? Number(receipt.vat_amount).toLocaleString() : 'N/A'}</span>
+            <span className="value">₱{record.vat_amount ? Number(record.vat_amount).toLocaleString() : 'N/A'}</span>
           </div>
           <div className="detailRow">
             <span className="label">Total Amount Due:</span>
-            <span className="value">₱{Number(receipt.total_amount_due).toLocaleString()}</span>
+            <span className="value">₱{Number(record.total_amount_due).toLocaleString()}</span>
           </div>
           <div className="detailRow">
             <span className="label">Source:</span>
             <span className="value">
-              {formatDisplayText(receipt.source_name)}
+              {formatDisplayText(getSourceName(record) || 'N/A')}
             </span>
           </div>
-          {receipt.remarks && (
+          {record.remarks && (
             <div className="detailRow">
               <span className="label">Remarks:</span>
-              <span className="value">{formatDisplayText(receipt.remarks)}</span>
+              <span className="value">{formatDisplayText(record.remarks)}</span>
             </div>
           )}
         </div>
 
-        {receipt.items && receipt.items.length > 0 && (
+        {record.items && record.items.length > 0 && (
           <div className="itemsSection">
             <h4>Items</h4>
             <table>
@@ -169,7 +217,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ receipt, onClose })
                 </tr>
               </thead>
               <tbody>
-                {receipt.items.map((item, index) => (
+                {record.items.map((item, index) => (
                   <tr key={item.receipt_item_id || index}>
                     <td>{formatDisplayText(item.item?.item_name || '')}</td>
                     <td>{getDisplayUnit(item)}</td>

@@ -55,7 +55,10 @@ type Reimbursement = {
   employee_name: string;
   job_title?: string;
   amount: number;
-  status: string;
+  status: {
+    id: string;
+    name: string;
+  };
   requested_date?: string;
   approved_by?: string;
   approved_date?: string;
@@ -88,7 +91,10 @@ type EditExpenseModalProps = {
   record: {
     expense_id: string;
     expense_date: string;
-    category: string;
+    category: {
+      category_id: string;
+      name: string;
+    };
     other_category?: string;
     total_amount: number;
     assignment?: Assignment;
@@ -133,18 +139,17 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [employeeName, setEmployeeName] = useState(record.reimbursements?.[0]?.employee_name || '');
   const isReceiptSource = !!record.receipt && !record.assignment;
 
-  type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'source' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category' | 'payment_method';
+  type FieldName = 'category' | 'assignment_id' | 'receipt_id' | 'amount' | 'other_source' | 'total_amount' | 'expense_date' | 'other_category' | 'payment_method';
 
   const validationRules: Record<FieldName, ValidationRule> = {
     expense_date: { required: true, label: "Expense Date" },
     category: { required: true, label: "Category" },
-    source: { required: true, label: "Source" },
     amount: { required: true, min: 0.01, label: "Amount" },
-    assignment_id: { required: record.source === 'operations', label: "Assignment" },
-    receipt_id: { required: record.source === 'receipt', label: "Receipt" },
-    other_source: { required: record.source === 'other', label: "Other Source", minLength: 2, maxLength: 50 },
-    other_category: { required: record.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
-    total_amount: { required: false, label: "Total Amount" }, // Added to satisfy FieldName
+    assignment_id: { required: false, label: "Assignment" },
+    receipt_id: { required: false, label: "Receipt" },
+    other_source: { required: false, label: "Other Source", minLength: 2, maxLength: 50 },
+    other_category: { required: record.category.name === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
+    total_amount: { required: false, label: "Total Amount" },
     payment_method: { required: false, label: "Payment Method" },
   };
 
@@ -152,7 +157,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       category: [],
       assignment_id: [],
       receipt_id: [],
-      source: [],
       amount: [],
       other_source: [],
       total_amount: [],
@@ -169,20 +173,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   
       if (name === 'total_amount') {
         newValue = parseFloat(value) || 0;
-      }
-  
-      // Special handling for category "Other"
-      if (name === 'category' && value === 'Other') {
-        setFormData(prev => ({
-          ...prev,
-          category: value,
-          other_category: '', // Reset other_category when switching to Other
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          [name]: newValue,
-        }));
       }
   
       // Validate this field immediately
@@ -252,7 +242,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       return;
     }
 
-    if (record.category === 'Other' && !otherCategory) {
+    if (record.category.name === 'Other' && !otherCategory) {
       await showError('Please specify the category', 'Error');
       return;
     }
@@ -337,7 +327,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       type="text"
                       id="category"
                       name="category"
-                      value={record.category === 'Other' ? record.other_category || 'Other' : record.category}
+                      value={record.category.name === 'Other' ? record.other_category || 'Other' : record.category.name}
                       onChange={handleInputChange}
                       readOnly
                       className={`formInput${errors.category.length ? ' input-error' : ''}`}
@@ -352,18 +342,14 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       type="text"
                       id="source"
                       name="source"
-                      value={record.source}
+                      value={record.assignment ? 'Operations' : record.receipt ? 'Receipt' : 'Other'}
                       readOnly
-                      onChange={handleInputChange}
-                      className={`formInput${errors.source.length ? ' input-error' : ''}`}
+                      className="formInput"
                     />
-                    {errors.source.map((msg, i) => (
-                      <div className="error-message" key={i}>{msg}</div>
-                    ))}
                   </div>
                 </div>
 
-                {record.category === 'Other' && (
+                {record.category.name === 'Other' && (
                   <div className="formRow">
                     <div className="formField">
                       <label htmlFor="other_category">Category<span className='requiredTags'></span></label>
@@ -489,7 +475,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                   )}
                   {/* Show badge if reimbursement exists */}
                   {isReceiptSource && record.reimbursements && record.reimbursements.length > 0 && (
-                    <span className={`reimb-status-badge ${record.reimbursements[0].status?.toLowerCase()}`}>{record.reimbursements[0].status}</span>
+                    <span className={`reimb-status-badge ${record.reimbursements[0].status?.name?.toLowerCase()}`}>{record.reimbursements[0].status?.name}</span>
                 )}
                 </div>
 
@@ -512,7 +498,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                   <div className="detailRow">
                     <span className="label">Category:</span>
                     <span className="value">
-                      {record.category === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category)}
+                      {record.category.name === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category.name)}
                       <span className="locked-label">Auto-filled from Operations (locked)</span>
                     </span>
                   </div>
@@ -563,7 +549,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       )}
                       {/* Show status badge if reimbursement exists */}
                       {record.reimbursements && record.reimbursements.length > 0 && (
-                        <span className={`reimb-status-badge ${record.reimbursements[0].status?.toLowerCase()}`}>{record.reimbursements[0].status}</span>
+                        <span className={`reimb-status-badge ${record.reimbursements[0].status?.name?.toLowerCase()}`}>{record.reimbursements[0].status?.name}</span>
                       )}
                     </div>
                   )}
