@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ExpenseCategory } from '@prisma/client';
 import OCRUpload from '../../Components/OCRUpload';
 import OCRCamera from '../../Components/OCRCamera';
 import Swal from 'sweetalert2';
@@ -25,7 +24,7 @@ type ReceiptItem = {
     item_id: string;
     item_name: string;
     unit: string;
-    category: ExpenseCategory;
+    category: string;
     other_category?: string;
     other_unit?: string;
   };
@@ -264,7 +263,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         item.item.category = 'Other';
         item.item.other_category = '';
       } else {
-        item.item.category = value as ExpenseCategory;
+        item.item.category = value as string;
         item.item.other_category = undefined;
       }
     } else if (field === 'other_category') {
@@ -293,7 +292,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: '',
           unit: '',
-          category: 'Fuel' as ExpenseCategory,
+          category: 'Fuel' as string,
         },
         quantity: 0,
         unit_price: 0,
@@ -381,8 +380,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
-            category_id: formData.category_id,
-            category: EXPENSE_CATEGORIES.includes(item.item.category as ExpenseCategory) ? item.item.category : 'Other',
+            category_id: (() => {
+              // Find the category ID for this item's category
+              if (item.item.category === 'Other' && item.item.other_category) {
+                // For "Other" category, find the category with name "Other"
+                const otherCategory = categories.find(c => c.name === 'Other');
+                return otherCategory?.category_id || '';
+              } else {
+                // Find the category with matching name
+                const category = categories.find(c => c.name === item.item.category);
+                return category?.category_id || '';
+              }
+            })(),
             other_category: item.item.category === 'Other' ? item.item.other_category : undefined
           })),
           created_by: currentUser,
@@ -436,7 +445,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: item.item_name,
           unit: item.unit,
-          category: 'Fuel' as ExpenseCategory,
+          category: 'Fuel' as string,
         },
         quantity: item.quantity,
         unit_price: item.unit_price,

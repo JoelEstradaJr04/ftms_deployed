@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       reimbursements, // array for receipt-sourced
       category: legacy_category,
       payment_method: legacy_payment_method,
-      source: legacy_source
+      source: source_type // field for source type (receipt, operations, etc.)
     } = body;
 
     // Accept legacy fields for transition
@@ -44,9 +44,22 @@ export async function POST(req: NextRequest) {
       const pm = await prisma.globalPaymentMethod.findFirst({ where: { name: legacy_payment_method } });
       if (pm) final_payment_method_id = pm.id;
     }
-    if (!final_source_id && legacy_source) {
-      const src = await prisma.globalSource.findFirst({ where: { name: legacy_source } });
-      if (src) final_source_id = src.source_id;
+
+    // Handle source_type field to determine source_id
+    if (!final_source_id && source_type) {
+      let sourceName = '';
+      if (source_type === 'receipt') {
+        sourceName = 'Receipt';
+      } else if (source_type === 'operations') {
+        sourceName = 'Operations';
+      } else if (source_type === 'other') {
+        sourceName = 'Other';
+      }
+      
+      if (sourceName) {
+        const src = await prisma.globalSource.findFirst({ where: { name: sourceName } });
+        if (src) final_source_id = src.source_id;
+      }
     }
 
     if (!final_category_id || !final_payment_method_id) {
@@ -215,7 +228,73 @@ export async function POST(req: NextRequest) {
         details: `Created expense record with amount ₱${total_amount}${receipt_id ? ' with receipt' : ''}${assignment_id ? ' from assignment' : ''}${paymentMethod.name === 'REIMBURSEMENT' ? ' (REIMBURSEMENT)' : ''}`
       });
 
-      return expense;
+      // Fetch the complete expense record with all relationships for the response
+      const completeExpense = await tx.expenseRecord.findUnique({
+        where: { expense_id: expense.expense_id },
+        include: {
+          category: true,
+          payment_method: true,
+          source: true,
+          receipt: {
+            include: {
+              payment_status: true,
+              terms: true,
+              category: true,
+              source: true,
+              items: {
+                where: {
+                  is_deleted: false
+                },
+                include: {
+                  item: {
+                    include: {
+                      unit: true,
+                      category: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          reimbursements: {
+            where: {
+              is_deleted: false
+            },
+            include: {
+              status: true
+            }
+          }
+        }
+      });
+
+      // Transform the data to match frontend expectations
+      const expenseWithDetails = {
+        ...completeExpense,
+        total_amount: Number(completeExpense.total_amount),
+        category_name: completeExpense.category?.name || null,
+        payment_method_name: completeExpense.payment_method?.name || null,
+        source_name: completeExpense.source?.name || null,
+        // Transform receipt data if present
+        receipt: completeExpense.receipt ? {
+          ...completeExpense.receipt,
+          total_amount: Number(completeExpense.receipt.total_amount),
+          vat_amount: completeExpense.receipt.vat_amount ? Number(completeExpense.receipt.vat_amount) : null,
+          total_amount_due: Number(completeExpense.receipt.total_amount_due),
+          items: completeExpense.receipt.items.map(item => ({
+            ...item,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            total_price: Number(item.total_price)
+          }))
+        } : null,
+        // Transform reimbursements data
+        reimbursements: completeExpense.reimbursements.map(reimb => ({
+          ...reimb,
+          amount: Number(reimb.amount)
+        }))
+      };
+
+      return expenseWithDetails;
     });
 
     return NextResponse.json(result);
@@ -287,30 +366,63 @@ export async function GET(req: NextRequest) {
       source: true,
       receipt: {
         include: {
+          payment_status: true,
+          terms: true,
+          category: true,
+          source: true,
           items: {
+            where: {
+              is_deleted: false
+            },
             include: {
-              item: true
+              item: {
+                include: {
+                  unit: true,
+                  category: true
+                }
+              }
             }
           }
+        }
+      },
+      reimbursements: {
+        where: {
+          is_deleted: false
+        },
+        include: {
+          status: true
         }
       }
     },
     orderBy: { created_at: 'desc' }
   });
 
-  // Fetch all reimbursements for all expenses
-  const expenseIds = expenses.map(exp => exp.expense_id);
-  const allReimbursements = await prisma.reimbursement.findMany({
-    where: { expense_id: { in: expenseIds } }
-  });
-
-  // Attach reimbursement details and global names for frontend
+  // Transform the data to match frontend expectations
   const expensesWithDetails = expenses.map(exp => ({
     ...exp,
+    total_amount: Number(exp.total_amount),
     category_name: exp.category?.name || null,
     payment_method_name: exp.payment_method?.name || null,
     source_name: exp.source?.name || null,
-    reimbursements: allReimbursements.filter((r: { expense_id: string }) => r.expense_id === exp.expense_id)
+    // Transform receipt data if present
+    receipt: exp.receipt ? {
+      ...exp.receipt,
+      total_amount: Number(exp.receipt.total_amount),
+      vat_amount: exp.receipt.vat_amount ? Number(exp.receipt.vat_amount) : null,
+      total_amount_due: Number(exp.receipt.total_amount_due),
+      items: exp.receipt.items.map(item => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        total_price: Number(item.total_price)
+      }))
+    } : null,
+    // Transform reimbursements data
+    reimbursements: exp.reimbursements.map(reimb => ({
+      ...reimb,
+      amount: Number(reimb.amount)
+    }))
   }));
+
   return NextResponse.json(expensesWithDetails);
 }

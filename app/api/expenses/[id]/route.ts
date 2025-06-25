@@ -14,13 +14,35 @@ export async function GET(
     where: { expense_id: id },
     include: {
       category: true,
+      payment_method: true,
+      source: true,
       receipt: {
         include: {
+          payment_status: true,
+          terms: true,
+          category: true,
+          source: true,
           items: {
+            where: {
+              is_deleted: false
+            },
             include: {
-              item: true
+              item: {
+                include: {
+                  unit: true,
+                  category: true
+                }
+              }
             }
           }
+        }
+      },
+      reimbursements: {
+        where: {
+          is_deleted: false
+        },
+        include: {
+          status: true
         }
       }
     }
@@ -30,7 +52,34 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  return NextResponse.json(expense);
+  // Transform the data to match frontend expectations
+  const transformedExpense = {
+    ...expense,
+    total_amount: Number(expense.total_amount),
+    category_name: expense.category?.name || null,
+    payment_method_name: expense.payment_method?.name || null,
+    source_name: expense.source?.name || null,
+    // Transform receipt data if present
+    receipt: expense.receipt ? {
+      ...expense.receipt,
+      total_amount: Number(expense.receipt.total_amount),
+      vat_amount: expense.receipt.vat_amount ? Number(expense.receipt.vat_amount) : null,
+      total_amount_due: Number(expense.receipt.total_amount_due),
+      items: expense.receipt.items.map(item => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        total_price: Number(item.total_price)
+      }))
+    } : null,
+    // Transform reimbursements data
+    reimbursements: expense.reimbursements.map(reimb => ({
+      ...reimb,
+      amount: Number(reimb.amount)
+    }))
+  };
+
+  return NextResponse.json(transformedExpense);
 }
 
 export async function PUT(

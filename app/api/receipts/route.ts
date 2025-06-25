@@ -1,6 +1,6 @@
 // app/api/receipts/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma, ExpenseCategory, PaymentStatus } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { generateId } from '@/lib/idGenerator'
 import { prisma } from '@/lib/prisma'
 import { getClientIp, logAudit } from '@/lib/auditLogger'
@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const supplier = searchParams.get('supplier');
-    const category = searchParams.get('category') as ExpenseCategory | undefined;
-    const status = searchParams.get('status') as PaymentStatus | undefined;
+    const category = searchParams.get('category') as string | undefined;
+    const status = searchParams.get('status') as string | undefined;
     const isExpenseRecorded = searchParams.get('isExpenseRecorded');
 
     const skip = (page - 1) * limit;
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     // Attach global names for frontend
     const receiptsWithNames = receipts.map(r => {
       const receiptWithIncludes = r as typeof r & {
-        category: { name: string | null } | null;
+        category: { category_id: string; name: string | null } | null;
         payment_status: { name: string | null } | null;
         source: { name: string | null } | null;
         terms: { name: string | null } | null;
@@ -99,6 +99,7 @@ export async function GET(req: NextRequest) {
       return {
         ...receiptWithIncludes,
         category_name: receiptWithIncludes.category?.name || null,
+        category_id: receiptWithIncludes.category?.category_id || null,
         payment_status_name: receiptWithIncludes.payment_status?.name || null,
         source_name: receiptWithIncludes.source?.name || null,
         terms_name: receiptWithIncludes.terms?.name || null,
