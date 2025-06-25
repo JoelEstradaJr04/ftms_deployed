@@ -9,6 +9,8 @@ import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { validateField, isValidAmount, ValidationRule } from "../../utility/validation";
 import type { Receipt as OriginalReceipt } from '../../types/receipt';
 import { formatDisplayText } from '../../utils/formatting';
+import BusSelector from '../../Components/busSelector';
+
 
 type Receipt = OriginalReceipt & {
   category_name?: string;
@@ -72,6 +74,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   assignments,
   currentUser 
 }) => {
+  const [showBusSelector, setShowBusSelector] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [source, setSource] = useState<'operations' | 'receipt' | 'other'>('operations');
@@ -553,29 +556,34 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                     <label htmlFor="sourceDetail">Source<span className='requiredTags'> *</span></label>
                     {source === 'operations' && (
                       <>
-                        <select
-                          id="sourceDetail"
-                          name="assignment_id"
-                          value={formData.assignment_id}
-                          onChange={handleInputChange}
-                          required
-                          className={`formSelect${errors.assignment_id.length ? ' input-error' : ''}`}
+                        <button
+                          type="button"
+                          className="formSelect"
+                          id='busSelector'
+                          style={{ textAlign: 'left', width: '100%' }}
+                          onClick={() => setShowBusSelector(true)}
                         >
-                          <option value="">Select Assignment</option>
-                          {filteredAssignments.map((assignment) => (
-                            <option 
-                              key={assignment.assignment_id} 
-                              value={assignment.assignment_id}
-                            >
-                              {formatAssignment(assignment)}
-                            </option>
-                          ))}
-                        </select>
+                          {formData.assignment_id
+                            ? formatAssignment(assignments.find(a => a.assignment_id === formData.assignment_id)!)
+                            : 'Select Assignment'}
+                        </button>
                         {errors.assignment_id.map((msg, i) => (
                           <div className="error-message" key={i}>{msg}</div>
                         ))}
+                        {showBusSelector && (
+                          <BusSelector
+                            assignments={filteredAssignments}
+                            onSelect={assignment => {
+                              setFormData(prev => ({ ...prev, assignment_id: assignment.assignment_id }));
+                              setShowBusSelector(false);
+                            }}
+                            isOpen={showBusSelector}
+                            allEmployees={allEmployees}
+                            onClose={() => setShowBusSelector(false)}
+                          />
+                        )}
                       </>
-                    )}
+                                      )}
                     {source === 'receipt' && (
                       <>
                         <select
