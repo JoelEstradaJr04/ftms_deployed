@@ -726,9 +726,10 @@ const filteredData = data.filter((item: ExpenseData) => {
         
         <div className="settings">
 
-          <div className="searchBar">
+          <div className="expense_searchBar">
             <i className="ri-search-line" />
             <input
+              className="searchInput"
               type="text"
               placeholder="Search here..."
               value={search}

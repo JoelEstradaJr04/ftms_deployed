@@ -28,7 +28,7 @@ button {
 }
 
 /* Search bar */
-.searchBar {
+.expense_searchBar {
   display: flex !important;
   align-items: center !important;
   width: auto !important;
@@ -40,7 +40,7 @@ button {
   box-shadow: var(--box-shadow) !important;
 }
 
-.searchBar input[type="text"] {
+.expense_searchBar .searchInput {
   flex: 1 !important;
   border: none !important;
   outline: none !important;

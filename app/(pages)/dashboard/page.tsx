@@ -185,7 +185,7 @@ const DashboardPage = () => {
   if (loading) {
     return (
         <div className="card">
-            <h1 className="title">Stock Management</h1>
+            <h1 className="title">Dashboard</h1>
             <Loading />
         </div>
     );
@@ -196,7 +196,7 @@ const DashboardPage = () => {
     <div className="dashboardPage">
       <div className="accounting">
         {/* CONTAINER FOR THE SETTINGS */}
-        <div className="settings">
+        <div className="dashboard_settings">
           <div className="filterDate">
             {/* DROPDOWN FILTER OF PERIODS */}
             <div className="filter">

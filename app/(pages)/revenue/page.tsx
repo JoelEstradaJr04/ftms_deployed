@@ -691,9 +691,10 @@ const RevenuePage = () => {
         </div>
         <div className="settings">
           {/* search bar */}
-          <div className="searchBar">
+          <div className="revenue_searchBar">
             <i className="ri-search-line" />
             <input
+              className="searchInput"
               type="text"
               placeholder="Search here..."
               value={search}
