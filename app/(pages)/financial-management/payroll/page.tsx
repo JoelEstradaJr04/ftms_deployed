@@ -102,14 +102,6 @@ const PayrollPage = () => {
         params.append('search', search.trim());
       }
 
-      if (positionFilter) {
-        params.append('position', positionFilter);
-      }
-
-      if (statusFilter) {
-        params.append('status', statusFilter);
-      }
-
       const response = await fetch(`/api/payroll?${params}`);
       
       if (!response.ok) {
@@ -140,7 +132,7 @@ const PayrollPage = () => {
   // Fetch data when component mounts or filters change (excluding search)
   useEffect(() => {
     fetchPayrollData(false);
-  }, [currentPage, pageSize, positionFilter, statusFilter]);
+  }, [currentPage, pageSize, positionFilter]);
 
   // Separate effect for search with debouncing
   useEffect(() => {
@@ -185,7 +177,15 @@ const PayrollPage = () => {
   };
 
   // Filter logic for client-side filtering
-  const filteredData = data;
+  const filteredData = data.filter(item =>
+    (!statusFilter || item.status.toLowerCase() === statusFilter.toLowerCase()) &&
+    (!positionFilter || item.job_title === positionFilter) &&
+    (!search || (
+      item.employee_name.toLowerCase().includes(search.toLowerCase()) ||
+      item.job_title.toLowerCase().includes(search.toLowerCase()) ||
+      item.department.toLowerCase().includes(search.toLowerCase())
+    ))
+  );
 
   // Unique positions for filter dropdowns
   const positions = Array.from(new Set(data.map((d) => d.job_title)));
