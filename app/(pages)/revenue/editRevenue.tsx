@@ -170,7 +170,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-          <div className="modalContent">
+          <div className="editRevenue_modalContent">
             <div className="formFieldsHorizontal">
               <div className="formInputs">
 

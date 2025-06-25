@@ -803,6 +803,123 @@
   max-width: 100%;
 }
 
+
+/*------    View Receipt - Table     ----*/
+/* Table container and scroll */
+.view_itemsSection {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.view_itemsSection table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--box-shadow, 0 2px 8px rgba(0,0,0,0.04));
+}
+
+.view_itemsSection th,
+.view_itemsSection td {
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-size: 14px;
+  /* Add flex centering for all content */
+  justify-content: center;
+  align-items: center;
+  /* Optional: allow wrapping for multi-line content */
+  flex-wrap: wrap;
+}
+
+.view_itemsSection td input,
+.view_itemsSection td select {
+  text-align: center !important;
+  font-size: 14px !important;
+}
+
+.view_itemsSection thead {
+  background: var(--table-header-color) !important;
+  text-align: center;
+  align-content: center;
+}
+
+.view_itemsSection thead th {
+  background-color: transparent;
+  font-weight: 600;
+  color: var(--primary-text-color, #222);
+  border-bottom: 2px solid #eee;
+}
+
+.view_itemsSection tbody tr {
+  transition: background 0.2s;
+}
+
+.view_itemsSection tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.view_itemsSection td input,
+.view_itemsSection td select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.view_itemsSection .customInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view_itemsSection .clearCustomBtn,
+.view_itemsSection .removeItemBtn {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.view_itemsSection .clearCustomBtn:hover,
+.view_itemsSection .removeItemBtn:hover {
+  background: #ffeaea;
+  color: #c0392b;
+}
+
+.view_itemsSection td {
+  vertical-align: middle;
+}
+
+.view_itemsSection td:last-child,
+.view_itemsSection th:last-child {
+  text-align: center;
+  width: 48px;
+}
+
+.view_itemsSection tbody tr:last-child {
+  opacity: 0.5;
+}
+
+.view_itemsSection .itemTable th:nth-child(2),
+.view_itemsSection .itemTable td:nth-child(2) {
+  max-width: 120px;
+  width: 15ch !important; 
+}
+
+.view_itemsSection td:nth-child(2) select {
+  max-width: 100%;
+}
+
 /* Optional: make the table horizontally scrollable on small screens */
 @media (max-width: 700px) {
   .itemsSection table {
