@@ -639,6 +639,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                       onChange={handleInputChange}
                       disabled={paymentStatuses.find(ps => ps.id === formData.payment_status_id)?.name === 'Cancelled' || paymentStatuses.find(ps => ps.id === formData.payment_status_id)?.name === 'Pending'}
                       className="formInput"
+                      max={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                 </div>
