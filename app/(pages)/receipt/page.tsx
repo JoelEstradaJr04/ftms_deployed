@@ -429,18 +429,18 @@ const ReceiptPage = () => {
                     <td>{formatDate(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
                     <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
-<td>
-  {(() => {
+                    <td>
+                      {(() => {
                         if (item.terms_name) {
                           return formatDisplayText(item.terms_name);
-    }
+                        }
                         if (item.terms_id && Array.isArray(terms)) {
                           const t = terms.find(term => term.id === item.terms_id);
-      return t ? formatDisplayText(t.name) : 'Cash';
-    }
-    return 'Cash';
-  })()}
-</td>
+                          return t ? formatDisplayText(t.name) : 'Cash';
+                        }
+                        return 'Cash';
+                      })()}
+                    </td>
                     <td>₱{Number(item.total_amount_due).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
@@ -450,7 +450,7 @@ const ReceiptPage = () => {
                         {item.payment_status_name}
                       </span>
                     </td>
-                    <td className="actionButtons">
+                    <td className="styles.actionButtons">
                       <div className="actionButtonsContainer">
                         <button className="viewBtn" onClick={() => {openViewModal(item);}} title="View Receipt">
                           <i className="ri-eye-line" />

@@ -1,5 +1,7 @@
+
+
 /* ---------- Overlay ---------- */
-.modalOverlay {
+.revenue-modalOverlay {
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -11,12 +13,30 @@
   z-index: 1050;
   overflow: auto;
 }
-.modalOverlay::-webkit-scrollbar {
+.revenue-modalOverlay::-webkit-scrollbar {
   display: none;
 }
 
+.addRevenueModal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+  width: 100%;
+  max-width: 700px;      /* Set your preferred max width */
+  min-width: 320px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 0;
+  font-family: var(--font-sans, 'Segoe UI', Arial, sans-serif);
+  color: var(--primary-text-color, #222);
+  overflow: hidden;
+}
+
+
 /* ---------- Modal Box ---------- */
-.modalContent {
+.revenueBusSelectorModal {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 16px rgba(0,0,0,0.12);
@@ -33,8 +53,10 @@
   overflow: hidden;
 }
 
+
+
 /* ---------- Header ---------- */
-.modalHeader {
+.revenue-modalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -43,7 +65,7 @@
   background: #fff;
 }
 
-.modalHeader h2 {
+.revenue-modalHeader h2 {
   font-size: 1.4rem;
   font-weight: 700;
   margin: 0;
@@ -51,7 +73,7 @@
 }
 
 /* ---------- Close Button ---------- */
-.closeButton {
+.revenue-closeButton {
   background: none;
   border: none;
   font-size: 1.5rem;
@@ -60,12 +82,12 @@
   transition: color 0.2s;
   margin-left: 1rem;
 }
-.closeButton:hover {
+.revenue-closeButton:hover {
   color: #222;
 }
 
 /* ---------- Body ---------- */
-.modalBody {
+.revenue-modalBody {
   width: 100%;
   padding: 1.5rem 2rem;
   background: #fafbfc;
@@ -73,8 +95,8 @@
   flex: 1 1 auto;
 }
 
-.modalBody input[type="text"],
-.modalBody select {
+.revenue-modalBody input[type="text"],
+.revenue-modalBody select {
   padding: 0.5rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -85,44 +107,44 @@
   margin-bottom: 0;
 }
 
-.modalBody table {
+.revenue-modalBody table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   font-size: 1rem;
 }
 
-.modalBody th, .modalBody td {
+.revenue-modalBody th, .revenue-modalBody td {
   padding: 8px 10px;
   border-bottom: 1px solid #eee;
   text-align: left;
 }
 
-.modalBody th {
+.revenue-modalBody th {
   background: #f4f4f4;
   color: #222;
   font-weight: 600;
 }
 
-.modalBody tr {
+.revenue-modalBody tr {
   transition: background 0.15s;
   cursor: pointer;
 }
 
-.modalBody tr:hover {
+.revenue-modalBody tr:hover {
   background: #f0f8ff;
 }
 
-.modalBody td {
+.revenue-modalBody td {
   color: #333;
 }
 
-.modalBody tr:last-child td {
+.revenue-modalBody tr:last-child td {
   border-bottom: none;
 }
 
 /* ---------- Footer ---------- */
-.modalFooter {
+.revenue-modalFooter {
   width: 100%;
   padding: 1.25rem 2rem;
   border-top: 1px solid #eee;
@@ -132,7 +154,7 @@
   gap: 1rem;
 }
 
-.modalFooter button {
+.revenue-modalFooter button {
   min-width: 110px;
   height: 40px;
   font-size: 1rem;
@@ -148,29 +170,39 @@
   gap: 0.5rem;
 }
 
-.btn-secondary {
+.revenue-btn-secondary {
   background: #f8f9fa;
   color: #333;
   border: 1px solid #ddd;
 }
-.btn-secondary:hover {
+.revenue-btn-secondary:hover {
   background: #e2e6ea;
 }
 
-
 /* ---------- Responsive ---------- */
+
+@media (max-width: 800px) {
+  .addRevenueModal {
+    max-width: 98vw;
+    width: 98vw;
+    min-width: 0;
+  }
+}
+
+
 @media (max-width: 600px) {
-  .modalContent {
+  .revenue-modalContent {
     width: 99%;
     min-width: 0;
   }
-  .modalHeader, .modalFooter {
+  
+  .revenue-modalHeader, .revenue-modalFooter {
     padding: 1rem;
   }
-  .modalBody {
+  .revenue-modalBody {
     padding: 1rem;
   }
-  .modalBody th, .modalBody td {
+  .revenue-modalBody th, .revenue-modalBody td {
     padding: 6px 4px;
     font-size: 0.95rem;
   }

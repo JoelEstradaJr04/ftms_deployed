@@ -825,7 +825,7 @@ const filteredData = data.filter((item: ExpenseData) => {
                       <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
                       <td>₱{Number(item.total_amount).toLocaleString()}</td>
                       <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method?.name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
-                      <td className="actionButtons">
+                      <td className="styles.actionButtons">
                         <div className="actionButtonsContainer">
                           {/* view button */}
                           <button className="viewBtn" onClick={() => handleViewExpense(item)} title="View Record">

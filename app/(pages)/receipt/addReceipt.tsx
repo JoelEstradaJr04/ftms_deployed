@@ -739,6 +739,22 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                     </thead>
                     <tbody>
                       {items.map((item, idx) => {
+                        // Check if the previous row is complete
+                        const prevComplete =
+                          idx === 0 ||
+                          (
+                            items[idx - 1].item.item_name &&
+                            (items[idx - 1].unit_id || items[idx - 1].item.unit === 'Other') &&
+                            (items[idx - 1].item.unit !== 'Other' || items[idx - 1].item.other_unit) &&
+                            items[idx - 1].quantity > 0 &&
+                            items[idx - 1].unit_price > 0 &&
+                            items[idx - 1].item.category &&
+                            (items[idx - 1].item.category !== 'Other' || items[idx - 1].item.other_category)
+                          );
+
+                        // If previous row is not complete, disable this row
+                        const disabled = !prevComplete;
+
                         const isLast = idx === items.length - 1;
                         return (
                           <tr key={idx}>
@@ -749,6 +765,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
                                 placeholder="Enter item name"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>
@@ -760,6 +777,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
                                     placeholder="Enter custom unit"
                                     {...(!isLast && { required: true })}
+                                    disabled={disabled}
                                   />
                                   <button
                                     type="button"
@@ -773,6 +791,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     }}
                                     className="clearCustomBtn"
                                     title="Clear custom unit"
+                                    disabled={disabled}
                                   >
                                     <i className="ri-close-line" />
                                   </button>
@@ -783,6 +802,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                   onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
                                   className="formSelect"
                                   {...(!isLast && { required: true })}
+                                  disabled={disabled}
                                 >
                                   <option value="">Select Unit</option>
                                   {itemUnits.map(unit => (
@@ -799,6 +819,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 min="0"
                                 step="0.01"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>
@@ -809,6 +830,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 min="0"
                                 step="0.01"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>₱{item.total_price.toLocaleString()}</td>
@@ -821,12 +843,14 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
                                     placeholder="Enter custom category"
                                     {...(!isLast && { required: true })}
+                                    disabled={disabled}
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleItemChange(idx, 'category', '')}
                                     className="clearCustomBtn"
                                     title="Clear custom category"
+                                    disabled={disabled}
                                   >
                                     <i className="ri-close-line" />
                                   </button>
@@ -834,31 +858,33 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               ) : (
                                 <select
                                   value={item.item.category}
-                                  onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
-                                  className="formSelect"
-                                  {...(!isLast && { required: true })}
-                                >
-                                  <option value="">Select Category</option>
-                                  {EXPENSE_CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-                                  ))}
-                                </select>
-                              )}
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(idx)}
-                                className="removeItemBtn"
-                                title="Remove item"
-                              >
-                                <i className="ri-delete-bin-line" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+              onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+              className="formSelect"
+              {...(!isLast && { required: true })}
+              disabled={disabled}
+            >
+              <option value="">Select Category</option>
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+              ))}
+            </select>
+          )}
+        </td>
+        <td>
+          <button
+            type="button"
+            onClick={() => removeItem(idx)}
+            className="removeItemBtn"
+            title="Remove item"
+            disabled={disabled}
+          >
+            <i className="ri-delete-bin-line" />
+          </button>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
                   </table>
                 </div>
 
