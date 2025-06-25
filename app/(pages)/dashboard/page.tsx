@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import PieChart from "../../Components/pieChart";
 import ExportConfirmationModal from "../../Components/ExportConfirmationModal";
 import "../../styles/dashboard.css"; // External CSS for styling
-import { GlobalCategory } from "@prisma/client";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
 import { formatDisplayText } from '@/app/utils/formatting';

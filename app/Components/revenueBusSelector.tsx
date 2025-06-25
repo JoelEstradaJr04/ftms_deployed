@@ -44,7 +44,7 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Filter assignments based on selected category (Boundary/Percentage) and search
   const filteredAssignments = useMemo(() => {

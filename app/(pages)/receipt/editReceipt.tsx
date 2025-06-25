@@ -92,13 +92,6 @@ type EditReceiptModalProps = {
   itemUnits: GlobalItemUnit[];
 };
 
-const EXPENSE_CATEGORIES = [
-  'Other'
-];
-
-const ITEM_UNITS = [
-  'Other'
-];
 
 const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   receipt,

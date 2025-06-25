@@ -42,7 +42,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading,] = useState(false);
 
   // Filter and sort assignments (only those not recorded)
   const filteredAssignments = useMemo(() => {
