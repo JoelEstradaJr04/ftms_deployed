@@ -101,7 +101,6 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                   <th>Route</th>
                   <th>Driver</th>
                   <th>Conductor</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
