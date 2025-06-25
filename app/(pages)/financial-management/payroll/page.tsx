@@ -226,28 +226,18 @@ const PayrollPage = () => {
   // Handle release action
   const handleRelease = async (ids: string[]) => {
     if (ids.length === 0) return;
-    
     try {
-      // Update status in API
-      for (const id of ids) {
-        await fetch('/api/payroll', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            payroll_id: id,
-            status: 'Released',
-            date_released: new Date().toISOString()
-          })
-        });
-      }
-
-      // Refresh data
+      // Find the full records in memory
+      const recordsToRelease = filteredData.filter(r => ids.includes(r.payroll_id));
+      // Send the full records to the backend
+      await fetch('/api/payroll', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recordsToRelease),
+      });
       await fetchPayrollData(false);
       showSuccess('Payroll released!', 'Success');
-    } catch (error) {
-      console.error('Error releasing payroll:', error);
+    } catch {
       setError('Failed to release payroll');
     }
   };
