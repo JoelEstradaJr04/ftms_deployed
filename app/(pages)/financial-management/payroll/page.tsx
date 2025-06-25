@@ -420,17 +420,6 @@ const PayrollPage = () => {
                             <i className="ri-check-double-line" />
                           </button>
                         )}
-                        <button
-                          className="viewBtn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRecordToView(item);
-                            setViewModalOpen(true);
-                          }}
-                          title="View Payroll"
-                        >
-                          <i className="ri-eye-line" />
-                        </button>
                       </div>
                     </td>
                   </tr>

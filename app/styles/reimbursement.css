@@ -42,6 +42,7 @@
   display: flex !important;
   align-items: center !important;
   gap: 0.5rem !important;
+  justify-content: center !important;
 }
 .settings button:hover {
   background-color: var(--secondary-hover-color) !important;
@@ -110,6 +111,7 @@
   width: var(--page-button-width) !important;
   border-radius: var(--page-button-border-radius)!important;
   box-shadow: var(--box-shadow) !important;
+  text-align: center !important;
 }
 
 #categoryFilter {
@@ -216,6 +218,7 @@
   font-size: 1em !important;
   cursor: pointer !important;
   transition: background 0.2s !important;
+  text-align: center;
 }
 .action-btn.reimburse-btn:hover {
   background: var(--success-hover-color, #218838) !important;

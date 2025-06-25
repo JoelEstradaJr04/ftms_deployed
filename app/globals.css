@@ -10,6 +10,10 @@
   font-family: "Open Sans", sans-serif !important;
 }
 
+button {
+  text-align: center !important;
+}
+
 .requiredTags {
   color: var(--error-color);
   font-weight: bold;

@@ -401,7 +401,7 @@ const getDisplayCategory = (receipt: Receipt) => {
                 <option key={status.id} value={status.name}>{formatDisplayText(status.name)}</option>
               ))}
             </select>
-            <button onClick={() => setShowModal(true)} id='addExpense'><i className="ri-add-line" /> Add Receipt</button>
+            <button onClick={() => setShowModal(true)} id='addButton'><i className="ri-add-line" /> Add Receipt</button>
           </div>
         </div>
 

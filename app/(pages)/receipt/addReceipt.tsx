@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { formatDate } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
 
+
 const EXPENSE_CATEGORIES = [
   'Fuel',
   'Vehicle_Parts',
@@ -325,8 +326,24 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       return;
     }
 
-    const validItems = items.filter(item => 
-      item.item.item_name && item.unit_id && item.item.unit && item.quantity > 0 && item.unit_price > 0
+    const validItems = items
+    .filter((item, idx) => {
+      // Exclude the last row if it's empty (all main fields blank/zero)
+      const isLast = idx === items.length - 1;
+      const isEmpty =
+        !item.item.item_name &&
+        !item.unit_id &&
+        !item.item.unit &&
+        (!item.quantity || item.quantity === 0) &&
+        (!item.unit_price || item.unit_price === 0);
+      return !isLast || !isEmpty;
+    })
+    .filter(item =>
+      item.item.item_name &&
+      item.unit_id &&
+      item.item.unit &&
+      item.quantity > 0 &&
+      item.unit_price > 0
     );
 
     if (validItems.length === 0) {
@@ -690,7 +707,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                   </div>
                 </div>
 
-                <div className="formField">
+                <div className="formField" id="formField_remarks">
                   <label htmlFor="remarks">Remarks</label>
                   <textarea
                     id="remarks"
@@ -702,6 +719,8 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                     rows={3}
                   />
                 </div>
+
+
 
                 <div className="itemsSection">
                   <h3>Items</h3>
@@ -718,118 +737,126 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.item.item_name}
-                              onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
-                              placeholder="Enter item name"
-                            />
-                          </td>
-                          <td>
-                            {item.item.unit === 'Other' ? (
-                              <div className="customInputWrapper">
-                                <input
-                                  type="text"
-                                  value={item.item.other_unit || ''}
-                                  onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
-                                  placeholder="Enter custom unit"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updatedItems = [...items];
-                                    const item = { ...updatedItems[idx] };
-                                    item.item.unit = '';
-                                    item.unit_id = '';
-                                    updatedItems[idx] = item;
-                                    setItems(updatedItems);
-                                  }}
-                                  className="clearCustomBtn"
-                                  title="Clear custom unit"
+                      {items.map((item, idx) => {
+                        const isLast = idx === items.length - 1;
+                        return (
+                          <tr key={idx}>
+                            <td>
+                              <input
+                                type="text"
+                                value={item.item.item_name}
+                                onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
+                                placeholder="Enter item name"
+                                {...(!isLast && { required: true })}
+                              />
+                            </td>
+                            <td>
+                              {item.item.unit === 'Other' ? (
+                                <div className="customInputWrapper">
+                                  <input
+                                    type="text"
+                                    value={item.item.other_unit || ''}
+                                    onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
+                                    placeholder="Enter custom unit"
+                                    {...(!isLast && { required: true })}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedItems = [...items];
+                                      const item = { ...updatedItems[idx] };
+                                      item.item.unit = '';
+                                      item.unit_id = '';
+                                      updatedItems[idx] = item;
+                                      setItems(updatedItems);
+                                    }}
+                                    className="clearCustomBtn"
+                                    title="Clear custom unit"
+                                  >
+                                    <i className="ri-close-line" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <select
+                                  value={item.unit_id || ''}
+                                  onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
+                                  className="formSelect"
+                                  {...(!isLast && { required: true })}
                                 >
-                                  <i className="ri-close-line" />
-                                </button>
-                              </div>
-                            ) : (
-                              <select
-                                value={item.unit_id || ''}
-                                onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
-                                required
-                                className="formSelect"
-                              >
-                                <option value="">Select Unit</option>
-                                {itemUnits.map(unit => (
-                                  <option key={unit.id} value={unit.id}>{unit.name}</option>
-                                ))}
-                              </select>
-                            )}
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              value={item.quantity || ''}
-                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              min="0"
-                              step="0.01"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              value={item.unit_price || ''}
-                              onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
-                              min="0"
-                              step="0.01"
-                            />
-                          </td>
-                          <td>₱{item.total_price.toLocaleString()}</td>
-                          <td>
-                            {item.item.category === 'Other' ? (
-                              <div className="customInputWrapper">
-                                <input
-                                  type="text"
-                                  value={item.item.other_category || ''}
-                                  onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
-                                  placeholder="Enter custom category"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleItemChange(idx, 'category', '')}
-                                  className="clearCustomBtn"
-                                  title="Clear custom category"
+                                  <option value="">Select Unit</option>
+                                  {itemUnits.map(unit => (
+                                    <option key={unit.id} value={unit.id}>{unit.name}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                value={item.quantity || ''}
+                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                                min="0"
+                                step="0.01"
+                                {...(!isLast && { required: true })}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                value={item.unit_price || ''}
+                                onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
+                                min="0"
+                                step="0.01"
+                                {...(!isLast && { required: true })}
+                              />
+                            </td>
+                            <td>₱{item.total_price.toLocaleString()}</td>
+                            <td>
+                              {item.item.category === 'Other' ? (
+                                <div className="customInputWrapper">
+                                  <input
+                                    type="text"
+                                    value={item.item.other_category || ''}
+                                    onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
+                                    placeholder="Enter custom category"
+                                    {...(!isLast && { required: true })}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleItemChange(idx, 'category', '')}
+                                    className="clearCustomBtn"
+                                    title="Clear custom category"
+                                  >
+                                    <i className="ri-close-line" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <select
+                                  value={item.item.category}
+                                  onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+                                  className="formSelect"
+                                  {...(!isLast && { required: true })}
                                 >
-                                  <i className="ri-close-line" />
-                                </button>
-                              </div>
-                            ) : (
-                              <select
-                                value={item.item.category}
-                                onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
-                                required
-                                className="formSelect"
+                                  <option value="">Select Category</option>
+                                  {EXPENSE_CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => removeItem(idx)}
+                                className="removeItemBtn"
+                                title="Remove item"
                               >
-                                <option value="">Select Category</option>
-                                {EXPENSE_CATEGORIES.map(cat => (
-                                  <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-                                ))}
-                              </select>
-                            )}
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              onClick={() => removeItem(idx)}
-                              className="removeItemBtn"
-                              title="Remove item"
-                            >
-                              <i className="ri-delete-bin-line" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                                <i className="ri-delete-bin-line" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
