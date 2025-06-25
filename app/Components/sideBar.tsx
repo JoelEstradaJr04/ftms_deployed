@@ -16,7 +16,7 @@ const routeToItem: { [key: string]: string } = {
   "/report": "report",
   "/reimbursement": "reimbursement",
   "/JEV": "JEV",
-  "/financial-management/payroll": "payroll", // Add this!
+  "/financial-management/payroll": "payroll",
 };
 
 const expenseSubItems = [

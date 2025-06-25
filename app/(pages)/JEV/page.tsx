@@ -5,8 +5,7 @@ import "../../styles/audit.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from "sweetalert2";
 import Loading from '../../Components/loading';
-import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
-import { formatDisplayText } from '@/app/utils/formatting';
+
 
 // DUMMY TYPE FOR AUDIT LOGS
 type AuditLog = {
@@ -65,13 +64,12 @@ const dummyRecords = [
   const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [tableFilter, setTableFilter] = useState("");
+  const [tableFilter] = useState("");
   const [dateFilter, setDateFilter] = useState(""); // Tracks the selected filter
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
 
   // Fetch logs (replace with your actual fetch logic)
