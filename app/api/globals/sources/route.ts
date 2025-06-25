@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { generateId } from '@/lib/idGenerator';
 
 // GET: List all sources
 export async function GET() {
@@ -11,8 +12,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { name, applicable_modules } = await req.json();
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+  const source_id = await generateId('SRC');
   const source = await prisma.globalSource.create({
-    data: { name, applicable_modules, is_deleted: false }
+    data: { source_id, name, applicable_modules, is_deleted: false }
   });
   return NextResponse.json(source);
 }

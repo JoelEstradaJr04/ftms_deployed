@@ -85,7 +85,7 @@ interface GlobalItemUnit { id: string; name: string; }
 
 type FormDataState = {
   supplier: string;
-  transaction_date: string;
+  transaction_date: string; // Will be in YYYY-MM-DDTHH:mm format
   vat_reg_tin: string;
   terms_id: string;
   date_paid: string;
@@ -119,7 +119,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   
   const [formData, setFormData] = useState<FormDataState>({
     supplier: '',
-    transaction_date: new Date().toISOString().split('T')[0],
+    transaction_date: new Date().toISOString().slice(0, 16), // Include time (YYYY-MM-DDTHH:mm)
     vat_reg_tin: '',
     terms_id: '',
     date_paid: '',
@@ -616,18 +616,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 </div>
 
                 <div className="formRow">
-                  <div className="formField">
-                    <label htmlFor="transaction_date">Transaction Date</label>
-                    <input
-                      type="date"
-                      id="transaction_date"
-                      name="transaction_date"
-                      value={formData.transaction_date}
-                      onChange={handleInputChange}
-                      required
-                      className="formInput"
-                    />
-                  </div>
+                <div className="formField">
+                  <label htmlFor="transaction_date">Transaction Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    id="transaction_date"
+                    name="transaction_date"
+                    value={formData.transaction_date}
+                    onChange={handleInputChange}
+                    required
+                    className="formInput"
+                  />
+                </div>
 
                   <div className="formField">
                     <label htmlFor="date_paid">Date Paid</label>

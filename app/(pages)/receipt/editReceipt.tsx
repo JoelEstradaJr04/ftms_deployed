@@ -56,7 +56,7 @@ type EditReceiptItem = {
     total_price: number;
 };
 
-type UpdatedReceiptData = {
+export type UpdatedReceiptData = {
   receipt_id: string;
   supplier: string;
   transaction_date: string;
@@ -112,7 +112,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   const [supplier, setSupplier] = useState(receipt?.supplier || '');
   const [transactionDate, setTransactionDate] = useState(() => {
     const date = receipt?.transaction_date ? new Date(receipt.transaction_date) : new Date();
-    return date.toISOString().split('T')[0];
+    return date.toISOString().slice(0, 16); // Include time (YYYY-MM-DDTHH:mm)
   });
   const [vatRegTin, setVatRegTin] = useState(receipt?.vat_reg_tin || '');
   const [termsId, setTermsId] = useState(receipt?.terms_id || '');
@@ -146,7 +146,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   useEffect(() => {
     if (receipt) {
       setSupplier(receipt.supplier || '');
-      setTransactionDate(new Date(receipt.transaction_date).toISOString().split('T')[0]);
+      setTransactionDate(new Date(receipt.transaction_date).toISOString().slice(0, 16)); // Include time
       setVatRegTin(receipt.vat_reg_tin || '');
       setTermsId(receipt.terms_id || '');
       if (receipt.date_paid) {
@@ -327,9 +327,9 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
         <div className="formRow">
           <div className="formGroup">
-            <label>Transaction Date</label>
+            <label>Transaction Date & Time</label>
             <input
-              type="date"
+              type="datetime-local"
               name="transaction_date"
               value={transactionDate}
               onChange={handleInputChange}

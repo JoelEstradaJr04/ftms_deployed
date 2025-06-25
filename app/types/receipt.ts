@@ -36,5 +36,6 @@ export type Receipt = {
   remarks?: string;
   ocr_confidence?: number;
   ocr_file_path?: string;
+  is_inventory_processed?: boolean;
   items: ReceiptItem[];
 };

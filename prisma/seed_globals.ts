@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { generateId } from '../lib/idGenerator';
 const prisma = new PrismaClient();
 
 async function main() {
@@ -15,10 +16,11 @@ async function main() {
     { name: 'Bus_Rental', modules: ['revenue'] },
   ];
   for (const { name, modules } of categories) {
+    const category_id = await generateId('CAT');
     await prisma.globalCategory.upsert({
       where: { name },
       update: { applicable_modules: modules },
-      create: { name, applicable_modules: modules, is_deleted: false },
+      create: { category_id, name, applicable_modules: modules, is_deleted: false },
     });
   }
 
@@ -26,13 +28,11 @@ async function main() {
   const statuses = [
     { name: 'Paid', modules: ['receipt'] },
     { name: 'Pending', modules: ['receipt'] },
-    { name: 'Cancelled', modules: ['receipt'] },
     { name: 'Dued', modules: ['receipt'] },
     { name: 'PENDING', modules: ['reimbursement'] },
     { name: 'APPROVED', modules: ['reimbursement'] },
     { name: 'REJECTED', modules: ['reimbursement'] },
     { name: 'PAID', modules: ['reimbursement'] },
-    { name: 'CANCELLED', modules: ['reimbursement'] },
   ];
   // Only one entry per unique name, merge modules
   const statusMap = {};
@@ -41,10 +41,11 @@ async function main() {
     modules.forEach(m => statusMap[name].add(m));
   }
   for (const name in statusMap) {
+    const id = await generateId('RST');
     await prisma.globalReimbursementStatus.upsert({
       where: { name },
       update: { applicable_modules: Array.from(statusMap[name]) },
-      create: { name, applicable_modules: Array.from(statusMap[name]), is_deleted: false },
+      create: { id, name, applicable_modules: Array.from(statusMap[name]), is_deleted: false },
     });
   }
 
@@ -58,13 +59,13 @@ async function main() {
     { name: 'Bus_Rental_Assignment', modules: ['revenue'] },
     { name: 'Receipt', modules: ['expense'] },
     { name: 'Operations', modules: ['expense'] },
-    { name: 'Other', modules: ['expense'] },
   ];
   for (const { name, modules } of sources) {
+    const source_id = await generateId('SRC');
     await prisma.globalSource.upsert({
       where: { name },
       update: { applicable_modules: modules },
-      create: { name, applicable_modules: modules, is_deleted: false },
+      create: { source_id, name, applicable_modules: modules, is_deleted: false },
     });
   }
 
@@ -77,10 +78,11 @@ async function main() {
     { name: 'Cash', modules: ['receipt'] },
   ];
   for (const { name, modules } of terms) {
+    const id = await generateId('TERM');
     await prisma.globalTerms.upsert({
       where: { name },
       update: {},
-      create: { name, applicable_modules: modules, is_deleted: false },
+      create: { id, name, applicable_modules: modules, is_deleted: false },
     });
   }
 
@@ -89,10 +91,11 @@ async function main() {
     'piece', 'box', 'pack', 'liter', 'gallon', 'milliliter', 'kilogram', 'gram', 'meter', 'foot', 'roll', 'set', 'pair'
   ];
   for (const name of itemUnits) {
+    const id = await generateId('UNIT');
     await prisma.globalItemUnit.upsert({
       where: { name },
       update: {},
-      create: { name, is_deleted: false },
+      create: { id, name, is_deleted: false },
     });
   }
 
@@ -102,10 +105,11 @@ async function main() {
     { name: 'REIMBURSEMENT', modules: ['expense'] },
   ];
   for (const { name } of paymentMethods) {
+    const id = await generateId('PMT');
     await prisma.globalPaymentMethod.upsert({
       where: { name },
       update: {},
-      create: { name, is_deleted: false },
+      create: { id, name, is_deleted: false },
     });
   }
 
@@ -113,14 +117,14 @@ async function main() {
   const paymentStatuses = [
     { name: 'Paid' },
     { name: 'Pending' },
-    { name: 'Cancelled' },
     { name: 'Dued' },
   ];
   for (const { name } of paymentStatuses) {
+    const id = await generateId('PAY');
     await prisma.globalPaymentStatus.upsert({
       where: { name },
       update: {},
-      create: { name, is_deleted: false },
+      create: { id, name, is_deleted: false },
     });
   }
 

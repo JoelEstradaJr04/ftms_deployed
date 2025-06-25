@@ -14,12 +14,6 @@ enum ExportFormat {
   XSL
 }
 
-enum TransactionType {
-  IN
-  OUT
-  ADJUSTMENT
-  NONE
-}
 
 model Sequence {
   name  String @id
@@ -124,6 +118,7 @@ model Receipt {
   ocr_confidence     Float?
   ocr_file_path      String?
   is_expense_recorded Boolean  @default(false)
+  is_inventory_processed Boolean @default(false)
   items              ReceiptItem[]
   transactions       ItemTransaction[]
   expense            ExpenseRecord?
@@ -159,7 +154,6 @@ model Item {
   unit          GlobalItemUnit @relation(fields: [unit_id], references: [id])
   category_id   String
   category      GlobalCategory @relation(fields: [category_id], references: [category_id])
-  other_unit    String?
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
@@ -183,7 +177,6 @@ model ItemTransaction {
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
-  transaction_type TransactionType @default(NONE)
   @@index([item_id, transaction_date])
   @@index([transaction_date, is_deleted])
   @@index([is_deleted, transaction_date])

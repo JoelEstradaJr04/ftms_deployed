@@ -165,31 +165,45 @@ export async function POST(req: NextRequest) {
     // }
 
     const result = await prisma.$transaction(async (tx) => {
-      const receipt = await tx.receipt.create({
-        data: {
-          receipt_id,
-          supplier,
-          transaction_date: new Date(transaction_date),
-          vat_reg_tin,
-          terms: { connect: { id: terms_id } },
-          date_paid: date_paid ? new Date(date_paid) : null,
-          payment_status: { connect: { id: payment_status_id } },
-          // record_status: { connect: { id: activeStatus.id } },
-          total_amount,
-          vat_amount,
-          total_amount_due,
-          category: { connect: { category_id } },
-          remarks,
-          source: source_id ? { connect: { source_id } } : undefined,
-          created_by: created_by || 'ftms_user',
+      const transactionDate = (() => {
+        if (!transaction_date) return new Date();
+        
+        const inputDate = new Date(transaction_date);
+        
+        // Check if the time is midnight (indicating only date was provided)
+        if (inputDate.getHours() === 0 && inputDate.getMinutes() === 0 && inputDate.getSeconds() === 0) {
+          // Use current time with the provided date
+          const now = new Date();
+          inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+        }
+        
+        return inputDate;
+      })();
+
+  const receipt = await tx.receipt.create({
+    data: {
+      receipt_id,
+      supplier,
+      transaction_date: transactionDate,
+      vat_reg_tin,
+      terms: { connect: { id: terms_id } },
+      date_paid: date_paid ? new Date(date_paid) : null,
+      payment_status: { connect: { id: payment_status_id } },
+      total_amount,
+      vat_amount,
+      total_amount_due,
+      category: { connect: { category_id } },
+      remarks,
+      source: source_id ? { connect: { source_id } } : undefined,
+      created_by: created_by || 'ftms_user',
+      // is_inventory_processed: false // TODO: Uncomment after regenerating Prisma client
         },
       });
 
       // Items
-      if (items && items.length > 0) {
-        await Promise.all(
-          items.map(async (item: { item_name: string; unit_id: string; category_id: string; quantity: number; unit_price: number; total_price: number; }) => {
-            // Validate item unit and category IDs
+    if (items && items.length > 0) {
+      await Promise.all(
+        items.map(async (item: { item_name: string; unit_id: string; category_id: string; quantity: number; unit_price: number; total_price: number; }) => {
             const [itemUnit, itemCategory] = await Promise.all([
               tx.globalItemUnit.findUnique({ where: { id: item.unit_id } }),
               tx.globalCategory.findUnique({ where: { category_id: item.category_id } })
@@ -232,9 +246,9 @@ export async function POST(req: NextRequest) {
                 transaction_id: await generateId('ITX'),
                 item_id: masterItem.item_id,
                 receipt_id: receipt.receipt_id,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                transaction_date: new Date(transaction_date),
+                quantity: new Prisma.Decimal(item.quantity.toString()),
+                unit_price: new Prisma.Decimal(item.unit_price.toString()),
+                transaction_date: transactionDate, // Use the same date with time
                 created_by: created_by || 'ftms_user'
               }
             });
