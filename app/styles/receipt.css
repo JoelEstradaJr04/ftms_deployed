@@ -703,17 +703,22 @@
   box-shadow: var(--box-shadow, 0 2px 8px rgba(0,0,0,0.04));
 }
 
-.itemsSection th, .itemsSection td {
-  padding: 0.5rem;
-  border: 1px solid #dddddd00;
+.itemsSection th,
+.itemsSection td {
   text-align: center !important;
   vertical-align: middle !important;
-  font-size: 1rem;
+  font-size: 14px;
+  /* Add flex centering for all content */
+  justify-content: center;
+  align-items: center;
+  /* Optional: allow wrapping for multi-line content */
+  flex-wrap: wrap;
 }
 
 .itemsSection td input,
 .itemsSection td select {
   text-align: center !important;
+  font-size: 14px !important;
 }
 
 .itemsSection thead {
@@ -788,10 +793,10 @@
   opacity: 0.5;
 }
 
-.itemsSection th:nth-child(2),
-.itemsSection td:nth-child(2) {
+.itemsSection .itemTable th:nth-child(2),
+.itemsSection .itemTable td:nth-child(2) {
   max-width: 120px;
-  width: 120px;
+  width: 15ch !important; 
 }
 
 .itemsSection td:nth-child(2) select {
