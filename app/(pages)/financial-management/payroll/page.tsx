@@ -1,3 +1,4 @@
+// financial-management\payroll\page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -325,10 +326,10 @@ const PayrollPage = () => {
 
             <button
               className="releaseAllBtn"
-              disabled={selectedIds.length === 0}
-              onClick={() => handleRelease(selectedIds)}
+              disabled={filteredData.filter(r => r.status === "Pending").length === 0}
+              onClick={() => handleReleaseWithConfirm(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id))}
             >
-              <i className="ri-check-double-line" /> Release
+              <i className="ri-check-double-line" /> Release All Pending
             </button>
           </div>
         </div>
@@ -339,22 +340,7 @@ const PayrollPage = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={
-                        filteredData.length > 0 &&
-                        filteredData.filter(r => r.status === "Pending").every(r => selectedIds.includes(r.payroll_id))
-                      }
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedIds(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id));
-                        } else {
-                          setSelectedIds([]);
-                        }
-                      }}
-                    />
-                  </th>
+                  <th>#</th>
                   <th>Employee Name</th>
                   <th>Job Title</th>
                   <th>Department</th>
@@ -367,7 +353,7 @@ const PayrollPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((item) => (
+                {filteredData.map((item, index) => (
                   <tr key={item.payroll_id}
                     style={{ cursor: "pointer" }}
                     onClick={() => {
@@ -375,21 +361,7 @@ const PayrollPage = () => {
                     setViewModalOpen(true);
                     }}
                   >
-                    <td>
-                      {item.status === "Pending" && (
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.payroll_id)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedIds(prev => [...prev, item.payroll_id]);
-                            } else {
-                              setSelectedIds(prev => prev.filter(id => id !== item.payroll_id));
-                            }
-                          }}
-                        />
-                      )}
-                    </td>
+                    <td>{(currentPage - 1) * pageSize + index + 1}</td>
                     <td>{item.employee_name}</td>
                     <td>{item.job_title}</td>
                     <td>{item.department}</td>
