@@ -780,62 +780,71 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                 {/* --- Reimbursement fields for receipt-sourced expenses --- */}
                 {source === 'receipt' && paymentMethod === 'REIMBURSEMENT' && (
                   <div className="reimb-multi-rows">
-                    <div className="reimbRowsHeader">
-                      <span>Employee Name</span>
-                      <span>Job Title</span>
-                      <span>Reimbursement Amount</span>
-                      <span></span>
-                    </div>
+                    <h3>Employee Reimbursement Details</h3>
                     {reimbursementRows.map((row, idx) => (
-                      <div className="reimbRow" key={idx}>
-                        <select
-                          value={row.employee_id}
-                          onChange={handleReimbRowChange(idx, 'employee_id')}
-                          className={`formSelect${row.error && !row.employee_id ? ' input-error' : ''}`}
-                          required
-                        >
-                          <option value="">Select Employee</option>
-                          {getAvailableEmployees(idx).map(emp => (
-                            <option key={emp.employee_id} value={emp.employee_id}>{emp.name}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          value={row.job_title}
-                          readOnly
-                          className="formInput"
-                          placeholder="Job Title"
-                        />
-                        <input
-                          type="number"
-                          value={row.amount}
-                          onChange={handleReimbRowChange(idx, 'amount')}
-                          min="1"
-                          className={`formInput${row.error && (!row.amount || isNaN(Number(row.amount)) || Number(row.amount) <= 0) ? ' input-error' : ''}`}
-                          placeholder="Amount"
-                          required
-                        />
-                        <button
-                          type="button"
-                          className="removeRowBtn"
-                          onClick={() => handleRemoveReimbRow(idx)}
-                          title="Remove"
-                          disabled={reimbursementRows.length === 1}
-                        >
-                          <i className="ri-delete-bin-line" />
-                        </button>
-                        {row.error && <span className="error-message">{row.error}</span>}
+                      <div className="employee-reimb-container" key={idx}>
+                        <div className="employee-section">
+                          <div className="employee-labels">
+                            <div className="employee-label-group">
+                              <label>Employee Name<span className='requiredTags'> *</span></label>
+                              <label>Job Title</label>
+                              <label>Reimbursement Amount<span className='requiredTags'> *</span></label>
+                            </div>
+                          </div>
+                          <div className="employee-inputs">
+                            <select
+                              value={row.employee_id}
+                              onChange={handleReimbRowChange(idx, 'employee_id')}
+                              className={`formSelect${row.error && !row.employee_id ? ' input-error' : ''}`}
+                              required
+                            >
+                              <option value="">Select Employee</option>
+                              {getAvailableEmployees(idx).map(emp => (
+                                <option key={emp.employee_id} value={emp.employee_id}>{emp.name}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={row.job_title}
+                              readOnly
+                              className="formInput"
+                              placeholder="Job Title"
+                            />
+                            <input
+                              type="number"
+                              value={row.amount}
+                              onChange={handleReimbRowChange(idx, 'amount')}
+                              min="1"
+                              className={`formInput${row.error && (!row.amount || isNaN(Number(row.amount)) || Number(row.amount) <= 0) ? ' input-error' : ''}`}
+                              placeholder="Enter amount"
+                              required
+                            />
+                          </div>
+                          <div className="employee-actions">
+                            <button
+                              type="button"
+                              className="removeRowBtn"
+                              onClick={() => handleRemoveReimbRow(idx)}
+                              title="Remove Employee"
+                              disabled={reimbursementRows.length === 1}
+                            >
+                              <i className="ri-delete-bin-line" />
+                            </button>
+                          </div>
+                        </div>
+                        {row.error && <div className="employee-error">{row.error}</div>}
                       </div>
                     ))}
-                    <button
-                      type="button"
-                      className="addRowBtn"
-                      onClick={handleAddReimbRow}
-                      disabled={!canAddRow}
-                      style={{ marginTop: 8 }}
-                    >
-                      <i className="ri-add-line" /> Add Another Employee
-                    </button>
+                    <div className="add-employee-section">
+                      <button
+                        type="button"
+                        className="addRowBtn"
+                        onClick={handleAddReimbRow}
+                        disabled={!canAddRow}
+                      >
+                        <i className="ri-add-line" /> Add Another Employee
+                      </button>
+                    </div>
                     {hasDuplicateEmployees() && <div className="error-message">Duplicate employees not allowed.</div>}
                   </div>
                 )}
