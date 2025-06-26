@@ -118,7 +118,7 @@ const Sidebar: React.FC = () => {
             <i className="ri-group-line" />
             <span>Payroll</span>
           </Link>
-
+          {/* 
           <Link
             href="/report"
             className={`nav-item ${activeItem === "report" ? "active" : ""}`}
@@ -127,7 +127,7 @@ const Sidebar: React.FC = () => {
             <i className="ri-file-chart-line" />
             <span>Financial Reports</span>
           </Link>
-
+          */}
 
 {/* 
           <Link

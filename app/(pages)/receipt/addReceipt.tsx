@@ -489,7 +489,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modalContent">
+          <div className="addReceipt_modalContent">
             <div className="source-selection">
               <div 
                 className={`source-option ${sourceOption === 'Manual_Entry' ? 'active' : ''}`}

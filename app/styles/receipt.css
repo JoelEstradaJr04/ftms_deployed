@@ -87,7 +87,7 @@
 }
 
 /* ---------- Content ---------- */
-.modalContent {
+.addReceipt_modalContent {
   width: var(--modal-content-width) !important;
   max-width: 100% !important;
   height: var(--modal-content-height) !important;
