@@ -42,7 +42,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading,] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,7 +169,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  paginatedAssignments.map((assignment, index) => (
+                  paginatedAssignments.map((assignment) => (
                     <tr
                       key={assignment.assignment_id}
                       role="button"

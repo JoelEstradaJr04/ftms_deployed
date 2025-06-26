@@ -55,7 +55,7 @@ class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <h2>Something went wrong</h2>
-          <p>We're sorry, but something unexpected happened.</p>
+          <p>We&apos;re sorry, but something unexpected happened.</p>
           <details style={{ marginTop: '10px', textAlign: 'left' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
               Error Details

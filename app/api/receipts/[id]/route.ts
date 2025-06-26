@@ -221,6 +221,7 @@ export async function PATCH(req: NextRequest) {
 // ...existing code...
 
 // DELETE /api/receipts/[id]
+// DELETE /api/receipts/[id]
 export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.pathname.split('/').pop()!;
@@ -229,7 +230,7 @@ export async function DELETE(req: NextRequest) {
 
     const clientIp = await getClientIp(req);
 
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Check if receipt exists
       const existingReceipt = await tx.receipt.findUnique({
         where: { receipt_id: id, is_deleted: false },
@@ -244,7 +245,7 @@ export async function DELETE(req: NextRequest) {
       }
 
       // Soft delete the receipt
-      const deletedReceipt = await tx.receipt.update({
+      await tx.receipt.update({
         where: { receipt_id: id },
         data: {
           is_deleted: true,
@@ -307,8 +308,6 @@ export async function DELETE(req: NextRequest) {
           )),
         },
       });
-
-      return deletedReceipt;
     });
 
     return NextResponse.json({ 

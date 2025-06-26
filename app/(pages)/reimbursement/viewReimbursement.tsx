@@ -2,6 +2,49 @@
 import React, { useState } from "react";
 import ViewExpenseModal from '../expense/viewExpense';
 import '../../styles/viewReimbursement.css';
+// Import the Receipt type from the shared types
+import type { Receipt } from '../../types/receipt';
+
+type Assignment = {
+  assignment_id: string;
+  bus_route: string;
+  date_assigned: string;
+  bus_plate_number: string;
+  bus_type: string;
+  driver_id: string;
+  conductor_id: string;
+  trip_fuel_expense: number;
+  // Add other assignment properties as needed
+};
+
+// Create a compatible Reimbursement type that matches what ViewExpenseModal expects
+type ReimbursementForExpense = {
+  reimbursement_id: string;
+  expense_id: string;
+  employee_id: string;
+  employee_name: string;
+  job_title?: string;
+  amount: number;
+  status: {
+    id: string;
+    name: string;
+  };
+  requested_date: string;
+  approved_by?: string;
+  approved_date?: string;
+  rejection_reason?: string;
+  paid_by?: string;
+  paid_date?: string;
+  payment_reference?: string;
+  payment_method?: string;
+  created_by: string;
+  created_at: string;
+  updated_by?: string;
+  updated_at?: string;
+  is_deleted: boolean;
+  cancelled_by?: string;
+  cancelled_date?: string;
+};
 
 type ExpenseRecord = {
   expense_id: string;
@@ -12,14 +55,14 @@ type ExpenseRecord = {
   other_category?: string;
   total_amount: number;
   expense_date: string;
-  assignment?: any;
-  receipt?: any;
+  assignment?: Assignment;
+  receipt?: Receipt; // Now uses the imported Receipt type
   other_source?: string;
   payment_method: {
     id: string;
     name: string;
   };
-  reimbursements?: any[];
+  reimbursements?: ReimbursementForExpense[]; // Use the compatible type
 };
 
 type Reimbursement = {
@@ -28,19 +71,24 @@ type Reimbursement = {
   employee_id: string;
   employee_name: string;
   job_title?: string;
-  submitted_date: string;
+  // Use the actual schema field name
+  requested_date: string;
+  // Keep submitted_date for backward compatibility if needed
+  submitted_date?: string;
   approved_by: string | null;
   approved_date: string | null;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
-  amount: number | null;
+  // Match the mapped status from API
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'CANCELLED';
+  // Amount should match schema (not nullable in DB)
+  amount: number;
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
   notes: string;
-  remarks?: string | null; // Add remarks field
+  remarks?: string | null;
   cancelled_by?: string | null;
   cancelled_date?: string | null;
-  expense?: ExpenseRecord; // Add expense details
+  expense?: ExpenseRecord;
 };
 
 interface ViewReimbursementProps {
@@ -101,15 +149,15 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
               </div>
               <div className="detailRow">
                 <span className="label">Submitted Date:</span>
-                <span className="value">{formatDisplay(record.submitted_date)}</span>
+                <span className="value">{formatDisplay(record.submitted_date || record.requested_date)}</span>
               </div>
               <div className="detailRow">
                 <span className="label">Status:</span>
-                <span className={`value viewStatus ${typeof record.status === 'string' ? record.status.toLowerCase() : ''} ${record.status === 'Cancelled' ? 'status-cancelled' : ''}`}>
+                <span className={`value viewStatus ${typeof record.status === 'string' ? record.status.toLowerCase() : ''} ${record.status === 'CANCELLED' ? 'status-cancelled' : ''}`}>
                   {record.status || '-'}
                 </span>
               </div>
-              {record.status === "Cancelled" && (
+              {record.status === "CANCELLED" && (
                 <>
                   <div className="detailRow">
                     <span className="label">Cancelled By:</span>
@@ -141,7 +189,7 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
                 <span className="label">Paid Date:</span>
                 <span className="value">{formatDisplay(record.paid_date)}</span>
               </div>
-              {record.status === "Rejected" && (
+              {record.status === "REJECTED" && (
                 <div className="detailRow">
                   <span className="label">Rejection Reason:</span>
                   <span className="value fullDetails">{formatDisplay(record.rejection_reason)}</span>
