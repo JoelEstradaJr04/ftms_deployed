@@ -16,6 +16,9 @@ export type Assignment = {
   conductor_id: string;
   bus_plate_number: string;
   bus_type: string;
+  // Add missing fields that are used in formatAssignment
+  driver_name?: string;
+  conductor_name?: string;
 };
 
 // Base URL for API calls

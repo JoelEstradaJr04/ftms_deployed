@@ -3,6 +3,8 @@
 import React from 'react';
 import styles from '../styles/ExportConfirmationModal.module.css';
 
+type DashboardCategoryData = Record<string, { name: string; amount: number }>;
+
 interface ExportConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,11 +15,11 @@ interface ExportConfirmationModalProps {
   dashboardData: {
     revenue: {
       total: number;
-      byCategory: Record<string, number>;
+      byCategory: DashboardCategoryData;
     };
     expense: {
       total: number;
-      byCategory: Record<string, number>;
+      byCategory: DashboardCategoryData;
     };
     profit: number;
   };
@@ -75,20 +77,20 @@ const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
           <div className={styles.categoryBreakdown}>
             <div className={styles.categorySection}>
               <h4>Revenue Categories:</h4>
-              {Object.entries(dashboardData.revenue.byCategory).map(([category, amount]) => (
-                <div key={category} className={styles.categoryItem}>
-                  <span>{category.replace('_', ' ')}:</span>
-                  <span>₱{amount.toLocaleString()}</span>
+              {Object.entries(dashboardData.revenue.byCategory).map(([categoryKey, categoryData]) => (
+                <div key={categoryKey} className={styles.categoryItem}>
+                  <span>{categoryData.name.replace('_', ' ')}:</span>
+                  <span>₱{categoryData.amount.toLocaleString()}</span>
                 </div>
               ))}
             </div>
 
             <div className={styles.categorySection}>
               <h4>Expense Categories:</h4>
-              {Object.entries(dashboardData.expense.byCategory).map(([category, amount]) => (
-                <div key={category} className={styles.categoryItem}>
-                  <span>{category.replace('_', ' ')}:</span>
-                  <span>₱{amount.toLocaleString()}</span>
+              {Object.entries(dashboardData.expense.byCategory).map(([categoryKey, categoryData]) => (
+                <div key={categoryKey} className={styles.categoryItem}>
+                  <span>{categoryData.name.replace('_', ' ')}:</span>
+                  <span>₱{categoryData.amount.toLocaleString()}</span>
                 </div>
               ))}
             </div>

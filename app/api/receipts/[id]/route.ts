@@ -136,14 +136,12 @@ export async function PATCH(req: NextRequest) {
               item_name: item.item_name,
               unit_id: item.unit_id,
               category_id: item.category_id,
-              other_unit: item.other_unit,
               created_at: new Date(),
               is_deleted: false
             },
             update: {
               unit_id: item.unit_id,
               category_id: item.category_id,
-              other_unit: item.other_unit,
               updated_at: new Date()
             }
           });
@@ -221,25 +219,25 @@ export async function PATCH(req: NextRequest) {
 }
 
 // DELETE /api/receipts/[id]
-export async function DELETE(req: NextRequest) {
-  try {
-    const id = req.nextUrl.pathname.split('/').pop();
-    const { reason } = await req.json();
+// export async function DELETE(req: NextRequest) {
+//   try {
+//     const id = req.nextUrl.pathname.split('/').pop();
+//     const { reason } = await req.json();
 
-    // Soft delete: set is_deleted = true
-    const deleted = await prisma.receipt.update({
-      where: { receipt_id: id },
-      data: {
-        is_deleted: true,
-        deleted_at: new Date(),
-        deleted_by: 'ftms_user', // or get from session/user
-        deletion_reason: reason || null,
-      },
-    });
+//     // Soft delete: set is_deleted = true
+//     const deleted = await prisma.receipt.update({
+//       where: { receipt_id: id },
+//       data: {
+//         is_deleted: true,
+//         deleted_at: new Date(),
+//         deleted_by: 'ftms_user', // or get from session/user
+//         deletion_reason: reason || null,
+//       },
+//     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting receipt:', error);
-    return NextResponse.json({ error: 'Failed to delete receipt' }, { status: 500 });
-  }
-}
+//     return NextResponse.json({ success: true });
+//   } catch (error) {
+//     console.error('Error deleting receipt:', error);
+//     return NextResponse.json({ error: 'Failed to delete receipt' }, { status: 500 });
+//   }
+// }

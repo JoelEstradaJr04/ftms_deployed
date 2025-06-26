@@ -34,8 +34,9 @@ async function main() {
     { name: 'REJECTED', modules: ['reimbursement'] },
     { name: 'PAID', modules: ['reimbursement'] },
   ];
-  // Only one entry per unique name, merge modules
-  const statusMap = {};
+  
+  // Fix: Properly type the statusMap to avoid TypeScript error
+  const statusMap: Record<string, Set<string>> = {};
   for (const { name, modules } of statuses) {
     if (!statusMap[name]) statusMap[name] = new Set();
     modules.forEach(m => statusMap[name].add(m));
@@ -81,7 +82,7 @@ async function main() {
     const id = await generateId('TERM');
     await prisma.globalTerms.upsert({
       where: { name },
-      update: {},
+      update: { applicable_modules: modules },
       create: { id, name, applicable_modules: modules, is_deleted: false },
     });
   }
@@ -94,8 +95,8 @@ async function main() {
     const id = await generateId('UNIT');
     await prisma.globalItemUnit.upsert({
       where: { name },
-      update: {},
-      create: { id, name, is_deleted: false },
+      update: { applicable_modules: [] }, // Add empty array for consistency
+      create: { id, name, applicable_modules: [], is_deleted: false },
     });
   }
 
@@ -104,27 +105,27 @@ async function main() {
     { name: 'CASH', modules: ['expense'] },
     { name: 'REIMBURSEMENT', modules: ['expense'] },
   ];
-  for (const { name } of paymentMethods) {
+  for (const { name, modules } of paymentMethods) {
     const id = await generateId('PMT');
     await prisma.globalPaymentMethod.upsert({
       where: { name },
-      update: {},
-      create: { id, name, is_deleted: false },
+      update: { applicable_modules: modules },
+      create: { id, name, applicable_modules: modules, is_deleted: false },
     });
   }
 
   // --- GlobalPaymentStatus ---
   const paymentStatuses = [
-    { name: 'Paid' },
-    { name: 'Pending' },
-    { name: 'Dued' },
+    { name: 'Paid', modules: ['receipt'] },
+    { name: 'Pending', modules: ['receipt'] },
+    { name: 'Dued', modules: ['receipt'] },
   ];
-  for (const { name } of paymentStatuses) {
+  for (const { name, modules } of paymentStatuses) {
     const id = await generateId('PAY');
     await prisma.globalPaymentStatus.upsert({
       where: { name },
-      update: {},
-      create: { id, name, is_deleted: false },
+      update: { applicable_modules: modules },
+      create: { id, name, applicable_modules: modules, is_deleted: false },
     });
   }
 
@@ -134,4 +135,4 @@ async function main() {
 main().catch(e => {
   console.error(e);
   process.exit(1);
-}).finally(() => prisma.$disconnect()); 
+}).finally(() => prisma.$disconnect());

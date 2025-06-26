@@ -10,37 +10,67 @@ import {
   ChartOptions
 } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { RevenueCategory, ExpenseCategory } from '@prisma/client';
-
 
 ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
+// Fix: Remove non-existent enum imports and use string-based categories
+// that align with your GlobalCategory model
 interface PieChartProps {
-  revenueData: Record<RevenueCategory, number>;
-  expenseData: Record<ExpenseCategory, number>;
+  revenueData: Record<string, number>; // Categories are string names from GlobalCategory
+  expenseData: Record<string, number>; // Categories are string names from GlobalCategory
 }
 
 const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
-  const revenueColors = {
-    Boundary: "#4373A1",
-    Percentage: "#708D81",
-    Bus_Rental: "#F4D58D",
-    Other: "#001427"
+  // Define color mappings for common categories
+  // These should match the actual category names in your GlobalCategory table
+  const revenueColors: Record<string, string> = {
+    'Boundary': "#4373A1",
+    'Percentage': "#708D81", 
+    'Bus Rental': "#F4D58D",
+    'Bus_Rental': "#F4D58D", // Handle underscore version
+    'Other': "#001427",
+    // Add more colors as needed for your actual categories
+    'Fare Collection': "#5B9BD5",
+    'Special Trips': "#A5A5A5"
   };
 
-  const expenseColors = {
-    Fuel: "#8D0801",
-    Vehicle_Parts: "#bf0603",
-    Tools: "#8b0000",
-    Equipment: "#590202",
-    Supplies: "#720000",
-    Other: "#400000"
+  const expenseColors: Record<string, string> = {
+    'Fuel': "#8D0801",
+    'Vehicle Parts': "#bf0603",
+    'Vehicle_Parts': "#bf0603", // Handle underscore version
+    'Tools': "#8b0000",
+    'Equipment': "#590202",
+    'Supplies': "#720000",
+    'Other': "#400000",
+    // Add more colors as needed for your actual categories
+    'Maintenance': "#DC143C",
+    'Repairs': "#B22222"
   };
+
+  // Helper function to get color for a category, with fallbacks
+  const getRevenueColor = (category: string): string => {
+    return revenueColors[category] || revenueColors[category.replace(/\s+/g, '_')] || "#6C757D";
+  };
+
+  const getExpenseColor = (category: string): string => {
+    return expenseColors[category] || expenseColors[category.replace(/\s+/g, '_')] || "#495057";
+  };
+
+  // Helper function to format category names for display
+  const formatCategoryName = (category: string): string => {
+    return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Create the backgroundColor array
+  const backgroundColors = [
+    ...Object.keys(revenueData).map(cat => getRevenueColor(cat)),
+    ...Object.keys(expenseData).map(cat => getExpenseColor(cat))
+  ];
 
   const pieData = {
     labels: [
-      ...Object.keys(revenueData).map(cat => `Revenue - ${cat.replace('_', ' ')}`),
-      ...Object.keys(expenseData).map(cat => `Expense - ${cat.replace('_', ' ')}`)
+      ...Object.keys(revenueData).map(cat => `Revenue - ${formatCategoryName(cat)}`),
+      ...Object.keys(expenseData).map(cat => `Expense - ${formatCategoryName(cat)}`)
     ],
     datasets: [
       {
@@ -48,11 +78,9 @@ const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
           ...Object.values(revenueData),
           ...Object.values(expenseData)
         ],
-        backgroundColor: [
-          ...Object.keys(revenueData).map(cat => revenueColors[cat as keyof typeof revenueColors]),
-          ...Object.keys(expenseData).map(cat => expenseColors[cat as keyof typeof expenseColors])
-        ],
+        backgroundColor: backgroundColors,
         borderWidth: 1,
+        borderColor: '#ffffff'
       },
     ],
   };
@@ -83,41 +111,88 @@ const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
           },
           color: '#000000',
           boxWidth: 16,
-          padding: 2
+          padding: 8,
+          // Fix: Use proper type checking and array access for backgroundColor
+          generateLabels: (chart) => {
+            const data = chart.data;
+            if (data.labels?.length && data.datasets.length) {
+              return data.labels.map((label, i) => {
+                const value = data.datasets[0].data[i] as number;
+                // Fix: Safely access backgroundColor with proper type checking
+                const backgroundColor = Array.isArray(backgroundColors) && i < backgroundColors.length 
+                  ? backgroundColors[i] 
+                  : '#6C757D';
+                
+                return {
+                  text: `${label}: ₱${value.toLocaleString()}`,
+                  fillStyle: backgroundColor,
+                  strokeStyle: '#ffffff',
+                  lineWidth: 1,
+                  hidden: false,
+                  index: i
+                };
+              });
+            }
+            return [];
+          }
         }
       },
       datalabels: {
         color: "#fff",
-        textShadowColor: 'rgba(0, 0, 0, 0.6)',
+        textShadowColor: 'rgba(0, 0, 0, 0.8)',
         textAlign: 'center',
-        textShadowBlur: 8,
+        textShadowBlur: 2,
         formatter: (value: number) => {
           const total = Object.values(revenueData).reduce((a, b) => a + b, 0) +
                        Object.values(expenseData).reduce((a, b) => a + b, 0);
-          const percentage = ((value / total) * 100).toFixed(1);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+          
+          // Only show label if percentage is significant (>2%)
+          if (parseFloat(percentage) < 2) {
+            return '';
+          }
+          
           return `₱${value.toLocaleString()}\n(${percentage}%)`;
         },
         font: {
           weight: "bold",
-          size: 12,
+          size: 11,
         },
         anchor: "center",
         align: "center",
-        offset: 10,
+        offset: 0,
+        // Hide labels for very small slices
+        display: function(context) {
+          const value = context.dataset.data[context.dataIndex] as number;
+          const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
+          return total > 0 && (value / total) > 0.02; // Only show if >2%
+        }
       },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.parsed;
+            const total = Object.values(revenueData).reduce((a, b) => a + b, 0) +
+                         Object.values(expenseData).reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(2) : '0.00';
+            return `${label}: ₱${value.toLocaleString()} (${percentage}%)`;
+          }
+        }
+      }
     },
     layout: {
       padding: {
         left: 10,
         right: 50,
-        bottom:20,
+        bottom: 20,
         top: 20,
       }
     }
-  }
+  };
 
   return (
-      <Pie data={pieData} options={options} plugins={[ChartDataLabels]}/>
+    <Pie data={pieData} options={options} plugins={[ChartDataLabels]} />
   );
 };
 

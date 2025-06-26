@@ -76,7 +76,12 @@ const ReportPage = () => {
 
   const formatAssignment = (assignment: Assignment): string => {
     const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+    // Fix: Use bus_plate_number instead of bus_bodynumber
+    // Handle missing driver_name and conductor_name gracefully
+    const driverName = assignment.driver_name || assignment.driver_id || 'Unknown';
+    const conductorName = assignment.conductor_name || assignment.conductor_id || 'Unknown';
+    
+    return `${busType} | ${assignment.bus_plate_number} - ${assignment.bus_route} | ${driverName.split(' ').pop()} & ${conductorName.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
   };
 
   const formatReceipt = (receipt: Receipt): string => {
@@ -146,18 +151,18 @@ const ReportPage = () => {
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const generateFileName = (type: 'expense' | 'revenue') => {
-    const now = new Date();
-    const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
-    const dateStamp = now.toISOString().split('T')[0];
+  // const generateFileName = (type: 'expense' | 'revenue') => {
+  //   const now = new Date();
+  //   const timeStamp = now.toISOString().replace(/[:.]/g, '-').split('T')[1].slice(0, 8);
+  //   const dateStamp = now.toISOString().split('T')[0];
     
-    let fileName = `${type}_report`;
-    if (dateFilter === 'Custom' && dateFrom && dateTo) {
-      fileName += `_${dateFrom}_to_${dateTo}`;
-    }
+  //   let fileName = `${type}_report`;
+  //   if (dateFilter === 'Custom' && dateFrom && dateTo) {
+  //     fileName += `_${dateFrom}_to_${dateTo}`;
+  //   }
     
-    return `${fileName}_${dateStamp}_${timeStamp}.csv`;
-  };
+  //   return `${fileName}_${dateStamp}_${timeStamp}.csv`;
+  // };
 
   // const handleExport = async () => {
   //   const reportType = activeTab === 'expense' ? 'expense' : 'revenue';
@@ -289,34 +294,34 @@ const ReportPage = () => {
     return [headers, ...rows];
   };
 
-  const exportToCSV = (data: (string | number)[][], type: 'expense' | 'revenue') => {
-    const csvContent = data.map(row => 
-      row.map(cell => {
-        // Handle cells that might contain commas or quotes
-        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
-          return `"${cell.replace(/"/g, '""')}"`;
-        }
-        return cell;
-      }).join(',')
-    ).join('\n');
+  // const exportToCSV = (data: (string | number)[][], type: 'expense' | 'revenue') => {
+  //   const csvContent = data.map(row => 
+  //     row.map(cell => {
+  //       // Handle cells that might contain commas or quotes
+  //       if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+  //         return `"${cell.replace(/"/g, '""')}"`;
+  //       }
+  //       return cell;
+  //     }).join(',')
+  //   ).join('\n');
 
-    // Create metadata section
-    const metadata = [
-      `# ${type.charAt(0).toUpperCase() + type.slice(1)} Report`,
-      `# Generated: ${formatDate(new Date())}`,
-      `# Date Range: ${dateFrom ? formatDate(dateFrom) : 'All'} to ${dateTo ? formatDate(dateTo) : 'Present'}`,
-      `# Total Records: ${data.length - 1}`,
-      ''
-    ].join('\n');
+  //   // Create metadata section
+  //   const metadata = [
+  //     `# ${type.charAt(0).toUpperCase() + type.slice(1)} Report`,
+  //     `# Generated: ${formatDate(new Date())}`,
+  //     `# Date Range: ${dateFrom ? formatDate(dateFrom) : 'All'} to ${dateTo ? formatDate(dateTo) : 'Present'}`,
+  //     `# Total Records: ${data.length - 1}`,
+  //     ''
+  //   ].join('\n');
 
-    const blob = new Blob([metadata + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = generateFileName(type);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  //   const blob = new Blob([metadata + csvContent], { type: 'text/csv;charset=utf-8;' });
+  //   const link = document.createElement('a');
+  //   link.href = URL.createObjectURL(blob);
+  //   link.download = generateFileName(type);
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  // };
 
   const handleExportData = async () => {
     const result = await Swal.fire({

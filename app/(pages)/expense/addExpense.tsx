@@ -197,7 +197,16 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     assignment_id: { required: source === 'operations', label: "Assignment" },
     receipt_id: { required: source === 'receipt', label: "Receipt" },
     other_source: { required: source === 'other', label: "Source", minLength: 2, maxLength: 50 },
-    total_amount: { required: true, min: 0.01, label: "Amount", custom: (v: number) => isValidAmount(Number(v)) ? null : "Amount must be greater than 0." },
+    total_amount: { 
+      required: true, 
+      min: 0.01, 
+      label: "Amount", 
+      custom: (v: unknown) => {
+        // Type guard to ensure v is a number
+        const numValue = typeof v === 'number' ? v : Number(v);
+        return isValidAmount(numValue) ? null : "Amount must be greater than 0.";
+      }
+    },
     expense_date: { required: true, label: "Expense Date" },
     other_category: { required: formData.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
   };

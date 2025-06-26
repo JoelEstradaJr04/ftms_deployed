@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const url = req.nextUrl || req.url;
     const searchParams = (typeof url === 'string' ? new URL(url, 'http://localhost') : url).searchParams;
     const status = searchParams.get('status');
-    const where: any = { is_deleted: false };
+    const where: Record<string, unknown> = { is_deleted: false };
     if (status) where.status = status;
     const reimbursements = await prisma.reimbursement.findMany({
       where,
@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest) {
     const currentStatus = reimbursement.status_id
       ? (await prisma.globalReimbursementStatus.findUnique({ where: { id: reimbursement.status_id } }))?.name
       : null;
-    const updateData: Record<string, any> = { updated_at: new Date(), updated_by: performed_by };
+    const updateData: Record<string, unknown> = { updated_at: new Date(), updated_by: performed_by };
     let auditAction = '';
     let auditDetails = '';
 

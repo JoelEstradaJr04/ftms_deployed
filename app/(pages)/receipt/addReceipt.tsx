@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import OCRUpload from '../../Components/OCRUpload';
 import OCRCamera from '../../Components/OCRCamera';
 import Swal from 'sweetalert2';
@@ -177,7 +177,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
-  const computeSummaryCategory = (items: ReceiptItem[]): string => {
+  const computeSummaryCategory = useCallback((items: ReceiptItem[]): string => {
     if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
     
     const categoryTotals: Record<string, number> = {};
@@ -202,7 +202,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
     
     return categories.find(c => c.name === 'Multiple_Categories')?.category_id || '';
-  };
+  }, [categories]); // Add categories as dependency since it's used inside the function
 
   const isCategoryEditable = (items: ReceiptItem[]) => {
     if (categoryOverride) return true;
@@ -228,7 +228,8 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         other_category: categories.find(c => c.category_id === summaryCategoryId)?.name === 'Other' ? otherCategory : undefined
       }));
     }
-  }, [items, categoryOverride, otherCategory, categories]);
+  }, [items, categoryOverride, otherCategory, categories, computeSummaryCategory]); // Add computeSummaryCategory to dependencies
+
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
     const updatedItems = [...items];

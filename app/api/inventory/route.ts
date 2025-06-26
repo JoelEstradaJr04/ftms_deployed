@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
+  void request; // Unused parameter, but kept for consistency with the original code
   try {
     const receipts = await prisma.receipt.findMany({
       where: {

@@ -12,31 +12,11 @@ import { showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
 import { validateField, ValidationRule } from "../../utility/validation";
 import { getAllEmployees } from '@/lib/supabase/employees';
+// Import shared types
+import { Receipt } from '@/app/types/receipt';
 
 
 /* ───── types ──────────────────────────────────────────────── */
-type ReceiptItem = {
-  receipt_item_id: string;
-  item_name: string;
-  unit: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-};
-
-type Receipt = {
-  receipt_id: string;
-  supplier: string;
-  transaction_date: string;
-  vat_reg_tin?: string;
-  terms?: string;
-  status: string;
-  total_amount: number;
-  vat_amount?: number;
-  total_amount_due?: number;
-  items: ReceiptItem[];
-};
-
 export type ExpenseData = {
   expense_id: string;
   date: string;
@@ -44,7 +24,11 @@ export type ExpenseData = {
   category: string;
   total_amount: number;
   receipt?: Receipt;
-  payment_method?: 'CASH' | 'REIMBURSEMENT';
+  // Updated to match schema structure
+  payment_method?: {
+    id: string;
+    name: string;
+  };
 };
 
 type Reimbursement = {
@@ -100,7 +84,11 @@ type EditExpenseModalProps = {
     assignment?: Assignment;
     receipt?: Receipt;
     other_source?: string;
-    payment_method?: 'CASH' | 'REIMBURSEMENT';
+    // Updated to match schema structure
+    payment_method?: {
+      id: string;
+      name: string;
+    };
     reimbursements?: Reimbursement[];
   };
   onClose: () => void;
@@ -111,7 +99,11 @@ type EditExpenseModalProps = {
     reimbursements?: { reimbursement_id: string; amount: number }[];
     other_source?: string;
     other_category?: string;
-    payment_method?: 'CASH' | 'REIMBURSEMENT';
+    // Updated to match schema structure
+    payment_method?: {
+      id: string;
+      name: string;
+    };
   }) => void;
 };
 
@@ -130,7 +122,9 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [originalTripExpense, setOriginalTripExpense] = useState<number | null>(null);
   const [showDeviationWarning, setShowDeviationWarning] = useState(false);
   const [deviationPercentage, setDeviationPercentage] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'REIMBURSEMENT'>(record.payment_method || 'CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'REIMBURSEMENT'>(
+    record.payment_method?.name as 'CASH' | 'REIMBURSEMENT' || 'CASH'
+  );
   const [reimbursementEdits, setReimbursementEdits] = useState<{ [id: string]: string }>({});
   const [reimbEditMode, setReimbEditMode] = useState(false);
   const [employeeList, setEmployeeList] = useState<{ employee_id: string; name: string; job_title?: string }[]>([]);
@@ -268,18 +262,24 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       'Save Changes?',
     );
 
-
     if (result.isConfirmed) {
       let updatedReimbursements = record.reimbursements?.map(r => ({
         reimbursement_id: r.reimbursement_id,
         amount: reimbursementEdits[r.reimbursement_id] ? Number(reimbursementEdits[r.reimbursement_id]) : r.amount
       }));
+      
       if (isReceiptSource && paymentMethod === 'REIMBURSEMENT') {
         updatedReimbursements = [{
           reimbursement_id: record.reimbursements?.[0]?.reimbursement_id || '',
           amount: Number(reimbursableAmount),
         }];
       }
+      // Create payment method object to match schema
+      const paymentMethodObject = {
+        id: paymentMethod === 'REIMBURSEMENT' ? 'REIMBURSEMENT' : 'CASH',
+        name: paymentMethod
+      };
+      
       onSave({
         expense_id: record.expense_id,
         expense_date: expenseDate,
@@ -287,7 +287,8 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
         reimbursements: updatedReimbursements,
         other_source: record.other_source,
         other_category: record.other_category,
-        payment_method: paymentMethod,
+        // Pass the object structure
+        payment_method: paymentMethodObject,
         ...(isReceiptSource && paymentMethod === 'REIMBURSEMENT' ? {
           reimbursable_amount: Number(reimbursableAmount),
           employee_id: selectedEmployeeId,
@@ -515,15 +516,17 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     </span>
                   </div>
                   <div className="detailRow">
-                    <span className="label">Payment Method:</span>
-                    <span className="value">{record.payment_method === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}
-                      <span className="locked-label">Auto-filled from Operations (locked)</span>
-                    </span>
-                  </div>
+                        <span className="label">Payment Method:</span>
+                        <span className="value">
+                          {record.payment_method?.name === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}
+                          <span className="locked-label">Auto-filled from Operations (locked)</span>
+                        </span>
+                      </div>
                   {isOperationsSource && (
                     <div className="detailRow">
                       <span className="label">Reimbursement:</span>
-                      {record.payment_method !== 'REIMBURSEMENT' && !reimbEditMode ? (
+                      {/* Fix: Compare with payment_method.name instead of payment_method */}
+                      {record.payment_method?.name !== 'REIMBURSEMENT' && !reimbEditMode ? (
                         <button type="button" onClick={() => setReimbEditMode(true)} className="addReimbBtn">Add Reimbursement</button>
                       ) : (
                         <>

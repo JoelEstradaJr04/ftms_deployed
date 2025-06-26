@@ -39,6 +39,8 @@ type ReceiptProp = {
     vat_amount?: number | null;
     total_amount_due: number;
     category_id: string;
+    source_id: string;  // Add this field
+    created_by: string; // Add this field
     remarks?: string | null;
     items: ReceiptItemProp[];
 };
@@ -65,6 +67,7 @@ export type UpdatedReceiptData = {
   date_paid?: string | null;
   payment_status_id: string;
   category_id: string;
+  source_id: string;  // Add this - required by AddReceiptSubmitData
   remarks?: string | null;
   total_amount: number;
   vat_amount: number;
@@ -78,6 +81,7 @@ export type UpdatedReceiptData = {
     total_price: number;
     category_id: string;
   }[];
+  created_by: string;  // Add this - required by AddReceiptSubmitData
   updated_by: string;
 };
 
@@ -272,6 +276,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
           date_paid: datePaid,
           payment_status_id: paymentStatusId,
           category_id: categoryId,
+          source_id: receipt.source_id,  // Use existing source_id from receipt
           remarks,
           total_amount: totalAmount,
           vat_amount: vatAmount,
@@ -285,6 +290,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             total_price: item.total_price,
             category_id: item.category_id,
           })),
+          created_by: receipt.created_by,  // Use existing created_by from receipt
           updated_by: 'ftms_user'
         };
         

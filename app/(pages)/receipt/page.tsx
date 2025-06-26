@@ -41,9 +41,9 @@ type Receipt = {
   total_amount_due: number;
   created_at: string;
   updated_at?: string;
-  created_by: string;
+  created_by: string;        // Ensure this is required
   updated_by?: string;
-  source_id: string;
+  source_id: string;         // Ensure this is required
   source_name: string;
   category_id: string;
   category_name: string;
@@ -261,12 +261,42 @@ const ReceiptPage = () => {
     }
   };
 
-  const handleUpdateReceiptAsync = async (receiptId: string, formData: AddReceiptSubmitData) => {
+  const handleUpdateReceiptAsync = async (receiptId: string, updatedData: UpdatedReceiptData) => {
     try {
+      // Convert UpdatedReceiptData to AddReceiptSubmitData format for API compatibility
+      const apiData: AddReceiptSubmitData = {
+        supplier: updatedData.supplier,
+        transaction_date: updatedData.transaction_date,
+        vat_reg_tin: updatedData.vat_reg_tin || undefined,
+        terms_id: updatedData.terms_id,
+        date_paid: updatedData.date_paid || undefined,
+        payment_status_id: updatedData.payment_status_id,
+        total_amount: updatedData.total_amount,
+        vat_amount: updatedData.vat_amount,
+        total_amount_due: updatedData.total_amount_due,
+        category_id: updatedData.category_id,
+        remarks: updatedData.remarks || undefined,
+        source_id: updatedData.source_id,
+        created_by: updatedData.created_by,
+        // Transform items to match AddReceiptSubmitData format
+        items: updatedData.items.map(item => ({
+          item_name: item.item_name,
+          unit_id: item.unit_id,
+          unit: '', // API might expect this field
+          other_unit: item.other_unit,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          category_id: item.category_id,
+          category: undefined, // Let API handle this
+          other_category: undefined, // Let API handle this
+        }))
+      };
+
       const response = await fetch(`/api/receipts/${receiptId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(apiData),
       });
 
       if (!response.ok) {

@@ -6,7 +6,7 @@ import ExportConfirmationModal from "../../Components/ExportConfirmationModal";
 import "../../styles/dashboard.css";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
-import { formatDisplayText } from '@/app/utils/formatting';
+//import { formatDisplayText } from '@/app/utils/formatting';
 
 interface RevenueRecord {
   category: {

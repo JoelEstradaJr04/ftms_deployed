@@ -1,7 +1,7 @@
 // financial-management\payroll\page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback} from "react";
 import "../../../styles/payroll.css";
 import "../../../styles/table.css";
 import "../../../styles/chips.css";
@@ -90,7 +90,7 @@ const PayrollPage = () => {
   });
 
   // Fetch payroll data from API
-  const fetchPayrollData = async (isSearch = false) => {
+  const fetchPayrollData = useCallback(async (isSearch = false) => {
     try {
       if (isSearch) {
         setSearchLoading(true);
@@ -134,33 +134,34 @@ const PayrollPage = () => {
         setLoading(false);
       }
     }
-  };
+  }, [currentPage, pageSize, startDate, endDate, search]); // Add dependencies that the function uses
 
   // Fetch data when component mounts or filters change (excluding search)
   useEffect(() => {
     fetchPayrollData(false);
-  }, [startDate, endDate, currentPage, pageSize]); // Added currentPage and pageSize dependencies
+  }, [fetchPayrollData]);  // Added currentPage and pageSize dependencies
 
   // Separate effect for search with debouncing
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      // Reset to first page when searching
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchPayrollData(true);
-      }
-    }, 500); // 500ms delay
-
-    return () => clearTimeout(timeoutId);
-  }, [search]);
-
-  // Effect to handle page changes
-  useEffect(() => {
+// Separate effect for search with debouncing
+useEffect(() => {
+  const timeoutId = setTimeout(() => {
+    // Reset to first page when searching
     if (currentPage !== 1) {
-      fetchPayrollData(false);
+      setCurrentPage(1);
+    } else {
+      fetchPayrollData(true);
     }
-  }, [currentPage, pageSize]);
+  }, 500); // 500ms delay
+
+  return () => clearTimeout(timeoutId);
+}, [search, currentPage, fetchPayrollData]); // Add missing dependencies
+
+// Effect to handle page changes
+useEffect(() => {
+  if (currentPage !== 1) {
+    fetchPayrollData(false);
+  }
+}, [currentPage, pageSize, fetchPayrollData]); // Add missing fetchPayrollData dependency
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

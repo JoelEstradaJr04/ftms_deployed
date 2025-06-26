@@ -21,10 +21,16 @@ type Employee = {
   name: string;
 };
 
+type Category = {
+  category_id: string;
+  name: string;
+};
+
+
 type RevenueSourceSelectorProps = {
   assignments: Assignment[];
   employees: Employee[];
-  categories: any[]; // Use your actual category type
+  categories: Category[]; 
   selectedCategoryId: string;
   onSelect: (assignment: Assignment) => void;
   onClose: () => void;

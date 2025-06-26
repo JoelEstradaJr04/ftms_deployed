@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/client'
 
-// Local type for cache population
+// Local type for cache population - matches your AssignmentCache schema
 type AssignmentSupabase = {
   assignment_id: string;
   bus_route: string;
@@ -21,6 +21,16 @@ type AssignmentSupabase = {
   bus_type: string;
 };
 
+// Type for Supabase response with optional employee relations
+type AssignmentSupabaseWithEmployees = AssignmentSupabase & {
+  driver?: {
+    name: string;
+  } | null;
+  conductor?: {
+    name: string;
+  } | null;
+};
+
 // GET - Return all cached assignments
 export async function GET() {
   try {
@@ -29,33 +39,75 @@ export async function GET() {
     
     // If cache is empty, fetch from Supabase and populate cache
     if (!cachedAssignments || cachedAssignments.length === 0) {
-      const { data: supabaseData, error: supabaseError } = await supabase
+      // Try to get data with employee names
+      const { data: supabaseDataWithNames, error: supabaseErrorWithNames } = await supabase
         .from('op_bus_assignments')
-        .select('*');
+        .select(`
+          *,
+          driver:driver_id(name),
+          conductor:conductor_id(name)
+        `);
 
-      if (supabaseError) {
-        throw new Error(supabaseError.message);
+      if (supabaseErrorWithNames) {
+        console.log('Supabase query with names failed, falling back to basic query:', supabaseErrorWithNames);
+        
+        // Fallback to basic query without joins
+        const { data: basicData, error: basicError } = await supabase
+          .from('op_bus_assignments')
+          .select('*');
+        
+        if (basicError) {
+          throw new Error(basicError.message);
+        }
+        
+        if (!basicData) {
+          throw new Error('No data received from Supabase');
+        }
+        
+        // Use basic data without names
+        await prisma.assignmentCache.createMany({
+          data: (basicData as AssignmentSupabase[]).map((assignment) => ({
+            assignment_id: assignment.assignment_id,
+            bus_route: assignment.bus_route,
+            date_assigned: new Date(assignment.date_assigned),
+            trip_fuel_expense: assignment.trip_fuel_expense,
+            trip_revenue: assignment.trip_revenue,
+            is_expense_recorded: assignment.is_expense_recorded,
+            is_revenue_recorded: assignment.is_revenue_recorded,
+            assignment_type: assignment.assignment_type,
+            assignment_value: assignment.assignment_value,
+            payment_method: assignment.payment_method,
+            driver_id: assignment.driver_id,
+            conductor_id: assignment.conductor_id,
+            bus_plate_number: assignment.bus_plate_number,
+            bus_type: assignment.bus_type,
+          }))
+        });
+      } else {
+        if (!supabaseDataWithNames) {
+          throw new Error('No data received from Supabase');
+        }
+        
+        // Use data with employee relations (if available)
+        await prisma.assignmentCache.createMany({
+          data: (supabaseDataWithNames as AssignmentSupabaseWithEmployees[]).map((assignment) => ({
+            assignment_id: assignment.assignment_id,
+            bus_route: assignment.bus_route,
+            date_assigned: new Date(assignment.date_assigned),
+            trip_fuel_expense: assignment.trip_fuel_expense,
+            trip_revenue: assignment.trip_revenue,
+            is_expense_recorded: assignment.is_expense_recorded,
+            is_revenue_recorded: assignment.is_revenue_recorded,
+            assignment_type: assignment.assignment_type,
+            assignment_value: assignment.assignment_value,
+            payment_method: assignment.payment_method,
+            driver_id: assignment.driver_id,
+            conductor_id: assignment.conductor_id,
+            bus_plate_number: assignment.bus_plate_number,
+            bus_type: assignment.bus_type,
+          }))
+        });
       }
-
-      // Populate cache with Supabase data
-      await prisma.assignmentCache.createMany({
-        data: (supabaseData as AssignmentSupabase[]).map((assignment) => ({
-          assignment_id: assignment.assignment_id,
-          bus_route: assignment.bus_route,
-          date_assigned: new Date(assignment.date_assigned),
-          trip_fuel_expense: assignment.trip_fuel_expense,
-          trip_revenue: assignment.trip_revenue,
-          is_expense_recorded: assignment.is_expense_recorded,
-          is_revenue_recorded: assignment.is_revenue_recorded,
-          assignment_type: assignment.assignment_type,
-          assignment_value: assignment.assignment_value,
-          payment_method: assignment.payment_method,
-          driver_id: assignment.driver_id,
-          conductor_id: assignment.conductor_id,
-          bus_plate_number: assignment.bus_plate_number,
-          bus_type: assignment.bus_type,
-        }))
-      });
 
       // Get the newly cached assignments
       cachedAssignments = await prisma.assignmentCache.findMany();
@@ -77,6 +129,10 @@ export async function POST() {
 
     if (supabaseError) {
       throw new Error(supabaseError.message);
+    }
+
+    if (!supabaseData) {
+      throw new Error('No data received from Supabase');
     }
 
     // Begin transaction

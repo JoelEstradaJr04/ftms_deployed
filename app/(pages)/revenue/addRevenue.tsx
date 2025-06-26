@@ -157,8 +157,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         }));
       }
     }
-  }, [formData.assignment_id, assignments, categories]); // Remove formData.category_id from dependencies
-  
+  }, [formData.assignment_id, formData.category_id, assignments, categories]); // Add formData.category_id to dependencies
 
   // Reset form when category changes
 
