@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from '../styles/ExportConfirmationModal.module.css';
 
 interface ExportConfirmationModalProps {
@@ -32,6 +32,44 @@ const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
   dateTo,
   dashboardData,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Focus the confirm button when modal opens
+      confirmButtonRef.current?.focus();
+
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
+    }
+  }, [isOpen, onClose]);
+
+  const handleOverlayClick = (event: React.MouseEvent) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const getDateRangeText = () => {
@@ -50,11 +88,25 @@ const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
   };
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <h2>Confirm Export</h2>
-        
-        <div className={styles.summarySection}>
+    <div
+      className={styles.modalOverlay}
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="export-modal-title"
+      aria-describedby="export-modal-description"
+    >
+      <div
+        className={styles.modalContent}
+        ref={modalRef}
+        role="document"
+      >
+        <h2 id="export-modal-title">Confirm Export</h2>
+
+        <div
+          className={styles.summarySection}
+          id="export-modal-description"
+        >
           <h3>Data Summary</h3>
           <div className={styles.dateRange}>
             <strong>Date Range:</strong> {getDateRangeText()}
@@ -96,10 +148,19 @@ const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
         </div>
 
         <div className={styles.modalActions}>
-          <button onClick={onClose} className={styles.cancelButton}>
+          <button
+            onClick={onClose}
+            className={styles.cancelButton}
+            aria-label="Cancel export"
+          >
             Cancel
           </button>
-          <button onClick={onConfirm} className={styles.confirmButton}>
+          <button
+            ref={confirmButtonRef}
+            onClick={onConfirm}
+            className={styles.confirmButton}
+            aria-label="Confirm and start export"
+          >
             Confirm Export
           </button>
         </div>

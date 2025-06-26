@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Tesseract from 'tesseract.js';
 import Swal from 'sweetalert2';
+import OCRErrorBoundary from './OCRErrorBoundary';
 
 type OCRCameraProps = {
   onOCRComplete: (data: {
@@ -302,39 +303,41 @@ const OCRCamera: React.FC<OCRCameraProps> = ({ onOCRComplete }) => {
   };
 
   return (
-    <div className="ocr-camera-container">
-      <div className="camera-section">
-        {!stream ? (
-          <button onClick={startCamera} className="start-camera-btn">
-            <i className="ri-camera-line"></i> Start Camera
-          </button>
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="camera-preview"
-            />
-            <div className="camera-controls">
-              <button onClick={captureImage} className="capture-btn" disabled={loading}>
-                <i className="ri-camera-line"></i> Capture
-              </button>
-              <button onClick={stopCamera} className="stop-btn">
-                <i className="ri-close-line"></i> Stop
-              </button>
+    <OCRErrorBoundary>
+      <div className="ocr-camera-container">
+        <div className="camera-section">
+          {!stream ? (
+            <button onClick={startCamera} className="start-camera-btn">
+              <i className="ri-camera-line"></i> Start Camera
+            </button>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="camera-preview"
+              />
+              <div className="camera-controls">
+                <button onClick={captureImage} className="capture-btn" disabled={loading}>
+                  <i className="ri-camera-line"></i> Capture
+                </button>
+                <button onClick={stopCamera} className="stop-btn">
+                  <i className="ri-close-line"></i> Stop
+                </button>
+              </div>
+            </>
+          )}
+          {loading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+              <p>Processing image...</p>
             </div>
-          </>
-        )}
-        {loading && (
-          <div className="loading-overlay">
-            <div className="loading-spinner"></div>
-            <p>Processing image...</p>
-          </div>
-        )}
+          )}
+        </div>
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
       </div>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-    </div>
+    </OCRErrorBoundary>
   );
 };
 
