@@ -19,7 +19,6 @@ type ReimbursementFormData = {
 };
 
 
-
 const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
   isOpen,
   onClose,
@@ -35,43 +34,12 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
   //state for the employee selector
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-
+  // Fix: Declare both error state and setter function properly
+  const [, setError] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [employees] = useState<Employee[]>([]);
 
-  // TODO: Replace this with your actual employee fetching logic or props
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      employee_id: "EMP001",
-      employee_name: "Alice Johnson",
-      job: "Accountant",
-      department: "Finance",
-    },
-    {
-      employee_id: "EMP002",
-      employee_name: "Bobay",
-      job: "Office Clerk",
-      department: "Administration",
-    },
-    {
-      employee_id: "EMP003",
-      employee_name: "Carlos Dela Cruz",
-      job: "IT Specialist",
-      department: "IT",
-    },
-    {
-      employee_id: "EMP004",
-      employee_name: "Diana Santos",
-      job: "HR Manager",
-      department: "Human Resources",
-    },
-    {
-      employee_id: "EMP005",
-      employee_name: "Eugene Lim",
-      job: "Procurement Officer",
-      department: "Purchasing",
-    },
-  ]);
 
   // Example: useEffect to fetch employees from API
   // React.useEffect(() => {
@@ -88,58 +56,61 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setReceiptFile(e.target.files[0]);
-    }
-  };
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files && e.target.files[0]) {
+  //     setReceiptFile(e.target.files[0]);
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!formData.employee_id || !formData.amount) {
-    showError('Please fill in all required fields', 'Error');
-    return;
-  }
-
-  if (formData.amount <= 0) {
-    showError('Amount must be greater than 0', 'Error');
-    return;
-  }
-
-  setIsSubmitting(true);
-  
-  try {
-    // Generate an expense ID if it's empty
-    const randomExpenseId = `E${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-    
-    const submissionData = {
-      ...formData,
-      expense_id: formData.expense_id || randomExpenseId, // Set a random ID if empty
-      receipt_file: receiptFile || undefined,
-      employeeDetails: selectedEmployee
-    };
-    
-    if (onSubmit) await onSubmit(submissionData);
-    
-    // Reset form
-    setFormData({
-      expense_id: '',
-      employee_id: '',
-      amount: 0,
-      notes: '',
-    });
-    setReceiptFile(null);
-    setSelectedEmployee(null);
-    
-    showSuccess('Reimbursement application submitted successfully!', 'Success');
-    onClose();
-  } catch (error) {
-      showError('Failed to submit reimbursement application', 'Error');
-    } finally {
-      setIsSubmitting(false);
+    if (!formData.employee_id || !formData.amount) {
+      showError('Please fill in all required fields', 'Error');
+      return;
     }
-  };
+
+    if (formData.amount <= 0) {
+      showError('Amount must be greater than 0', 'Error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Generate an expense ID if it's empty
+      const randomExpenseId = `E${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
+      const submissionData = {
+        ...formData,
+        expense_id: formData.expense_id || randomExpenseId,
+        receipt_file: receiptFile || undefined,
+        employeeDetails: selectedEmployee
+      };
+      
+      if (onSubmit) await onSubmit(submissionData);
+      
+      // Reset form
+      setFormData({
+        expense_id: '',
+        employee_id: '',
+        amount: 0,
+        notes: '',
+      });
+      setReceiptFile(null);
+      setSelectedEmployee(null);
+      
+      showSuccess('Reimbursement application submitted successfully!', 'Success');
+      onClose();
+    } catch(error) {
+        console.error('Error submitting reimbursement:', error);
+        // Fix: Now setError is properly declared as a function
+        setError('Failed to submit reimbursement application');
+        showError('Failed to submit reimbursement application', 'Error');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
 
   const handleClose = () => {
     if (!isSubmitting) {

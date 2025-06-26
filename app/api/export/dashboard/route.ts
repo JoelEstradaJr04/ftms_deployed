@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { RevenueCategory, ExpenseCategory } from '@prisma/client';
 import { generateId } from '@/lib/idGenerator';
 
+// Fix: Remove non-existent enum imports and use string-based categories
+// that align with your GlobalCategory model
 interface DashboardData {
   revenue: {
     total: number;
-    byCategory: Record<RevenueCategory, number>;
+    byCategory: Record<string, number>; // Categories are string names from GlobalCategory
   };
   expense: {
     total: number;
-    byCategory: Record<ExpenseCategory, number>;
+    byCategory: Record<string, number>; // Categories are string names from GlobalCategory
   };
   profit: number;
 }
@@ -59,8 +60,9 @@ export async function POST(req: NextRequest) {
       ...headerInfo,
       ['Revenue Breakdown'],
       ['Category', 'Amount (₱)'],
+      // Fix: Handle string-based categories from GlobalCategory model
       ...Object.entries(dashboardData.revenue.byCategory).map(([category, amount]) => [
-        category.replace('_', ' '),
+        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase().replace(/_/g, ' '), // Format category name
         amount.toLocaleString()
       ]),
       [''],
@@ -73,8 +75,9 @@ export async function POST(req: NextRequest) {
       ...headerInfo,
       ['Expense Breakdown'],
       ['Category', 'Amount (₱)'],
+      // Fix: Handle string-based categories from GlobalCategory model
       ...Object.entries(dashboardData.expense.byCategory).map(([category, amount]) => [
-        category.replace('_', ' '),
+        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase().replace(/_/g, ' '), // Format category name
         amount.toLocaleString()
       ]),
       [''],
@@ -90,23 +93,37 @@ export async function POST(req: NextRequest) {
       ['Revenue Categories:'],
       ['Category', 'Amount (₱)', 'Percentage of Total Revenue'],
       ...Object.entries(dashboardData.revenue.byCategory).map(([category, amount]) => [
-        category.replace('_', ' '),
+        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase().replace(/_/g, ' '),
         amount.toLocaleString(),
-        `${((amount / dashboardData.revenue.total) * 100).toFixed(2)}%`
+        dashboardData.revenue.total > 0 
+          ? `${((amount / dashboardData.revenue.total) * 100).toFixed(2)}%`
+          : '0.00%'
       ]),
       [''],
       ['Expense Categories:'],
       ['Category', 'Amount (₱)', 'Percentage of Total Expenses'],
       ...Object.entries(dashboardData.expense.byCategory).map(([category, amount]) => [
-        category.replace('_', ' '),
+        category.charAt(0).toUpperCase() + category.slice(1).toLowerCase().replace(/_/g, ' '),
         amount.toLocaleString(),
-        `${((amount / dashboardData.expense.total) * 100).toFixed(2)}%`
+        dashboardData.expense.total > 0 
+          ? `${((amount / dashboardData.expense.total) * 100).toFixed(2)}%`
+          : '0.00%'
       ]),
       [''],
       ['Financial Metrics:'],
       ['Metric', 'Value'],
-      ['Revenue to Expense Ratio', `${(dashboardData.revenue.total / dashboardData.expense.total).toFixed(2)}`],
-      ['Profit Margin', `${((dashboardData.profit / dashboardData.revenue.total) * 100).toFixed(2)}%`],
+      [
+        'Revenue to Expense Ratio', 
+        dashboardData.expense.total > 0 
+          ? `${(dashboardData.revenue.total / dashboardData.expense.total).toFixed(2)}`
+          : 'N/A'
+      ],
+      [
+        'Profit Margin', 
+        dashboardData.revenue.total > 0 
+          ? `${((dashboardData.profit / dashboardData.revenue.total) * 100).toFixed(2)}%`
+          : 'N/A'
+      ],
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
 
@@ -116,15 +133,16 @@ export async function POST(req: NextRequest) {
     XLSX.utils.book_append_sheet(wb, wsExpense, 'Expenses');
 
     // Style the worksheets - make columns wider
-    ['!cols', '!rows'].forEach(prop => {
-      [wsRevenue, wsExpense, wsSummary].forEach(ws => {
-        ws[prop] = [
-          { wch: 25 }, // First column wider for categories
-          { wch: 20 }, // Second column for amounts
-          { wch: 20 }  // Third column for percentages
-        ];
-      });
-    });
+    const columnWidths = [
+      { wch: 25 }, // First column wider for categories
+      { wch: 20 }, // Second column for amounts
+      { wch: 20 }  // Third column for percentages
+    ];
+
+    // Apply column widths properly
+    wsRevenue['!cols'] = columnWidths;
+    wsExpense['!cols'] = columnWidths;
+    wsSummary['!cols'] = columnWidths;
 
     // Write to buffer
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -143,4 +161,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

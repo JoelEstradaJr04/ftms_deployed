@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import OCRUpload from '../../Components/OCRUpload';
 import OCRCamera from '../../Components/OCRCamera';
 import Swal from 'sweetalert2';
@@ -85,7 +85,7 @@ interface GlobalItemUnit { id: string; name: string; }
 
 type FormDataState = {
   supplier: string;
-  transaction_date: string;
+  transaction_date: string; // Will be in YYYY-MM-DDTHH:mm format
   vat_reg_tin: string;
   terms_id: string;
   date_paid: string;
@@ -119,7 +119,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   
   const [formData, setFormData] = useState<FormDataState>({
     supplier: '',
-    transaction_date: new Date().toISOString().split('T')[0],
+    transaction_date: new Date().toISOString().slice(0, 16), // Include time (YYYY-MM-DDTHH:mm)
     vat_reg_tin: '',
     terms_id: '',
     date_paid: '',
@@ -177,7 +177,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
-  const computeSummaryCategory = (items: ReceiptItem[]): string => {
+  const computeSummaryCategory = useCallback((items: ReceiptItem[]): string => {
     if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
     
     const categoryTotals: Record<string, number> = {};
@@ -202,7 +202,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
     
     return categories.find(c => c.name === 'Multiple_Categories')?.category_id || '';
-  };
+  }, [categories]); // Add categories as dependency since it's used inside the function
 
   const isCategoryEditable = (items: ReceiptItem[]) => {
     if (categoryOverride) return true;
@@ -228,7 +228,8 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         other_category: categories.find(c => c.category_id === summaryCategoryId)?.name === 'Other' ? otherCategory : undefined
       }));
     }
-  }, [items, categoryOverride, otherCategory, categories]);
+  }, [items, categoryOverride, otherCategory, categories, computeSummaryCategory]); // Add computeSummaryCategory to dependencies
+
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
     const updatedItems = [...items];
@@ -616,18 +617,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 </div>
 
                 <div className="formRow">
-                  <div className="formField">
-                    <label htmlFor="transaction_date">Transaction Date</label>
-                    <input
-                      type="date"
-                      id="transaction_date"
-                      name="transaction_date"
-                      value={formData.transaction_date}
-                      onChange={handleInputChange}
-                      required
-                      className="formInput"
-                    />
-                  </div>
+                <div className="formField">
+                  <label htmlFor="transaction_date">Transaction Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    id="transaction_date"
+                    name="transaction_date"
+                    value={formData.transaction_date}
+                    onChange={handleInputChange}
+                    required
+                    className="formInput"
+                  />
+                </div>
 
                   <div className="formField">
                     <label htmlFor="date_paid">Date Paid</label>
@@ -739,6 +740,22 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                     </thead>
                     <tbody>
                       {items.map((item, idx) => {
+                        // Check if the previous row is complete
+                        const prevComplete =
+                          idx === 0 ||
+                          (
+                            items[idx - 1].item.item_name &&
+                            (items[idx - 1].unit_id || items[idx - 1].item.unit === 'Other') &&
+                            (items[idx - 1].item.unit !== 'Other' || items[idx - 1].item.other_unit) &&
+                            items[idx - 1].quantity > 0 &&
+                            items[idx - 1].unit_price > 0 &&
+                            items[idx - 1].item.category &&
+                            (items[idx - 1].item.category !== 'Other' || items[idx - 1].item.other_category)
+                          );
+
+                        // If previous row is not complete, disable this row
+                        const disabled = !prevComplete;
+
                         const isLast = idx === items.length - 1;
                         return (
                           <tr key={idx}>
@@ -749,6 +766,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
                                 placeholder="Enter item name"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>
@@ -760,6 +778,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     onChange={(e) => handleItemChange(idx, 'other_unit', e.target.value)}
                                     placeholder="Enter custom unit"
                                     {...(!isLast && { required: true })}
+                                    disabled={disabled}
                                   />
                                   <button
                                     type="button"
@@ -773,6 +792,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     }}
                                     className="clearCustomBtn"
                                     title="Clear custom unit"
+                                    disabled={disabled}
                                   >
                                     <i className="ri-close-line" />
                                   </button>
@@ -783,6 +803,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                   onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
                                   className="formSelect"
                                   {...(!isLast && { required: true })}
+                                  disabled={disabled}
                                 >
                                   <option value="">Select Unit</option>
                                   {itemUnits.map(unit => (
@@ -799,6 +820,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 min="0"
                                 step="0.01"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>
@@ -809,6 +831,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 min="0"
                                 step="0.01"
                                 {...(!isLast && { required: true })}
+                                disabled={disabled}
                               />
                             </td>
                             <td>₱{item.total_price.toLocaleString()}</td>
@@ -821,12 +844,14 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                     onChange={(e) => handleItemChange(idx, 'other_category', e.target.value)}
                                     placeholder="Enter custom category"
                                     {...(!isLast && { required: true })}
+                                    disabled={disabled}
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleItemChange(idx, 'category', '')}
                                     className="clearCustomBtn"
                                     title="Clear custom category"
+                                    disabled={disabled}
                                   >
                                     <i className="ri-close-line" />
                                   </button>
@@ -834,31 +859,33 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               ) : (
                                 <select
                                   value={item.item.category}
-                                  onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
-                                  className="formSelect"
-                                  {...(!isLast && { required: true })}
-                                >
-                                  <option value="">Select Category</option>
-                                  {EXPENSE_CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-                                  ))}
-                                </select>
-                              )}
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(idx)}
-                                className="removeItemBtn"
-                                title="Remove item"
-                              >
-                                <i className="ri-delete-bin-line" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+              onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+              className="formSelect"
+              {...(!isLast && { required: true })}
+              disabled={disabled}
+            >
+              <option value="">Select Category</option>
+              {EXPENSE_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+              ))}
+            </select>
+          )}
+        </td>
+        <td>
+          <button
+            type="button"
+            onClick={() => removeItem(idx)}
+            className="removeItemBtn"
+            title="Remove item"
+            disabled={disabled}
+          >
+            <i className="ri-delete-bin-line" />
+          </button>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
                   </table>
                 </div>
 

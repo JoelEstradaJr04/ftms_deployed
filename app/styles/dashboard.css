@@ -37,7 +37,7 @@ button:hover {
 }
 
 /* ---------- Settings Bar ---------- */
-.settings {
+.dashboard_settings {
   display: flex !important;
   flex-wrap: wrap !important;
   justify-content: space-between !important;
@@ -47,9 +47,9 @@ button:hover {
   gap: 0.5rem !important;
 }
 
-.settings input[type="text"],
-.settings input[type="date"],
-.settings select {
+.dashboard_settings input[type="text"],
+.dashboard_settings input[type="date"],
+.dashboard_settings select {
   padding: 8px !important;
   font-size: 1rem !important;
   border: none !important;
@@ -62,9 +62,9 @@ button:hover {
   height: var(--page-button-height) !important;
   box-shadow: var(--box-shadow) !important;
 }
-.settings input[type="text"]:focus,
-.settings input[type="date"]:focus,
-.settings select:focus {
+.dashboard_settings input[type="text"]:focus,
+.dashboard_settings input[type="date"]:focus,
+.dashboard_settings select:focus {
   outline: none !important;
   border-color: var(--info-color) !important;
 }

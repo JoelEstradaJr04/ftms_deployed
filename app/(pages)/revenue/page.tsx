@@ -126,10 +126,11 @@ const RevenuePage = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
-      
+      console.log('[FETCH] Starting fetchAllData');
       try {
         // Fetch employees for assignment display
         const employeesResponse = await fetch('/api/employees');
+        console.log('[FETCH] /api/employees status:', employeesResponse.status);
         if (employeesResponse.ok) {
           const employeesData = await employeesResponse.json();
           setAllEmployees(employeesData);
@@ -137,39 +138,43 @@ const RevenuePage = () => {
 
         // Fetch all assignments for displaying in the table
         const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
+        console.log('[FETCH] /api/assignments/cache status:', assignmentsResponse.status);
         if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
         const { data: assignmentsData } = await assignmentsResponse.json();
-        
+
         // Filter out recorded assignments for the AddRevenue modal
         const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
         setAssignments(unrecordedAssignments);
-        
+
         // Store all assignments for table display
         setAllAssignments(assignmentsData);
-        
+
         // Then fetch revenues
         const revenuesResponse = await fetch('/api/revenues');
+        console.log('[FETCH] /api/revenues status:', revenuesResponse.status);
         if (!revenuesResponse.ok) throw new Error('Failed to fetch revenues');
-        
+
         const revenues: RevenueRecord[] = await revenuesResponse.json();
-        
+
         const transformedData: RevenueData[] = revenues.map(revenue => ({
           revenue_id: revenue.revenue_id,
           category: revenue.category,
           source: revenue.source,
           total_amount: Number(revenue.total_amount),
           collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
-          created_by: revenue.created_by, // Add this line to fix the error
+          created_by: revenue.created_by,
           created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
         }));
-        
+
         setData(transformedData);
+        console.log('[FETCH] Data loaded successfully');
       } catch (error) {
         console.error('Error fetching data:', error);
         showError('Failed to load data', 'Error');
       } finally {
         setLoading(false);
+        console.log('[FETCH] setLoading(false) called');
       }
     };
     
@@ -686,9 +691,10 @@ const RevenuePage = () => {
         </div>
         <div className="settings">
           {/* search bar */}
-          <div className="searchBar">
+          <div className="revenue_searchBar">
             <i className="ri-search-line" />
             <input
+              className="searchInput"
               type="text"
               placeholder="Search here..."
               value={search}
@@ -775,7 +781,7 @@ const RevenuePage = () => {
                       <td>{item.category?.name || 'N/A'}</td>
                       <td>{formatAssignment(assignment)}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
-                      <td className="actionButtons">
+                      <td className="styles.actionButtons">
                         <div className="actionButtonsContainer">
                           {/* view button */}
                           <button 

@@ -30,6 +30,7 @@ type Reimbursement = {
   updated_at?: string | null;
 };
 
+// Update ApiReimbursement to match your Prisma schema structure
 type ApiReimbursement = {
   reimbursement_id: string;
   expense_id: string;
@@ -39,7 +40,11 @@ type ApiReimbursement = {
   requested_date: string;
   approved_by: string | null;
   approved_date: string | null;
-  status: string;
+  // Update to match schema - status is a relation object
+  status: {
+    id: string;
+    name: string;
+  };
   amount: number | null;
   rejection_reason: string | null;
   paid_date: string | null;
@@ -91,10 +96,10 @@ const ReimbursementPage = () => {
       const data: ApiReimbursement[] = JSON.parse(text);
       setReimbursements(
         data.map((item) => {
-          // Robust status mapping
-          const statusKey = (item.status_name || '').toUpperCase() as keyof typeof statusMap;
+          // Fix: Access status.name instead of status_name
+          const statusKey = (item.status?.name || '').toUpperCase() as keyof typeof statusMap;
           const mappedStatus = statusMap[statusKey] ||
-            (item.status_name ? item.status_name.charAt(0).toUpperCase() + item.status_name.slice(1).toLowerCase() : 'Unknown');
+            (item.status?.name ? item.status.name.charAt(0).toUpperCase() + item.status.name.slice(1).toLowerCase() : 'Unknown');
           return {
             reimbursement_id: item.reimbursement_id,
             expense_id: item.expense_id,

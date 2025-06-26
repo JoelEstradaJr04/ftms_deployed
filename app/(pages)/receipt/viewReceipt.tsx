@@ -203,7 +203,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
         </div>
 
         {record.items && record.items.length > 0 && (
-          <div className="itemsSection">
+          <div className="view_itemsSection">
             <h4>Items</h4>
             <table>
               <thead>

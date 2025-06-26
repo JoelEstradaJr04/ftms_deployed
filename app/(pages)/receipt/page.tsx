@@ -10,6 +10,7 @@ import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
 import { formatDisplayText } from '@/app/utils/formatting';
 import Loading from '../../Components/loading';
+import type { UpdatedReceiptData } from './editReceipt';
 
 type ReceiptItem = {
   receipt_item_id: string;
@@ -40,15 +41,18 @@ type Receipt = {
   total_amount_due: number;
   created_at: string;
   updated_at?: string;
-  created_by: string;
+  created_by: string;        // Ensure this is required
   updated_by?: string;
-  source_id: string;
+  source_id: string;         // Ensure this is required
   source_name: string;
   category_id: string;
   category_name: string;
   remarks?: string;
   is_expense_recorded: boolean;
+  is_inventory_processed: boolean;
   items: ReceiptItem[];
+  other_category?: string;
+  is_deleted: boolean;
 };
 
 type AddReceiptSubmitData = {
@@ -66,12 +70,14 @@ type AddReceiptSubmitData = {
   source_id: string;
   items: {
     item_name: string;
+    unit_id?: string;
     unit: string;
     other_unit?: string;
     quantity: number;
     unit_price: number;
     total_price: number;
-    category: string;
+    category?: string;
+    category_id?: string;
     other_category?: string;
   }[];
   created_by: string;
@@ -87,9 +93,7 @@ const ReceiptPage = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -101,6 +105,7 @@ const ReceiptPage = () => {
   const [paymentStatuses, setPaymentStatuses] = useState<{ id: string; name: string }[]>([]);
   const [itemUnits, setItemUnits] = useState<{ id: string; name: string }[]>([]);
   const [globalsLoading, setGlobalsLoading] = useState(true);
+  const [pageSize] = useState(10);
 
   const fetchReceipts = useCallback(async (isInitialLoad = false) => {
     if (isInitialLoad) {
@@ -127,7 +132,6 @@ const ReceiptPage = () => {
       const result = await response.json();
       
       setData(result.receipts);
-      setTotalRecords(result.pagination.total);
       setTotalPages(result.pagination.totalPages);
 
     } catch (error) {
@@ -179,70 +183,61 @@ const ReceiptPage = () => {
     setCurrentPage(newPage);
   };
 
-  const handleClearFilters = () => {
-    setSearch('');
-    setCategoryFilter('');
-    setStatusFilter('');
-    setDateFrom('');
-    setDateTo('');
-    setCurrentPage(1); 
-  };
-  
-const handleDelete = async (receipt_id: string) => {
-  const result = await Swal.fire({
-    title: 'Delete Receipt',
-    text: 'Are you sure you want to delete this receipt?',
-    input: 'text',
-    inputLabel: 'Reason for deletion',
-    inputPlaceholder: 'Enter reason for deletion',
-    inputValidator: (value) => {
-      if (!value) {
-        return 'Please provide a reason for deletion';
-      }
-    },
-    showCancelButton: true,
-    confirmButtonColor: '#961C1E',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Yes, delete it!',
-    background: 'white',
-  });
-
-  if (result.isConfirmed) {
-    try {
-      const response = await fetch(`/api/receipts/${receipt_id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason: result.value }),
-      });
-
-      if (!response.ok) {
-        // Try to parse error JSON, but handle empty response
-        let errorMsg = 'Failed to delete receipt';
-        const text = await response.text();
-        if (text) {
-          try {
-            const error = JSON.parse(text);
-            errorMsg = error.error || errorMsg;
-          } catch {
-            // ignore parse error, use default message
-          }
+  const handleDelete = async (receipt_id: string) => {
+    const result = await Swal.fire({
+      title: 'Delete Receipt',
+      text: 'Are you sure you want to delete this receipt?',
+      input: 'text',
+      inputLabel: 'Reason for deletion',
+      inputPlaceholder: 'Enter reason for deletion',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Please provide a reason for deletion';
         }
-        throw new Error(errorMsg);
+      },
+      showCancelButton: true,
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete it!',
+      background: 'white',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/receipts/${receipt_id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ reason: result.value }),
+        });
+
+        if (!response.ok) {
+          // Try to parse error JSON, but handle empty response
+          let errorMsg = 'Failed to delete receipt';
+          const text = await response.text();
+          if (text) {
+            try {
+              const error = JSON.parse(text);
+              errorMsg = error.error || errorMsg;
+            } catch {
+              // ignore parse error, use default message
+            }
+          }
+          throw new Error(errorMsg);
+        }
+
+        await Swal.fire('Deleted!', 'Receipt has been deleted.', 'success');
+        await fetchReceipts(false);
+
+      } catch (error) {
+        console.error('Error deleting receipt:', error);
+        Swal.fire('Error', error instanceof Error ? error.message : 'Failed to delete receipt', 'error');
       }
-
-      await Swal.fire('Deleted!', 'Receipt has been deleted.', 'success');
-      await fetchReceipts(false);
-
-    } catch (error) {
-      console.error('Error deleting receipt:', error);
-      Swal.fire('Error', error instanceof Error ? error.message : 'Failed to delete receipt', 'error');
     }
-  }
-};
+  };
 
-  const handleAddReceipt = async (formData: AddReceiptSubmitData) => {
+  const handleAddReceipt: (formData: AddReceiptSubmitData) => void = async (formData) => {
     try {
       const response = await fetch('/api/receipts', {
         method: 'POST',
@@ -260,31 +255,67 @@ const handleDelete = async (receipt_id: string) => {
       await response.json();
       setShowModal(false);
       fetchReceipts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding receipt:', error);
-      Swal.fire('Error', `Failed to add receipt: ${error.message}`, 'error');
-        }
+      Swal.fire('Error', `Failed to add receipt: ${error instanceof Error ? error.message : 'Failed to add receipt'}`, 'error');
+    }
+  };
+
+  const handleUpdateReceiptAsync = async (receiptId: string, updatedData: UpdatedReceiptData) => {
+    try {
+      // Convert UpdatedReceiptData to AddReceiptSubmitData format for API compatibility
+      const apiData: AddReceiptSubmitData = {
+        supplier: updatedData.supplier,
+        transaction_date: updatedData.transaction_date,
+        vat_reg_tin: updatedData.vat_reg_tin || undefined,
+        terms_id: updatedData.terms_id,
+        date_paid: updatedData.date_paid || undefined,
+        payment_status_id: updatedData.payment_status_id,
+        total_amount: updatedData.total_amount,
+        vat_amount: updatedData.vat_amount,
+        total_amount_due: updatedData.total_amount_due,
+        category_id: updatedData.category_id,
+        remarks: updatedData.remarks || undefined,
+        source_id: updatedData.source_id,
+        created_by: updatedData.created_by,
+        // Transform items to match AddReceiptSubmitData format
+        items: updatedData.items.map(item => ({
+          item_name: item.item_name,
+          unit_id: item.unit_id,
+          unit: '', // API might expect this field
+          other_unit: item.other_unit,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          category_id: item.category_id,
+          category: undefined, // Let API handle this
+          other_category: undefined, // Let API handle this
+        }))
       };
 
-  const handleUpdateReceipt = async (receiptId: string, formData: any) => {
-  try {
       const response = await fetch(`/api/receipts/${receiptId}`, {
         method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiData),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update receipt');
-    }
+      }
 
       await response.json();
       setEditModalOpen(false);
       fetchReceipts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating receipt:', error);
-      Swal.fire('Error', `Failed to update receipt: ${error.message}`, 'error');
+      Swal.fire('Error', `Failed to update receipt: ${error instanceof Error ? error.message : 'Failed to update receipt'}`, 'error');
+    }
+  };
+
+  const handleUpdateReceipt = (updatedRecord: UpdatedReceiptData) => {
+    if (recordToEdit) {
+      handleUpdateReceiptAsync(recordToEdit.receipt_id, updatedRecord);
     }
   };
 
@@ -296,7 +327,7 @@ const handleDelete = async (receipt_id: string) => {
   const openViewModal = (receipt: Receipt) => {
     setRecordToView(receipt);
     setViewModalOpen(true);
-};
+  };
   
   const getStatusBadgeClass = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -311,13 +342,9 @@ const handleDelete = async (receipt_id: string) => {
       default:
         return 'status-other';
     }
-};
+  };
 
-const getDisplaySource = (receipt: Receipt) => {
-    return formatDisplayText(receipt.source_name);
-};
-
-const getDisplayCategory = (receipt: Receipt) => {
+  const getDisplayCategory = (receipt: Receipt) => {
     if (receipt.category_name === 'Other' && receipt.other_category) {
       return formatDisplayText(receipt.other_category);
     }
@@ -432,18 +459,18 @@ const getDisplayCategory = (receipt: Receipt) => {
                     <td>{formatDate(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
                     <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
-<td>
-  {(() => {
+                    <td>
+                      {(() => {
                         if (item.terms_name) {
                           return formatDisplayText(item.terms_name);
-    }
+                        }
                         if (item.terms_id && Array.isArray(terms)) {
                           const t = terms.find(term => term.id === item.terms_id);
-      return t ? formatDisplayText(t.name) : 'Cash';
-    }
-    return 'Cash';
-  })()}
-</td>
+                          return t ? formatDisplayText(t.name) : 'Cash';
+                        }
+                        return 'Cash';
+                      })()}
+                    </td>
                     <td>₱{Number(item.total_amount_due).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
@@ -453,7 +480,7 @@ const getDisplayCategory = (receipt: Receipt) => {
                         {item.payment_status_name}
                       </span>
                     </td>
-                    <td className="actionButtons">
+                    <td className="styles.actionButtons">
                       <div className="actionButtonsContainer">
                         <button className="viewBtn" onClick={() => {openViewModal(item);}} title="View Receipt">
                           <i className="ri-eye-line" />
@@ -477,7 +504,9 @@ const getDisplayCategory = (receipt: Receipt) => {
         <PaginationComponent
           currentPage={currentPage}
           totalPages={totalPages}
+          pageSize={pageSize}
           onPageChange={handlePageChange}
+          onPageSizeChange={() => {}}
         />
 
         {showModal && (
@@ -496,11 +525,10 @@ const getDisplayCategory = (receipt: Receipt) => {
         
         {editModalOpen && recordToEdit && (
           <EditReceiptModal
-            record={recordToEdit}
+            receipt={recordToEdit}
             onClose={() => setEditModalOpen(false)}
             onSave={handleUpdateReceipt}
             categories={categories}
-            sources={sources}
             terms={terms}
             paymentStatuses={paymentStatuses}
             itemUnits={itemUnits}

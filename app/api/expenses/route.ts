@@ -3,12 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateId } from '@/lib/idGenerator'
 import { logAudit } from '@/lib/auditLogger'
-// import { createClient } from '@supabase/supabase-js'
-
-// // Initialize Supabase client
-// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-// const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-// const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function POST(req: NextRequest) {
   try {
@@ -111,7 +105,7 @@ export async function POST(req: NextRequest) {
           // Fetch assignment for names and employee IDs
           const assignment = await tx.assignmentCache.findUnique({ where: { assignment_id } });
           if (assignment) {
-            const { driver_id, conductor_id, trip_fuel_expense } = assignment;
+            const { driver_id, conductor_id } = assignment;
             // Find employee IDs for driver and conductor
             const driver = await tx.employeeCache.findFirst({ where: { employee_id: driver_id } });
             const conductor = await tx.employeeCache.findFirst({ where: { employee_id: conductor_id } });
@@ -267,6 +261,11 @@ export async function POST(req: NextRequest) {
         }
       });
 
+      // Fix: Add null check for completeExpense
+      if (!completeExpense) {
+        throw new Error('Failed to retrieve created expense record');
+      }
+
       // Transform the data to match frontend expectations
       const expenseWithDetails = {
         ...completeExpense,
@@ -304,6 +303,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// GET function remains the same...
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const dateFilter = searchParams.get('dateFilter');

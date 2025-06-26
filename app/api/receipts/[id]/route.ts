@@ -90,11 +90,27 @@ export async function PATCH(req: NextRequest) {
 
       if (!existingReceipt) throw new Error('Receipt not found');
 
+      // Preserve time when updating transaction_date
+      const updatedTransactionDate = (() => {
+        if (!transaction_date) return existingReceipt.transaction_date;
+        
+        const inputDate = new Date(transaction_date);
+        
+        // Check if the time is midnight (indicating only date was provided)
+        if (inputDate.getHours() === 0 && inputDate.getMinutes() === 0 && inputDate.getSeconds() === 0) {
+          // Keep existing time if available, otherwise use current time
+          const existingTime = existingReceipt.transaction_date;
+          inputDate.setHours(existingTime.getHours(), existingTime.getMinutes(), existingTime.getSeconds(), existingTime.getMilliseconds());
+        }
+        
+        return inputDate;
+      })();
+
       const updatedReceipt = await tx.receipt.update({
         where: { receipt_id: id },
         data: {
           supplier,
-          transaction_date: transaction_date ? new Date(transaction_date) : undefined,
+          transaction_date: updatedTransactionDate,
           vat_reg_tin,
           terms_id,
           date_paid: date_paid ? new Date(date_paid) : null,
@@ -109,8 +125,8 @@ export async function PATCH(req: NextRequest) {
         },
       });
 
-      if (items && items.length > 0) {
-        await tx.receiptItem.deleteMany({ where: { receipt_id: id } });
+    if (items && items.length > 0) {
+      await tx.receiptItem.deleteMany({ where: { receipt_id: id } });
 
         await Promise.all(items.map(async (item: ReceiptItemPayload) => {
           const masterItem = await tx.item.upsert({
@@ -120,14 +136,12 @@ export async function PATCH(req: NextRequest) {
               item_name: item.item_name,
               unit_id: item.unit_id,
               category_id: item.category_id,
-              other_unit: item.other_unit,
               created_at: new Date(),
               is_deleted: false
             },
             update: {
               unit_id: item.unit_id,
               category_id: item.category_id,
-              other_unit: item.other_unit,
               updated_at: new Date()
             }
           });
@@ -151,12 +165,11 @@ export async function PATCH(req: NextRequest) {
               transaction_id: await generateId('ITX'),
               item_id: masterItem.item_id,
               receipt_id: id,
-              quantity: new Prisma.Decimal(item.quantity),
-              unit_price: new Prisma.Decimal(item.unit_price),
-              transaction_date: new Date(transaction_date),
+              quantity: new Prisma.Decimal(item.quantity.toString()),
+              unit_price: new Prisma.Decimal(item.unit_price.toString()),
+              transaction_date: updatedTransactionDate, // Use the preserved date-time
               created_by: updated_by || 'ftms_user',
               created_at: new Date(),
-              transaction_type: 'IN'
             }
           });
         }));
@@ -206,25 +219,25 @@ export async function PATCH(req: NextRequest) {
 }
 
 // DELETE /api/receipts/[id]
-export async function DELETE(req: NextRequest) {
-  try {
-    const id = req.nextUrl.pathname.split('/').pop();
-    const { reason } = await req.json();
+// export async function DELETE(req: NextRequest) {
+//   try {
+//     const id = req.nextUrl.pathname.split('/').pop();
+//     const { reason } = await req.json();
 
-    // Soft delete: set is_deleted = true
-    const deleted = await prisma.receipt.update({
-      where: { receipt_id: id },
-      data: {
-        is_deleted: true,
-        deleted_at: new Date(),
-        deleted_by: 'ftms_user', // or get from session/user
-        deletion_reason: reason || null,
-      },
-    });
+//     // Soft delete: set is_deleted = true
+//     const deleted = await prisma.receipt.update({
+//       where: { receipt_id: id },
+//       data: {
+//         is_deleted: true,
+//         deleted_at: new Date(),
+//         deleted_by: 'ftms_user', // or get from session/user
+//         deletion_reason: reason || null,
+//       },
+//     });
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting receipt:', error);
-    return NextResponse.json({ error: 'Failed to delete receipt' }, { status: 500 });
-  }
-}
+//     return NextResponse.json({ success: true });
+//   } catch (error) {
+//     console.error('Error deleting receipt:', error);
+//     return NextResponse.json({ error: 'Failed to delete receipt' }, { status: 500 });
+//   }
+// }

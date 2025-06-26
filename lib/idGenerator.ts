@@ -14,7 +14,14 @@ const TABLE_PREFIXES = {
   REV: 'RevenueRecord',
   RAL: 'ReceiptAuditLog',
   REX: 'ReceiptExport',
-  RSC: 'ReceiptStorageConfig'
+  RSC: 'ReceiptStorageConfig',
+  CAT: 'GlobalCategory',
+  SRC: 'GlobalSource',
+  PAY: 'GlobalPaymentStatus',
+  TERM: 'GlobalTerms',
+  UNIT: 'GlobalItemUnit',
+  PMT: 'GlobalPaymentMethod',
+  RST: 'GlobalReimbursementStatus'
 } as const
 
 type TablePrefix = keyof typeof TABLE_PREFIXES

@@ -39,6 +39,8 @@ type ReceiptProp = {
     vat_amount?: number | null;
     total_amount_due: number;
     category_id: string;
+    source_id: string;  // Add this field
+    created_by: string; // Add this field
     remarks?: string | null;
     items: ReceiptItemProp[];
 };
@@ -56,7 +58,7 @@ type EditReceiptItem = {
     total_price: number;
 };
 
-type UpdatedReceiptData = {
+export type UpdatedReceiptData = {
   receipt_id: string;
   supplier: string;
   transaction_date: string;
@@ -65,6 +67,7 @@ type UpdatedReceiptData = {
   date_paid?: string | null;
   payment_status_id: string;
   category_id: string;
+  source_id: string;  // Add this - required by AddReceiptSubmitData
   remarks?: string | null;
   total_amount: number;
   vat_amount: number;
@@ -78,6 +81,7 @@ type UpdatedReceiptData = {
     total_price: number;
     category_id: string;
   }[];
+  created_by: string;  // Add this - required by AddReceiptSubmitData
   updated_by: string;
 };
 
@@ -92,13 +96,6 @@ type EditReceiptModalProps = {
   itemUnits: GlobalItemUnit[];
 };
 
-const EXPENSE_CATEGORIES = [
-  'Other'
-];
-
-const ITEM_UNITS = [
-  'Other'
-];
 
 const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   receipt,
@@ -112,7 +109,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   const [supplier, setSupplier] = useState(receipt?.supplier || '');
   const [transactionDate, setTransactionDate] = useState(() => {
     const date = receipt?.transaction_date ? new Date(receipt.transaction_date) : new Date();
-    return date.toISOString().split('T')[0];
+    return date.toISOString().slice(0, 16); // Include time (YYYY-MM-DDTHH:mm)
   });
   const [vatRegTin, setVatRegTin] = useState(receipt?.vat_reg_tin || '');
   const [termsId, setTermsId] = useState(receipt?.terms_id || '');
@@ -146,7 +143,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   useEffect(() => {
     if (receipt) {
       setSupplier(receipt.supplier || '');
-      setTransactionDate(new Date(receipt.transaction_date).toISOString().split('T')[0]);
+      setTransactionDate(new Date(receipt.transaction_date).toISOString().slice(0, 16)); // Include time
       setVatRegTin(receipt.vat_reg_tin || '');
       setTermsId(receipt.terms_id || '');
       if (receipt.date_paid) {
@@ -279,6 +276,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
           date_paid: datePaid,
           payment_status_id: paymentStatusId,
           category_id: categoryId,
+          source_id: receipt.source_id,  // Use existing source_id from receipt
           remarks,
           total_amount: totalAmount,
           vat_amount: vatAmount,
@@ -292,6 +290,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             total_price: item.total_price,
             category_id: item.category_id,
           })),
+          created_by: receipt.created_by,  // Use existing created_by from receipt
           updated_by: 'ftms_user'
         };
         
@@ -327,9 +326,9 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
         <div className="formRow">
           <div className="formGroup">
-            <label>Transaction Date</label>
+            <label>Transaction Date & Time</label>
             <input
-              type="date"
+              type="datetime-local"
               name="transaction_date"
               value={transactionDate}
               onChange={handleInputChange}

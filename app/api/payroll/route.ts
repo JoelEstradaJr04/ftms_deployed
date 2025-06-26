@@ -1,259 +1,302 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '../../../lib/prisma';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const HR_API_BASE_URL = process.env.HR_API_BASE_URL;
 
-// GET: List all payroll records
-export async function GET(req: NextRequest) {
+interface HRPayrollEmployeeAssignment {
+  department?: {
+    departmentName?: string;
+  };
+  departmentName?: string;
+}
+
+interface HRPayrollEmployee {
+  employeeNumber: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  suffix?: string;
+  employeeStatus: string;
+  hiredate: string;
+  terminationDate?: string;
+  basicRate: number;
+  position: {
+    positionName: string;
+    department: {
+      departmentName: string;
+    };
+  };
+  department?: {
+    departmentName: string;
+  };
+  attendances: Array<{
+    date: string;
+    status: string;
+  }>;
+  benefits: Array<{
+    benefitType: {
+      name: string;
+    };
+    value: number;
+    frequency: string;
+    effectiveDate: string;
+    endDate?: string;
+    isActive: boolean;
+  }>;
+  deductions: Array<{
+    deductionType: {
+      name: string;
+      type: string;
+    };
+    value: number;
+    frequency: string;
+    effectiveDate: string;
+    endDate?: string;
+    isActive: boolean;
+  }>;
+  assignments?: HRPayrollEmployeeAssignment[];
+}
+
+function transformHRDataToPayroll(hrData: HRPayrollEmployee[], startDate: string, endDate: string) {
+  return hrData.map(employee => {
+    const fullName = [employee.firstName, employee.middleName, employee.lastName, employee.suffix]
+      .filter(Boolean)
+      .join(' ');
+
+    // Calculate days worked based on attendance
+    const daysWorked = employee.attendances.filter(att => att.status === 'Present').length;
+    
+    // Calculate basic pay
+    const basicPay = Number(employee.basicRate) / 30 * daysWorked; // Ensure number
+    
+    // Process benefits
+    let revenueBenefit = 0;
+    let safetyBenefit = 0;
+    let additionalBenefits = 0;
+    let serviceIncentiveLeave = 0;
+    let holidayPay = 0;
+    let thirteenthMonthPay = 0;
+
+    employee.benefits.forEach(benefit => {
+      if (!benefit.isActive) return;
+      const value = Number(benefit.value);
+      const benefitName = benefit.benefitType.name.toLowerCase();
+      if (benefitName.includes('revenue')) revenueBenefit += value;
+      else if (benefitName.includes('safety')) safetyBenefit += value;
+      else if (benefitName.includes('service') || benefitName.includes('leave')) serviceIncentiveLeave += value;
+      else if (benefitName.includes('holiday')) holidayPay += value;
+      else if (benefitName.includes('13th') || benefitName.includes('thirteenth')) thirteenthMonthPay += value;
+      else additionalBenefits += value;
+    });
+
+    // Process deductions
+    let sssDeduction = 0;
+    let philhealthDeduction = 0;
+    let pagIbigDeduction = 0;
+    let cashAdvance = 0;
+    let damageShortage = 0;
+    let otherDeductions = 0;
+
+    employee.deductions.forEach(deduction => {
+      if (!deduction.isActive) return;
+      const value = Number(deduction.value);
+      const deductionName = deduction.deductionType.name.toLowerCase();
+      if (deductionName.includes('sss')) sssDeduction += value;
+      else if (deductionName.includes('philhealth')) philhealthDeduction += value;
+      else if (deductionName.includes('pag-ibig') || deductionName.includes('pag ibig')) pagIbigDeduction += value;
+      else if (deductionName.includes('cash') || deductionName.includes('advance')) cashAdvance += value;
+      else if (deductionName.includes('damage') || deductionName.includes('shortage')) damageShortage += value;
+      else otherDeductions += value;
+    });
+
+    // Calculate totals (ensure numbers)
+    const grossTotalEarnings = Number(basicPay) + Number(revenueBenefit) + Number(safetyBenefit) + Number(additionalBenefits) + 
+                              Number(serviceIncentiveLeave) + Number(holidayPay) + Number(thirteenthMonthPay);
+    
+    const totalDeductions = Number(sssDeduction) + Number(philhealthDeduction) + Number(pagIbigDeduction) + 
+                           Number(cashAdvance) + Number(damageShortage) + Number(otherDeductions);
+    
+    const netPay = Number(grossTotalEarnings) - Number(totalDeductions);
+
+    // --- Department extraction (FIXED) ---
+    // First try to get department from position.department.departmentName
+    let departmentName = '-';
+    if (employee.position && employee.position.department && employee.position.department.departmentName) {
+      departmentName = employee.position.department.departmentName;
+    } 
+    // Fallback to direct department property if exists
+    else if (employee.department && employee.department.departmentName) {
+      departmentName = employee.department.departmentName;
+    } 
+    // Fallback to assignments if available
+    else if (employee.assignments && Array.isArray(employee.assignments) && employee.assignments.length > 0) {
+      const assignment = employee.assignments[0];
+      if (assignment.department && assignment.department.departmentName) {
+        departmentName = assignment.department.departmentName;
+      } else if (assignment.departmentName) {
+        departmentName = assignment.departmentName;
+      }
+    }
+
+    return {
+      payroll_id: `payroll_${employee.employeeNumber}_${startDate}_${endDate}`,
+      employee_number: employee.employeeNumber,
+      employee_name: fullName,
+      first_name: employee.firstName,
+      middle_name: employee.middleName || null,
+      last_name: employee.lastName,
+      suffix: employee.suffix || null,
+      employee_status: employee.employeeStatus,
+      hire_date: employee.hiredate,
+      termination_date: employee.terminationDate || null,
+      job_title: (employee.position && employee.position.positionName) ? employee.position.positionName : '-',
+      department: departmentName,
+      payroll_period: "Monthly", // Default to monthly, adjust as needed
+      payroll_start_date: startDate,
+      payroll_end_date: endDate,
+      basic_rate: Number(employee.basicRate),
+      days_worked: daysWorked,
+      
+      // Earnings
+      basic_pay: Number(basicPay),
+      overtime_regular: 0, // Not provided in HR data
+      overtime_holiday: 0, // Not provided in HR data
+      service_incentive_leave: Number(serviceIncentiveLeave),
+      holiday_pay: Number(holidayPay),
+      thirteenth_month_pay: Number(thirteenthMonthPay),
+      
+      // Benefits
+      revenue_benefit: Number(revenueBenefit),
+      safety_benefit: Number(safetyBenefit),
+      additional_benefits: Number(additionalBenefits),
+      
+      // Deductions
+      sss_deduction: Number(sssDeduction),
+      philhealth_deduction: Number(philhealthDeduction),
+      pag_ibig_deduction: Number(pagIbigDeduction),
+      cash_advance: Number(cashAdvance),
+      damage_shortage: Number(damageShortage),
+      other_deductions: Number(otherDeductions),
+      
+      // Totals
+      gross_total_earnings: Number(grossTotalEarnings),
+      total_deductions: Number(totalDeductions),
+      net_pay: Number(netPay),
+      
+      // Status
+      status: "Pending",
+      date_released: null,
+    };
+  });
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const url = req.nextUrl || req.url;
-    const searchParams = (typeof url === 'string' ? new URL(url, 'http://localhost') : url).searchParams;
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('start') || new Date().toISOString().split('T')[0];
+    const endDate = searchParams.get('end') || new Date().toISOString().split('T')[0];
+
+    const hrApiUrl = `${HR_API_BASE_URL}/finance/payroll-employees-range?start=${startDate}&end=${endDate}`;
     
-    // Get query parameters
-    const search = searchParams.get('search');
-    const position = searchParams.get('position');
-    const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '10');
-    const offset = (page - 1) * pageSize;
+    const response = await fetch(hrApiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-    // Build query
-    let query = supabase
-      .from('hr_payroll')
-      .select('*', { count: 'exact' });
-
-    // Apply filters
-    if (search && search.trim()) {
-      const searchTerm = search.trim();
-      query = query.or(`employee_name.ilike.%${searchTerm}%,position.ilike.%${searchTerm}%`);
-    }
-    
-    if (position) {
-      query = query.eq('position', position);
+    if (!response.ok) {
+      throw new Error(`HR API responded with status: ${response.status}`);
     }
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    // Apply pagination
-    query = query.range(offset, offset + pageSize - 1);
-    
-    // Order by created_at descending
-    query = query.order('created_at', { ascending: false });
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to fetch payroll data' }, { status: 500 });
-    }
-
-    // Transform data to match frontend expectations
-    const transformedData = data?.map(record => ({
-      payroll_id: record.payroll_id,
-      employee_name: record.employee_name,
-      job_title: record.position, // Map position to job_title for frontend
-      department: getDepartmentFromPosition(record.position), // Derive department from position
-      payroll_period: "Monthly", // Default to monthly for now
-      net_pay: parseFloat(record.net_pay),
-      deduction: parseFloat(record.total_deduction),
-      salary: parseFloat(record.gross_total_earnings), // Use gross earnings as salary
-      status: record.status || "Pending", // Use actual status from database
-      date_released: record.date_released,
-      // Additional fields for detailed view
-      days_of_work: record.days_of_work,
-      basic_rate: parseFloat(record.basic_rate),
-      basic_pay: parseFloat(record.basic_pay),
-      regular: parseFloat(record.regular),
-      holiday: parseFloat(record.holiday),
-      service_incentive_leave: parseFloat(record.service_incentive_leave),
-      holiday_pay: parseFloat(record.holiday_pay),
-      thirteenth_month_pay: parseFloat(record.thirteenth_month_pay),
-      revenue: parseFloat(record.revenue),
-      safety: parseFloat(record.safety),
-      additional: parseFloat(record.additional),
-      philhealth: parseFloat(record.philhealth),
-      pag_ibig: parseFloat(record.pag_ibig),
-      sss: parseFloat(record.sss),
-      cash_advance: parseFloat(record.cash_advance),
-      damage_shortage: parseFloat(record.damage_shortage),
-      gross_total_earnings: parseFloat(record.gross_total_earnings),
-      total_deduction: parseFloat(record.total_deduction),
-      created_at: record.created_at,
-      updated_at: record.updated_at
-    })) || [];
+    const hrData: HRPayrollEmployee[] = await response.json();
+    const transformedData = transformHRDataToPayroll(hrData, startDate, endDate);
 
     return NextResponse.json({
+      success: true,
       data: transformedData,
-      pagination: {
-        currentPage: page,
-        pageSize,
-        totalRecords: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize)
-      }
+      count: transformedData.length,
     });
 
   } catch (error) {
     console.error('Error fetching payroll data:', error);
-    return NextResponse.json({ error: 'Failed to fetch payroll data' }, { status: 500 });
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to fetch payroll data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
 
-// POST: Create new payroll record
-export async function POST(req: NextRequest) {
+export async function PATCH(request: NextRequest) {
   try {
-    const body = await req.json();
-    const {
-      employee_name,
-      position,
-      days_of_work,
-      basic_rate,
-      regular = 0,
-      holiday = 0,
-      service_incentive_leave = 12.44,
-      holiday_pay = 0,
-      thirteenth_month_pay = 0,
-      revenue = 0,
-      safety = 0,
-      additional = 0,
-      philhealth = 0,
-      pag_ibig = 0,
-      sss = 0,
-      cash_advance = 0,
-      damage_shortage = 0
-    } = body;
-
-    // Validate required fields
-    if (!employee_name || !position || !days_of_work || !basic_rate) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: employee_name, position, days_of_work, basic_rate' 
-      }, { status: 400 });
+    console.log('PATCH /api/payroll - Request received');
+    
+    const body = await request.json();
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
+    const records = Array.isArray(body) ? body : [body];
+    console.log('Records to process:', records.length);
+    
+    const results = [];
+    for (const rec of records) {
+      console.log('Processing record for employee:', rec.employee_number);
+      
+      // Prepare data for upsert - convert date strings to Date objects
+      const dataToSave = {
+        ...rec,
+        status: 'Released',
+        date_released: new Date(),
+        // Convert string dates to Date objects for Prisma
+        payroll_start_date: new Date(rec.payroll_start_date),
+        payroll_end_date: new Date(rec.payroll_end_date),
+        hire_date: new Date(rec.hire_date),
+        termination_date: rec.termination_date ? new Date(rec.termination_date) : null,
+      };
+      
+      console.log('Data to save:', {
+        employee_number: dataToSave.employee_number,
+        payroll_start_date: dataToSave.payroll_start_date,
+        payroll_end_date: dataToSave.payroll_end_date,
+        status: dataToSave.status
+      });
+      
+      try {
+        // Upsert by unique constraint (employee_number, payroll_start_date, payroll_end_date)
+        const saved = await prisma.payrollRecord.upsert({
+          where: {
+            employee_number_payroll_start_date_payroll_end_date: {
+              employee_number: rec.employee_number,
+              payroll_start_date: new Date(rec.payroll_start_date),
+              payroll_end_date: new Date(rec.payroll_end_date),
+            }
+          },
+          update: dataToSave,
+          create: {
+            ...dataToSave,
+            created_by: rec.released_by || 'system', // fallback if not provided
+          }
+        });
+        
+        console.log('Successfully saved record for employee:', rec.employee_number);
+        results.push(saved);
+      } catch (dbError) {
+        console.error('Database error for employee', rec.employee_number, ':', dbError);
+        throw dbError;
+      }
     }
-
-    const { data, error } = await supabase
-      .from('hr_payroll')
-      .insert([{
-        employee_name,
-        position,
-        days_of_work,
-        basic_rate,
-        regular,
-        holiday,
-        service_incentive_leave,
-        holiday_pay,
-        thirteenth_month_pay,
-        revenue,
-        safety,
-        additional,
-        philhealth,
-        pag_ibig,
-        sss,
-        cash_advance,
-        damage_shortage
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to create payroll record' }, { status: 500 });
-    }
-
-    return NextResponse.json(data, { status: 201 });
-
+    
+    console.log('PATCH completed successfully. Records processed:', results.length);
+    return NextResponse.json({ success: true, data: results });
   } catch (error) {
-    console.error('Error creating payroll record:', error);
-    return NextResponse.json({ error: 'Failed to create payroll record' }, { status: 500 });
+    console.error('PATCH /api/payroll - Error occurred:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
   }
 }
-
-// PATCH: Update payroll record
-export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { payroll_id, ...updateData } = body;
-
-    if (!payroll_id) {
-      return NextResponse.json({ error: 'payroll_id is required' }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-      .from('hr_payroll')
-      .update({
-        ...updateData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('payroll_id', payroll_id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to update payroll record' }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('Error updating payroll record:', error);
-    return NextResponse.json({ error: 'Failed to update payroll record' }, { status: 500 });
-  }
-}
-
-// DELETE: Delete payroll record
-export async function DELETE(req: NextRequest) {
-  try {
-    const url = req.nextUrl || req.url;
-    const searchParams = (typeof url === 'string' ? new URL(url, 'http://localhost') : url).searchParams;
-    const payroll_id = searchParams.get('payroll_id');
-
-    if (!payroll_id) {
-      return NextResponse.json({ error: 'payroll_id is required' }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from('hr_payroll')
-      .delete()
-      .eq('payroll_id', payroll_id);
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to delete payroll record' }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: 'Payroll record deleted successfully' });
-
-  } catch (error) {
-    console.error('Error deleting payroll record:', error);
-    return NextResponse.json({ error: 'Failed to delete payroll record' }, { status: 500 });
-  }
-}
-
-// Helper function to derive department from position
-function getDepartmentFromPosition(position: string): string {
-  const positionLower = position.toLowerCase();
-  
-  if (['driver', 'conductor', 'mechanic'].includes(positionLower)) {
-    return 'Operations';
-  } else if (['manager', 'supervisor'].includes(positionLower)) {
-    return 'Management';
-  } else if (['accountant', 'cashier', 'clerk'].includes(positionLower)) {
-    return 'Finance';
-  } else if (['secretary', 'hr assistant'].includes(positionLower)) {
-    return 'Administration';
-  } else if (['nurse', 'midwife', 'dentist'].includes(positionLower)) {
-    return 'Healthcare';
-  } else if (['teacher', 'librarian'].includes(positionLower)) {
-    return 'Education';
-  } else if (['cook', 'dishwasher', 'cafeteria worker'].includes(positionLower)) {
-    return 'Food Service';
-  } else if (['security guard', 'janitor', 'maintenance'].includes(positionLower)) {
-    return 'Facilities';
-  } else {
-    return 'General';
-  }
-} 

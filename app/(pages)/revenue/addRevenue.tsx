@@ -15,6 +15,7 @@ import { isValidAmount } from '../../utility/validation';
 import { formatDate } from '../../utility/dateFormatter';
 import { formatDisplayText } from '../../utils/formatting';
 import { Assignment } from '@/lib/supabase/assignments';
+import RevenueSourceSelector from '../../Components/revenueBusSelector';
 
 type GlobalCategory = {
   category_id: string;
@@ -47,9 +48,11 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   assignments,
   currentUser 
 }) => {
+  console.log('[RENDER] AddRevenue component rendering');
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const today = new Date().toISOString().split('T')[0];
+  const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [categories, setCategories] = useState<GlobalCategory[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   
@@ -63,6 +66,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
   // Fetch categories and employees on component mount
   useEffect(() => {
+    console.log('[EFFECT] Fetching categories and employees');
     const fetchGlobals = async () => {
       try {
         const [categoriesResponse, employeesResponse] = await Promise.all([
@@ -82,11 +86,13 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
           if (revenueCategories.length > 0) {
             setFormData(prev => ({ ...prev, category_id: revenueCategories[0].category_id }));
           }
+          console.log('[DATA] Categories loaded:', categoriesData.length);
         }
 
         if (employeesResponse.ok) {
           const employeesData = await employeesResponse.json();
           setAllEmployees(employeesData);
+          console.log('[DATA] Employees loaded:', employeesData.length);
         }
       } catch (error) {
         console.error('Error fetching globals:', error);
@@ -127,18 +133,23 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
   // When assignment changes, auto-fill fields
   useEffect(() => {
-    if (formData.assignment_id) {
+    console.log('[EFFECT] Assignment effect triggered:', {
+      assignment_id: formData.assignment_id,
+      category_id: formData.category_id,
+      assignmentsLength: assignments.length,
+      categoriesLength: categories.length
+    });
+    if (formData.assignment_id && formData.assignment_id !== '') {
       const selectedAssignment = assignments.find(a => a.assignment_id === formData.assignment_id);
+      console.log('[EFFECT] Selected assignment found:', Boolean(selectedAssignment));
       if (selectedAssignment) {
         const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
-        
-        // Calculate amount based on category type
+        console.log('[EFFECT] Selected category:', selectedCategory?.name);
         let calculatedAmount = selectedAssignment.trip_revenue;
         if (selectedCategory?.name === 'Percentage' && selectedAssignment.assignment_value) {
           calculatedAmount = selectedAssignment.trip_revenue * (selectedAssignment.assignment_value / 100);
         }
-        // For Boundary category, use trip_revenue as is
-        
+        console.log('[EFFECT] Updating form with calculated amount:', calculatedAmount);
         setFormData(prev => ({
           ...prev,
           total_amount: calculatedAmount,
@@ -146,26 +157,17 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         }));
       }
     }
-  }, [formData.assignment_id, formData.category_id, assignments, categories]);
+  }, [formData.assignment_id, formData.category_id, assignments, categories]); // Add formData.category_id to dependencies
 
   // Reset form when category changes
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      assignment_id: '',
-      total_amount: 0,
-      collection_date: new Date().toISOString().split('T')[0],
-    }));
-  }, [formData.category_id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+    console.log('[EVENT] Input changed:', name, value);
     let newValue: string | number = value;
     if (name === 'total_amount') {
       newValue = parseFloat(value) || 0;
     }
-
     setFormData(prev => ({
       ...prev,
       [name]: newValue
@@ -174,6 +176,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[EVENT] Form submit:', formData);
 
     const { category_id, assignment_id, total_amount, collection_date } = formData;
 
@@ -236,7 +239,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     <div className="modalOverlay">
       <div className="addRevenueModal">
         {/* Close Button */}
-        <button type="button" className="closeButton" onClick={onClose}>
+        <button type="button" className="closeButton" onClick={() => { console.log('[EVENT] Close button clicked'); onClose(); }}>
           <i className="ri-close-line"></i>
         </button>
 
@@ -249,7 +252,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modalContent">
+          <div className="addRevenue_modalContent">
             <div className="formFieldsHorizontal">
               <div className="formInputs">
 
@@ -261,7 +264,17 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                       id="category_id"
                       name="category_id"
                       value={formData.category_id}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        console.log('[EVENT] Category changed to:', value);
+                        setFormData(prev => ({
+                          ...prev,
+                          category_id: value,
+                          assignment_id: '',
+                          total_amount: 0,
+                          collection_date: new Date().toISOString().split('T')[0],
+                        }));
+                      }}
                       required
                       className="formSelect"
                     >
@@ -283,27 +296,47 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                   {/* ASSIGNMENT (required for all categories) */}
                   <div className="formField">
                     <label htmlFor="assignment_id">Assignment<span className='requiredTags'> *</span></label>
-                    <select
-                      id="assignment_id"
-                      name="assignment_id"
-                      value={formData.assignment_id}
-                      onChange={handleInputChange}
-                      required
+                    <button
+                      type="button"
                       className="formSelect"
+                      id='busSelector'
+                      style={{ textAlign: "left", width: "100%" }}
+                      onClick={() => { console.log('[EVENT] Open assignment selector modal'); setShowSourceSelector(true); }}
                       disabled={filteredAssignments.length === 0}
                     >
-                      <option value="">Select Assignment</option>
-                      {filteredAssignments.map((assignment) => (
-                        <option 
-                          key={assignment.assignment_id} 
-                          value={assignment.assignment_id}
-                        >
-                          {formatAssignment(assignment)}
-                        </option>
-                      ))}
-                    </select>
+                      {formData.assignment_id
+                        ? formatAssignment(assignments.find(a => a.assignment_id === formData.assignment_id)!)
+                        : "Select Assignment"}
+                    </button>
                     {filteredAssignments.length === 0 && formData.category_id && (
                       <div className="noAssignments">No assignments available for selected category</div>
+                    )}
+                    
+                    {/* Add the modal */}
+                    {showSourceSelector && (
+                      <RevenueSourceSelector
+                        assignments={assignments}
+                        employees={allEmployees}
+                        categories={categories}
+                        selectedCategoryId={formData.category_id}
+                        onSelect={assignment => {
+                          console.log('[MODAL] Assignment selected:', assignment.assignment_id);
+                          const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
+                          let calculatedAmount = assignment.trip_revenue;
+                          if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
+                            calculatedAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                          }
+                          console.log('[MODAL] Setting form with amount:', calculatedAmount);
+                          setFormData(prev => ({
+                            ...prev,
+                            assignment_id: assignment.assignment_id,
+                            total_amount: calculatedAmount,
+                            collection_date: assignment.date_assigned.split('T')[0],
+                          }));
+                        }}
+                        onClose={() => { console.log('[EVENT] Close assignment selector modal'); setShowSourceSelector(false); }}
+                        isOpen={showSourceSelector}
+                      />
                     )}
                   </div>
                 </div>
@@ -343,7 +376,6 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                     )}
                   </div>
                 </div>
-
               </div>
             </div>
           </div>

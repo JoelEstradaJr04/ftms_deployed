@@ -14,6 +14,27 @@ import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
+// Import shared types
+import { Receipt } from '@/app/types/receipt';
+
+
+// Add interface for new expense creation
+interface NewExpense {
+  category?: string;
+  category_id?: string;
+  assignment_id?: string;
+  receipt_id?: string;
+  source_id?: string;
+  payment_method_id?: string;
+  total_amount: number;
+  expense_date: string;
+  created_by: string;
+  employee_id?: string;
+  driver_reimbursement?: number;
+  conductor_reimbursement?: number;
+  other_source?: string;
+  other_category?: string;
+}
 
 // Define interface based on your Prisma ExpenseRecord schema
 interface ExpenseRecord {
@@ -47,71 +68,6 @@ interface ExpenseRecord {
   category_name?: string;
   payment_method_name?: string;
   source_name?: string;
-}
-
-interface Receipt {
-  receipt_id: string;
-  supplier: string;
-  transaction_date: string;
-  vat_reg_tin?: string;
-  terms?: {
-    id: string;
-    name: string;
-  };
-  date_paid?: string;
-  payment_status: {
-    id: string;
-    name: string;
-  };
-  total_amount: number;
-  vat_amount?: number;
-  total_amount_due: number;
-  category: {
-    category_id: string;
-    name: string;
-  };
-  remarks?: string;
-  ocr_confidence?: number;
-  ocr_file_path?: string;
-  is_expense_recorded: boolean;
-  items: ReceiptItem[];
-  source?: {
-    source_id: string;
-    name: string;
-  };
-  created_by: string;
-  created_at: string;
-  updated_at?: string;
-  updated_by?: string;
-  is_deleted: boolean;
-}
-
-interface ReceiptItem {
-  receipt_item_id: string;
-  receipt_id: string;
-  item_id: string;
-  item: {
-    item_id: string;
-    item_name: string;
-    unit: {
-      id: string;
-      name: string;
-    };
-    category: {
-      category_id: string;
-      name: string;
-    };
-    other_unit?: string;
-  };
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  created_at: string;
-  updated_at?: string;
-  created_by: string;
-  updated_by?: string;
-  is_deleted: boolean;
-  ocr_confidence?: number;
 }
 
 type Reimbursement = {
@@ -300,7 +256,7 @@ const filteredData = data.filter((item: ExpenseData) => {
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const handleAddExpense = async (newExpense: any) => {
+  const handleAddExpense = async (newExpense: NewExpense) => {
     // Remove employee_id if present and source is operations
     if (newExpense.assignment_id && newExpense.driver_reimbursement !== undefined && newExpense.conductor_reimbursement !== undefined) {
       delete newExpense.employee_id;
@@ -656,15 +612,7 @@ const filteredData = data.filter((item: ExpenseData) => {
         }
       } else if (item.receipt) {
         source = formatReceipt(item.receipt);
-      } else {
-        source = item.other_source || 'N/A';
-      }
-
-      // Reimbursement display logic
-      let reimbursementDisplay = '-';
-      if (item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0) {
-        reimbursementDisplay = item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ');
-      }
+      } 
    
       return (
         <tr key={item.expense_id}>
@@ -726,9 +674,10 @@ const filteredData = data.filter((item: ExpenseData) => {
         
         <div className="settings">
 
-          <div className="searchBar">
+          <div className="expense_searchBar">
             <i className="ri-search-line" />
             <input
+              className="searchInput"
               type="text"
               placeholder="Search here..."
               value={search}
@@ -808,16 +757,8 @@ const filteredData = data.filter((item: ExpenseData) => {
                     }
                   } else if (item.receipt) {
                     source = formatReceipt(item.receipt);
-                  } else {
-                    source = item.other_source || 'N/A';
-                  }
-               
-                  // Reimbursement display logic
-                  let reimbursementDisplay = '-';
-                  if (item.payment_method === 'REIMBURSEMENT' && item.reimbursements && item.reimbursements.length > 0) {
-                    reimbursementDisplay = item.reimbursements.map(r => `${r.job_title ? r.job_title + ': ' : ''}${r.employee_name} (₱${Number(r.amount).toLocaleString()})`).join(', ');
-                  }
-               
+                  } 
+                              
                   return (
                     <tr key={item.expense_id}>
                       <td>{formatDateTime(item.expense_date)}</td>
@@ -825,7 +766,7 @@ const filteredData = data.filter((item: ExpenseData) => {
                       <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
                       <td>₱{Number(item.total_amount).toLocaleString()}</td>
                       <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method?.name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
-                      <td className="actionButtons">
+                      <td className="styles.actionButtons">
                         <div className="actionButtonsContainer">
                           {/* view button */}
                           <button className="viewBtn" onClick={() => handleViewExpense(item)} title="View Record">
@@ -873,7 +814,6 @@ const filteredData = data.filter((item: ExpenseData) => {
               expense_id: recordToEdit.expense_id,
               expense_date: recordToEdit.expense_date,
               category: recordToEdit.category,
-              other_category: recordToEdit.other_category,
               total_amount: recordToEdit.total_amount,
               assignment: recordToEdit.assignment_id 
                 ? (() => {
@@ -888,8 +828,15 @@ const filteredData = data.filter((item: ExpenseData) => {
                     };
                   })()
                 : undefined,
-              receipt: recordToEdit.receipt,
-              other_source: recordToEdit.other_source,
+              receipt: recordToEdit.receipt ? {
+                ...recordToEdit.receipt,
+                items: recordToEdit.receipt.items.map(item => ({
+                  ...item,
+                  item_name: item.item?.item_name || '',
+                  unit: item.item?.unit?.name || ''
+                }))
+              } : undefined,
+              // Pass the entire payment_method object to match schema structure
               payment_method: recordToEdit.payment_method,
               reimbursements: recordToEdit.reimbursements,
             }}
@@ -906,7 +853,6 @@ const filteredData = data.filter((item: ExpenseData) => {
             record={{
               expense_id: recordToView.expense_id,
               category: recordToView.category,
-              other_category: recordToView.other_category,
               total_amount: recordToView.total_amount,
               expense_date: recordToView.expense_date,
               assignment: recordToView.assignment_id 
@@ -923,7 +869,6 @@ const filteredData = data.filter((item: ExpenseData) => {
                   })()
                 : undefined,
               receipt: recordToView.receipt,
-              other_source: recordToView.other_source,
               payment_method: recordToView.payment_method,
               reimbursements: recordToView.reimbursements,
             }}

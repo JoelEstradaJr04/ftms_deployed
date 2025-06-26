@@ -3,30 +3,35 @@
 import React, { useState, useEffect, useCallback } from "react";
 import PieChart from "../../Components/pieChart";
 import ExportConfirmationModal from "../../Components/ExportConfirmationModal";
-import "../../styles/dashboard.css"; // External CSS for styling
-import { GlobalCategory } from "@prisma/client";
+import "../../styles/dashboard.css";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
-import { formatDisplayText } from '@/app/utils/formatting';
+//import { formatDisplayText } from '@/app/utils/formatting';
 
 interface RevenueRecord {
-  category: RevenueCategory;
+  category: {
+    category_id: string;
+    name: string;
+  };
   total_amount: string | number;
 }
 
 interface ExpenseRecord {
-  category: ExpenseCategory;
+  category: {
+    category_id: string;
+    name: string;
+  };
   total_amount: string | number;
 }
 
 interface DashboardData {
   revenue: {
     total: number;
-    byCategory: Record<RevenueCategory, number>;
+    byCategory: Record<string, { name: string; amount: number }>;
   };
   expense: {
     total: number;
-    byCategory: Record<ExpenseCategory, number>;
+    byCategory: Record<string, { name: string; amount: number }>;
   };
   profit: number;
 }
@@ -34,13 +39,13 @@ interface DashboardData {
 const DashboardPage = () => {
   const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState(""); // Tracks the selected filter
-  const [dateFrom, setDateFrom] = useState(""); // Tracks the start date
-  const [dateTo, setDateTo] = useState(""); // Tracks the end date
+  const [dateFilter, setDateFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
-    revenue: { total: 0, byCategory: {} as Record<RevenueCategory, number> },
-    expense: { total: 0, byCategory: {} as Record<ExpenseCategory, number> },
+    revenue: { total: 0, byCategory: {} },
+    expense: { total: 0, byCategory: {} },
     profit: 0
   });
 
@@ -72,19 +77,27 @@ const DashboardPage = () => {
       const expenseResponse = await fetch(`/api/expenses?${params}`);
       const expenseData = await expenseResponse.json();
 
-      // Calculate totals and categorize
-      const revenueByCategory = revenueData.reduce((acc: Record<RevenueCategory, number>, curr: RevenueRecord) => {
-        acc[curr.category] = (acc[curr.category] || 0) + Number(curr.total_amount);
-        return acc;
-      }, {} as Record<RevenueCategory, number>);
+      // Calculate totals and categorize by category name
+      const revenueByCategory: Record<string, { name: string; amount: number }> = {};
+      revenueData.forEach((curr: RevenueRecord) => {
+        const categoryName = curr.category.name;
+        if (!revenueByCategory[categoryName]) {
+          revenueByCategory[categoryName] = { name: categoryName, amount: 0 };
+        }
+        revenueByCategory[categoryName].amount += Number(curr.total_amount);
+      });
 
-      const expenseByCategory = expenseData.reduce((acc: Record<ExpenseCategory, number>, curr: ExpenseRecord) => {
-        acc[curr.category] = (acc[curr.category] || 0) + Number(curr.total_amount);
-        return acc;
-      }, {} as Record<ExpenseCategory, number>);
+      const expenseByCategory: Record<string, { name: string; amount: number }> = {};
+      expenseData.forEach((curr: ExpenseRecord) => {
+        const categoryName = curr.category.name;
+        if (!expenseByCategory[categoryName]) {
+          expenseByCategory[categoryName] = { name: categoryName, amount: 0 };
+        }
+        expenseByCategory[categoryName].amount += Number(curr.total_amount);
+      });
 
-      const totalRevenue = (Object.values(revenueByCategory) as number[]).reduce((a, b) => a + b, 0);
-      const totalExpense = (Object.values(expenseByCategory) as number[]).reduce((a, b) => a + b, 0);
+      const totalRevenue = Object.values(revenueByCategory).reduce((acc, curr) => acc + curr.amount, 0);
+      const totalExpense = Object.values(expenseByCategory).reduce((acc, curr) => acc + curr.amount, 0);
       const profit = totalRevenue - totalExpense;
 
       setDashboardData({
@@ -102,13 +115,8 @@ const DashboardPage = () => {
 
   // Initial fetch and polling setup
   useEffect(() => {
-    // Fetch immediately
     fetchDashboardData();
-
-    // Set up polling every 30 seconds
     const intervalId = setInterval(fetchDashboardData, 30000);
-
-    // Cleanup on unmount
     return () => clearInterval(intervalId);
   }, [fetchDashboardData]);
 
@@ -160,7 +168,7 @@ const DashboardPage = () => {
         window.URL.revokeObjectURL(url);
         setIsExportModalOpen(false);
 
-        // Log the export action to audit using the client-side logger
+        // Log the export action
         const idResponse = await fetch('/api/generate-export-id');
         if (!idResponse.ok) {
           throw new Error('Failed to generate export ID');
@@ -185,7 +193,7 @@ const DashboardPage = () => {
   if (loading) {
     return (
         <div className="card">
-            <h1 className="title">Stock Management</h1>
+            <h1 className="title">Dashboard</h1>
             <Loading />
         </div>
     );
@@ -195,10 +203,8 @@ const DashboardPage = () => {
     <>
     <div className="dashboardPage">
       <div className="accounting">
-        {/* CONTAINER FOR THE SETTINGS */}
-        <div className="settings">
+        <div className="dashboard_settings">
           <div className="filterDate">
-            {/* DROPDOWN FILTER OF PERIODS */}
             <div className="filter">
               <label htmlFor="dateFilter">Filter By:</label>
               <select
@@ -259,26 +265,21 @@ const DashboardPage = () => {
             )}
           </div>
 
-          {/* EXPORT BUTTON */}
           <div className="exportButton">
               <button onClick={() => setIsExportModalOpen(true)}><i className="ri-receipt-line" /> Export</button>
           </div>
         </div>
-      {/* </div> */}
 
-        {/* CONTAINER FOR THE DATA */}
-        {/* CONTAINS REVENUE, EXPENSES, AND PROFIT */}
-        {/* GRAPHS FOR THE EXPENSES */}
-          <div className="dataContainer">
+        <div className="dataContainer">
                 <div className="data">
                     <div className="dataGrid" id="revenue">
                         <div className="title"><h2>Revenue</h2></div>
                         <p>₱{dashboardData.revenue.total.toLocaleString()}</p>
                         <div className="categoryBreakdown">
-                          {Object.entries(dashboardData.revenue.byCategory).map(([category, amount]) => (
-                            <div key={category} className="categoryItem">
-                              <span>{formatDisplayText(category)}</span>
-                              <span>₱{amount.toLocaleString()}</span>
+                          {Object.entries(dashboardData.revenue.byCategory).map(([categoryName, categoryData]) => (
+                            <div key={categoryName} className="categoryItem">
+                              <span>{categoryData.name}</span>
+                              <span>₱{categoryData.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -287,10 +288,10 @@ const DashboardPage = () => {
                         <div className="title"><h2>Expenses</h2></div>  
                         <p>₱{dashboardData.expense.total.toLocaleString()}</p>
                         <div className="categoryBreakdown">
-                          {Object.entries(dashboardData.expense.byCategory).map(([category, amount]) => (
-                            <div key={category} className="categoryItem">
-                              <span>{formatDisplayText(category)}</span>
-                              <span>₱{amount.toLocaleString()}</span>
+                          {Object.entries(dashboardData.expense.byCategory).map(([categoryName, categoryData]) => (
+                            <div key={categoryName} className="categoryItem">
+                              <span>{categoryData.name}</span>
+                              <span>₱{categoryData.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -299,7 +300,6 @@ const DashboardPage = () => {
                         <div className="title"><h2>Profit</h2></div>
                         <p>₱{dashboardData.profit.toLocaleString()}</p>
                     </div>
-                    {/* AUTOMATICALLY UPDATING EMOJI BASED ON THE PROFIT */}
                     <div className="dataGrid" id="emoji">
                         <div className="emoji">
                           <video
@@ -312,20 +312,17 @@ const DashboardPage = () => {
                     </div>
                 </div>
 
-
-                {/* CONTAINER FOR THE GRAPHS */}
-                {/* CONTAINS THE REVENUE, EXPENSES, AND PROFIT GRAPHS */}
                 <div className="graphContainer-wrapper">
                   <div className="graphContainer">
                       <div className="title"><h2>Financial Overview</h2></div>
-                      {/* PIE CHART */}
-                      {/* This is a pie chart that shows the expenses */}
-                      {/* The data is passed as props to the PieChart component */}
-                      {/* The PieChart component is imported from the Components folder */}
                       <div className="pieChartContainer">
                         <PieChart 
-                          revenueData={dashboardData.revenue.byCategory}
-                          expenseData={dashboardData.expense.byCategory}
+                          revenueData={Object.fromEntries(
+                            Object.entries(dashboardData.revenue.byCategory).map(([key, value]) => [key, value.amount])
+                          )}
+                          expenseData={Object.fromEntries(
+                            Object.entries(dashboardData.expense.byCategory).map(([key, value]) => [key, value.amount])
+                          )}
                         />
                       </div>
                   </div>
