@@ -38,10 +38,17 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { requested_date: 'asc' }
     });
-    const mapped = reimbursements.map(r => ({
-      ...r,
-      status_name: r.status?.name || null,
-    }));
+  const mapped = reimbursements.map(r => ({
+    ...r,
+    // Map status relationship to match frontend expectations
+    status: r.status?.name || 'Pending',
+    status_name: r.status?.name || null,
+    // Map date fields to match frontend expectations
+    submitted_date: r.requested_date,
+    // Convert Decimal to number for frontend
+    amount: r.amount ? parseFloat(r.amount.toString()) : null,
+    total_amount: r.expense?.total_amount ? parseFloat(r.expense.total_amount.toString()) : 0,
+  }));
     return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error fetching reimbursements:', error);
