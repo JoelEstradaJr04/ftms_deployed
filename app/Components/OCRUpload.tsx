@@ -212,24 +212,33 @@ const OCRUpload: React.FC = () => {
                 }}
               />
               
-              {originalImageNaturalDimensions && displayedImageRenderedDimensions && ocrResults.map((result, index) => {
-                const scaleX = displayedImageRenderedDimensions.width / originalImageNaturalDimensions.width;
-                const scaleY = displayedImageRenderedDimensions.height / originalImageNaturalDimensions.height;
-                return (
-                  <div
-                    key={index}
-                    className="text-overlay"
-                    style={{
-                      position: 'absolute',
-                      left: `${result.bbox[0][0] * scaleX}px`,
-                      top: `${result.bbox[0][1] * scaleY}px`,
-                      width: `${(result.bbox[2][0] - result.bbox[0][0]) * scaleX}px`,
-                      height: `${(result.bbox[2][1] - result.bbox[0][1]) * scaleY}px`,
-                    }}
-                    title={`${result.text} (${(result.confidence * 100).toFixed(1)}% confidence)`}
-                  />
-                );
-              })}
+{originalImageNaturalDimensions && displayedImageRenderedDimensions && ocrResults.map((result, index) => {
+  if (
+    !result.bbox ||
+    !Array.isArray(result.bbox) ||
+    result.bbox.length < 3 ||
+    !Array.isArray(result.bbox[0]) ||
+    !Array.isArray(result.bbox[2])
+  ) {
+    return null;
+  }
+  const scaleX = displayedImageRenderedDimensions.width / originalImageNaturalDimensions.width;
+  const scaleY = displayedImageRenderedDimensions.height / originalImageNaturalDimensions.height;
+  return (
+    <div
+      key={index}
+      className="text-overlay"
+      style={{
+        position: 'absolute',
+        left: `${result.bbox[0][0] * scaleX}px`,
+        top: `${result.bbox[0][1] * scaleY}px`,
+        width: `${(result.bbox[2][0] - result.bbox[0][0]) * scaleX}px`,
+        height: `${(result.bbox[2][1] - result.bbox[0][1]) * scaleY}px`,
+      }}
+      title={`${result.text} (${(result.confidence * 100).toFixed(1)}% confidence)`}
+    />
+  );
+})}
             </div>
           </div>
 

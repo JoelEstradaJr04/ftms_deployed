@@ -14,13 +14,14 @@ const routeToItem: { [key: string]: string } = {
   "/receipt": "receipt",
   "/audit": "audit",
   "/report": "report",
-  "/financial-management/balancePayment": "balancePayment",
+  "/reimbursement": "reimbursement",
+  "/JEV": "JEV",
   "/financial-management/payroll": "payroll",
 };
 
-const financialSubItems = [
-  "/financial-management/balancePayment",
-  "/financial-management/payroll",
+const expenseSubItems = [
+  "/expense",
+  "/reimbursement",
 ];
 
 const Sidebar: React.FC = () => {
@@ -32,8 +33,8 @@ const Sidebar: React.FC = () => {
     const matched = routeToItem[pathname] || null;
     setActiveItem(matched);
 
-    if (financialSubItems.includes(pathname)) {
-      setOpenSubMenu("financial-management");
+    if (expenseSubItems.includes(pathname)) {
+      setOpenSubMenu("expense-management");
     }
   }, [pathname]);
 
@@ -44,7 +45,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="sidebar shadow-lg" id="sidebar">
       <div className="sidebar-content">
-        <div className="logo-Image /">
+        <div className="logo-img">
           <Image src="/agilaLogo.png" alt="logo" width={150} height={50} priority />
         </div>
 
@@ -63,18 +64,42 @@ const Sidebar: React.FC = () => {
             className={`nav-item ${activeItem === "revenue" ? "active" : ""}`}
             onClick={() => setActiveItem("revenue")}
           >
-            <i className="fa-duotone fa-dollar-sign" />
+            <i className="ri-money-dollar-circle-line" />
             <span>Revenue Management</span>
           </Link>
 
-          <Link
-            href="/expense"
-            className={`nav-item ${activeItem === "expense" ? "active" : ""}`}
-            onClick={() => setActiveItem("expense")}
+          {/* Expenses Submenu */}
+          <div
+            className={`nav-item module ${
+              ["expense", "reimbursement"].includes(activeItem!) ? "active" : ""
+            }`}
+            onClick={() => toggleSubMenu("expense-management")}
           >
-            <i className="ri-money-dollar-circle-line" />
-            <span>Expense Management</span>
-          </Link>
+            <i className="ri-wallet-3-line"></i>
+            <span>Expenses</span>
+            <i
+              className={`dropdown-arrow ri-arrow-down-s-line ${
+                openSubMenu === "expense-management" ? "rotate" : ""
+              }`}
+            />
+          </div>
+
+          {openSubMenu === "expense-management" && (
+            <div className="sub-menu active">
+              <Link
+                href="/expense"
+                className={`sub-item ${activeItem === "expense" ? "active" : ""}`}
+              >
+                Expenses
+              </Link>
+              <Link
+                href="/reimbursement"
+                className={`sub-item ${activeItem === "reimbursement" ? "active" : ""}`}
+              >
+                Reimbursements
+              </Link>
+            </div>
+          )}
 
           <Link
             href="/receipt"
@@ -85,38 +110,14 @@ const Sidebar: React.FC = () => {
             <span>Receipt Management</span>
           </Link>
 
-          {/* Financial Submenu */}
-          <div
-            className={`nav-item module ${
-              ["balancePayment", "payroll"].includes(activeItem!) ? "active" : ""
-            }`}
-            onClick={() => toggleSubMenu("financial-management")}
+          <Link
+            href="/financial-management/payroll"
+            className={`nav-item ${activeItem === "payroll" ? "active" : ""}`}
+            onClick={() => setActiveItem("payroll")}
           >
             <i className="ri-group-line" />
-            <span>Employee Financial Mgmt</span>
-            <i
-              className={`dropdown-arrow ri-arrow-down-s-line ${
-                openSubMenu === "financial-management" ? "rotate" : ""
-              }`}
-            />
-          </div>
-
-          {openSubMenu === "financial-management" && (
-            <div className="sub-menu active">
-              <Link
-                href="/financial-management/balancePayment"
-                className={`sub-item ${activeItem === "balancePayment" ? "active" : ""}`}
-              >
-                Balance & Payment
-              </Link>
-              <Link
-                href="/financial-management/payroll"
-                className={`sub-item ${activeItem === "payroll" ? "active" : ""}`}
-              >
-                Payroll
-              </Link>
-            </div>
-          )}
+            <span>Payroll</span>
+          </Link>
 
           <Link
             href="/report"
@@ -126,6 +127,19 @@ const Sidebar: React.FC = () => {
             <i className="ri-file-chart-line" />
             <span>Financial Reports</span>
           </Link>
+
+
+{/* 
+          <Link
+            href="/JEV"
+            className={`nav-item ${activeItem === "JEV" ? "active" : ""}`}
+            onClick={() => setActiveItem("JEV")}
+          >
+            <i className="ri-book-2-line"></i>
+            <span>JEV</span>
+          </Link>
+*/}
+
 
           <Link
             href="/audit"

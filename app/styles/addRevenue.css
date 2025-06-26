@@ -89,7 +89,7 @@
 }
 
 /* ---------- Content ---------- */
-.modalContent {
+.addRevenue_modalContent {
   width: var(--modal-content-width) !important;
   max-width: 100% !important;
   height: var(--modal-content-height) !important;
@@ -210,6 +210,29 @@
   background-color: var(--error-hover-color);
 }
 
+#busSelector {
+  min-width: var(--modal-button-width) !important;
+  max-width: fit-content;
+  min-height: var(--modal-button-height) !important;
+  font-size: var(--modal-button-font-size) !important;
+  border-radius: var(--modal-button-border-radius) !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+  color: var(--button-font-color) !important;
+  box-shadow: var(--box-shadow) !important;
+  transition: transform 0.15s ease, background 0.15s ease !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background: var(--primary-color) !important;
+  padding: var(--table-action-button-padding);
+}
+
+#busSelector:hover {
+  background: var(--primary-hover-color) !important;
+}
+
 /* Close button */
 .closeButton {
   position: absolute;
@@ -235,3 +258,32 @@
   justify-content: space-between !important;
   align-items: center !important;
 }
+
+
+/* ---------- Error Message for Data Validation ---------- */
+.input-error {
+  border-color: #ff4d4f !important;
+  background-color: #fff6f6;
+}
+
+.error {
+  border: 1px solid #ff4d4f !important;
+  background-color: #fff6f6;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.requiredTags {
+  color: #ff4d4f;
+  margin-left: 2px;
+}
+
+.autofill-note {
+  color: gray;
+  font-size: 13px;
+}
+

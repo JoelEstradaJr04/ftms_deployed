@@ -42,7 +42,7 @@ export async function getClientIp(request?: NextRequest | Request): Promise<stri
 
 type AuditLogData = {
   action: string;
-  table_affected: 'ExpenseRecord' | 'RevenueRecord' | 'Receipt';
+  table_affected: 'ExpenseRecord' | 'RevenueRecord' | 'Receipt' | 'Reimbursement';
   record_id: string;
   performed_by: string;
   details: string;

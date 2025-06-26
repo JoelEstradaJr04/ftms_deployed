@@ -1,3 +1,4 @@
+// ftms_deployed\prisma\schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,92 +8,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ExpenseCategory {
-  Fuel
-  Vehicle_Parts
-  Tools
-  Equipment
-  Supplies
-  Other
-  Multiple_Categories
-}
-
-enum RevenueCategory {
-  Boundary
-  Percentage
-  Bus_Rental
-  Other
-}
-
-enum Department {
-  Operations
-  Inventory
-  Human_Resources
-}
-
-enum ReceiptStatus {
-  Paid
-  Pending
-  Cancelled
-  Dued
-}
-
-enum ReceiptSource {
-  Manual_Entry
-  OCR_Camera
-  OCR_File
-}
-
 enum ExportFormat {
   CSV
   PDF
   XSL
 }
-
-enum TransactionType {
-  IN
-  OUT
-  ADJUSTMENT
-  NONE
-}
-
-enum PaymentStatus {
-  Paid
-  Pending
-  Cancelled
-  Dued
-}
-
-enum RecordStatus {
-  Active
-  Inactive
-}
-
-enum Terms {
-  Net_15
-  Net_30
-  Net_60
-  Net_90
-  Cash
-}
-
-enum ItemUnit {
-  piece
-  box
-  pack
-  liter
-  gallon
-  milliliter
-  kilogram
-  gram
-  meter
-  foot
-  roll
-  set
-  pair
-  Other
-}
-
 
 
 model Sequence {
@@ -105,68 +25,68 @@ model ExpenseRecord {
   assignment_id  String?
   receipt_id     String?  @unique
   receipt        Receipt? @relation(fields: [receipt_id], references: [receipt_id])
-  category       ExpenseCategory
+  category_id    String
+  source_id      String?
+  category       GlobalCategory @relation(fields: [category_id], references: [category_id])
+  source         GlobalSource?  @relation(fields: [source_id], references: [source_id])
   total_amount   Decimal  @db.Decimal(20, 4)
   expense_date   DateTime
   created_by     String
   created_at     DateTime @default(now())
   updated_at     DateTime?
   is_deleted     Boolean  @default(false)
-  other_source   String?
-  other_category String?
-
-  // Constraint for assignment-based records
-  @@unique([category, assignment_id, expense_date], name: "unique_expense_assignment")
-  // Constraint for receipt-based records
-  @@unique([category, receipt_id, expense_date], name: "unique_expense_receipt")
-  // Constraint for other-source records
-  @@unique([category, other_source, other_category, total_amount, expense_date], name: "unique_expense_other")
+  payment_method_id String
+  payment_method GlobalPaymentMethod @relation(fields: [payment_method_id], references: [id])
+  reimbursements Reimbursement[]
+  @@unique([category_id, assignment_id, expense_date], name: "unique_expense_assignment")
+  @@unique([category_id, receipt_id, expense_date], name: "unique_expense_receipt")
+  @@unique([category_id, source_id, total_amount, expense_date], name: "unique_expense_other")
 }
 
 model RevenueRecord {
   revenue_id     String   @id
   assignment_id  String?
-  category       RevenueCategory
+  category_id    String
+  source_id      String?
+  category       GlobalCategory @relation(fields: [category_id], references: [category_id])
+  source         GlobalSource?  @relation(fields: [source_id], references: [source_id])
   total_amount   Decimal  @db.Decimal(20, 4)
   collection_date DateTime
   created_by     String
   created_at     DateTime @default(now())
   updated_at     DateTime?
   is_deleted     Boolean  @default(false)
-  other_source   String?
-
-  // Constraint for assignment-based records
-  @@unique([category, assignment_id, collection_date], name: "unique_revenue_assignment")
-  // Constraint for other-source records
-  @@unique([category, other_source, total_amount, collection_date], name: "unique_revenue_other")
+  @@unique([category_id, assignment_id, collection_date], name: "unique_revenue_assignment")
+  @@unique([category_id, source_id, total_amount, collection_date], name: "unique_revenue_other")
 }
 
 model AuditLog {
   log_id         String   @id @default(uuid())
   action         String
-  table_affected String   // Can be "ExpenseRecord", "RevenueRecord", "Receipt", etc.
+  table_affected String
   record_id      String
   performed_by   String
   timestamp      DateTime @default(now())
-  details        Json?    // Store old_values, new_values, and other metadata
+  details        Json?
   ip_address     String?
 }
 
 model AssignmentCache {
   assignment_id     String   @id
-  bus_bodynumber    String
-  bus_platenumber   String
   bus_route         String
-  bus_type         String
-  driver_name      String
-  conductor_name   String
-  date_assigned    DateTime
+  date_assigned     DateTime
   trip_fuel_expense Decimal  @db.Decimal(20, 4)
-  trip_revenue     Decimal  @db.Decimal(20, 4)
-  is_revenue_recorded      Boolean  @default(false)
+  trip_revenue      Decimal  @db.Decimal(20, 4)
   is_expense_recorded      Boolean  @default(false)
-  assignment_type  String
-  last_updated     DateTime @default(now())
+  is_revenue_recorded      Boolean  @default(false)
+  assignment_type   String
+  assignment_value  Decimal  @db.Decimal(20, 4)
+  payment_method    String
+  driver_id         String
+  conductor_id      String
+  bus_plate_number  String
+  bus_type          String
+  last_updated      DateTime @default(now())
 }
 
 model Receipt {
@@ -174,10 +94,11 @@ model Receipt {
   supplier           String
   transaction_date   DateTime
   vat_reg_tin        String?
-  terms              Terms     @default(Cash)
+  terms_id           String
+  terms              GlobalTerms @relation(fields: [terms_id], references: [id])
   date_paid          DateTime?
-  payment_status     PaymentStatus @default(Pending)
-  record_status      RecordStatus @default(Active)
+  payment_status_id  String
+  payment_status     GlobalPaymentStatus @relation(fields: [payment_status_id], references: [id])
   total_amount       Decimal   @db.Decimal(20, 4)
   vat_amount         Decimal?  @db.Decimal(20, 4)
   total_amount_due   Decimal   @db.Decimal(20, 4)
@@ -189,53 +110,58 @@ model Receipt {
   deletion_reason    String?
   deleted_by         String?
   deleted_at         DateTime?
-  source             ReceiptSource @default(Manual_Entry)
-  category           ExpenseCategory
-  other_category     String?
+  source_id          String?
+  category_id        String
+  source             GlobalSource? @relation(fields: [source_id], references: [source_id])
+  category           GlobalCategory @relation(fields: [category_id], references: [category_id])
   remarks            String?
-  ocr_confidence     Float?    // Overall OCR confidence score
-  ocr_file_path      String?   // Path to stored receipt image/file
-  is_expense_recorded Boolean  @default(false)  // Track if receipt is already recorded as expense
+  ocr_confidence     Float?
+  ocr_file_path      String?
+  is_expense_recorded Boolean  @default(false)
   items              ReceiptItem[]
   transactions       ItemTransaction[]
   expense            ExpenseRecord?
   exports            ReceiptExport[]
   ocr_fields         ReceiptOCRField[]
   keywords           ReceiptKeyword[]
-  storage_size_bytes BigInt?   // Size of associated files in bytes
+  storage_size_bytes BigInt?
+  @@index([transaction_date, is_deleted])
 }
 
 model ReceiptItem {
   receipt_item_id    String   @id
-  receipt_id        String
-  item_id           String
-  receipt           Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
-  item              Item      @relation(fields: [item_id], references: [item_id])
-  quantity          Decimal   @db.Decimal(10, 2)
-  unit_price        Decimal   @db.Decimal(20, 4)
-  total_price       Decimal   @db.Decimal(20, 4)
-  created_at        DateTime  @default(now())
-  updated_at        DateTime?
-  created_by        String
-  updated_by        String?
-  is_deleted        Boolean   @default(false)
-  ocr_confidence    Float?    // OCR confidence score for this item
-
+  receipt_id         String
+  item_id            String
+  receipt            Receipt   @relation(fields: [receipt_id], references: [receipt_id], onDelete: Cascade)
+  item               Item      @relation(fields: [item_id], references: [item_id])
+  quantity           Decimal   @db.Decimal(10, 2)
+  unit_price         Decimal   @db.Decimal(20, 4)
+  total_price        Decimal   @db.Decimal(20, 4)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime?
+  created_by         String
+  updated_by         String?
+  is_deleted         Boolean   @default(false)
+  ocr_confidence     Float?
+  is_inventory_processed Boolean @default(false)
   @@unique([receipt_id, item_id])
 }
 
 model Item {
   item_id       String   @id
   item_name     String   @unique
-  unit          String
-  category      ExpenseCategory
-  other_unit    String?
-  other_category String?
+  unit_id       String
+  unit          GlobalItemUnit @relation(fields: [unit_id], references: [id])
+  category_id   String
+  category      GlobalCategory @relation(fields: [category_id], references: [category_id])
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
   transactions  ItemTransaction[]
   receipt_items ReceiptItem[]
+  @@index([item_name, is_deleted])
+  @@index([category_id, is_deleted])
+  @@index([is_deleted, category_id, item_name])
 }
 
 model ItemTransaction {
@@ -251,9 +177,10 @@ model ItemTransaction {
   created_at    DateTime @default(now())
   updated_at    DateTime?
   is_deleted    Boolean  @default(false)
-  transaction_type TransactionType @default(NONE)
-
   @@index([item_id, transaction_date])
+  @@index([transaction_date, is_deleted])
+  @@index([is_deleted, transaction_date])
+  @@index([item_id, is_deleted, transaction_date])
 }
 
 model ReceiptExport {
@@ -263,14 +190,14 @@ model ReceiptExport {
   format        ExportFormat
   exported_by   String
   exported_at   DateTime @default(now())
-  filters_used  Json?    // Store the filters used during export
-  file_path     String?  // Path to exported file
+  filters_used  Json?
+  file_path     String?
 }
 
 model ReceiptStorageConfig {
   config_id           String   @id
-  auto_archive_months Int      @default(6)    // Archive receipts older than X months
-  last_cleanup        DateTime @default(now()) // Last storage cleanup timestamp
+  auto_archive_months Int      @default(6)
+  last_cleanup        DateTime @default(now())
   updated_by         String
   updated_at         DateTime @default(now())
 }
@@ -279,16 +206,15 @@ model ReceiptOCRField {
   field_id           String   @id
   receipt_id         String
   receipt            Receipt  @relation(fields: [receipt_id], references: [receipt_id])
-  field_name         String   // e.g., "supplier", "amount", "date"
+  field_name         String
   extracted_value    String
   confidence_score   Float
   is_verified        Boolean  @default(false)
   verified_by        String?
   verified_at        DateTime?
-  original_image_coords Json?    // Store coordinates where field was found in image
+  original_image_coords Json?
   created_at         DateTime @default(now())
   updated_at         DateTime?
-
   @@unique([receipt_id, field_name])
 }
 
@@ -297,10 +223,9 @@ model ReceiptKeyword {
   receipt_id     String
   receipt        Receipt  @relation(fields: [receipt_id], references: [receipt_id])
   keyword        String
-  source         String   // "ocr" or "manual"
+  source         String
   confidence     Float?
   created_at     DateTime @default(now())
-
   @@index([keyword])
 }
 
@@ -311,4 +236,176 @@ model ReceiptStorageMetrics {
   last_updated        DateTime @default(now())
   created_by          String
   updated_by          String?
+}
+
+model EmployeeCache {
+  employee_id  String   @id
+  name         String
+  job_title    String
+  last_updated DateTime @default(now())
+}
+
+model Reimbursement {
+  reimbursement_id String   @id @default(uuid())
+  expense_id       String
+  employee_id      String
+  employee_name    String
+  job_title        String?
+  amount           Decimal  @db.Decimal(20, 4)
+  status_id        String
+  status           GlobalReimbursementStatus @relation(fields: [status_id], references: [id])
+  requested_date   DateTime @default(now())
+  approved_by      String?
+  approved_date    DateTime?
+  rejection_reason String?
+  paid_by          String?
+  paid_date        DateTime?
+  payment_reference String?
+  payment_method   String?
+  remarks          String? 
+  created_by       String
+  created_at       DateTime @default(now())
+  updated_by       String?
+  updated_at       DateTime?
+  is_deleted       Boolean  @default(false)
+  cancelled_by     String?
+  cancelled_date   DateTime?
+  expense          ExpenseRecord @relation(fields: [expense_id], references: [expense_id])
+  @@unique([expense_id, employee_id])
+}
+
+model GlobalSource {
+  source_id    String   @id @default(uuid())
+  name         String   @unique
+  applicable_modules String[]
+  is_deleted   Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime?
+  expenses     ExpenseRecord[]
+  revenues     RevenueRecord[]
+  receipts     Receipt[]
+}
+
+model GlobalCategory {
+  category_id  String   @id @default(uuid())
+  name         String   @unique
+  applicable_modules String[]
+  is_deleted   Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime?
+  expenses     ExpenseRecord[]
+  revenues     RevenueRecord[]
+  items        Item[]
+  receipts     Receipt[]
+}
+
+model GlobalPaymentStatus {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  applicable_modules String[] 
+  is_deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  receipts  Receipt[]
+}
+
+model GlobalTerms {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  applicable_modules String[] 
+  is_deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  receipts  Receipt[]
+}
+
+model GlobalItemUnit {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  applicable_modules String[] 
+  is_deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  items     Item[]
+}
+
+model GlobalPaymentMethod {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  applicable_modules String[] 
+  is_deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  expenses   ExpenseRecord[]
+}
+
+model GlobalReimbursementStatus {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  applicable_modules String[]
+  is_deleted Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime?
+  reimbursements Reimbursement[]
+}
+
+model PayrollRecord {
+  payroll_id        String   @id @default(uuid())
+  employee_number   String
+  employee_name     String
+  first_name        String
+  middle_name       String?
+  last_name         String
+  suffix            String?
+  employee_status   String
+  hire_date         DateTime
+  termination_date  DateTime?
+  job_title         String
+  department        String
+  payroll_period    String   // "Monthly" | "Weekly"
+  payroll_start_date DateTime
+  payroll_end_date   DateTime
+  basic_rate        Decimal  @db.Decimal(20, 4)
+  days_worked       Int      @default(0)
+  
+  // Earnings
+  basic_pay                 Decimal @db.Decimal(20, 4) @default(0)
+  overtime_regular          Decimal @db.Decimal(20, 4) @default(0)
+  overtime_holiday          Decimal @db.Decimal(20, 4) @default(0)
+  service_incentive_leave   Decimal @db.Decimal(20, 4) @default(0)
+  holiday_pay              Decimal @db.Decimal(20, 4) @default(0)
+  thirteenth_month_pay     Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Benefits
+  revenue_benefit          Decimal @db.Decimal(20, 4) @default(0)
+  safety_benefit           Decimal @db.Decimal(20, 4) @default(0)
+  additional_benefits      Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Deductions
+  sss_deduction            Decimal @db.Decimal(20, 4) @default(0)
+  philhealth_deduction     Decimal @db.Decimal(20, 4) @default(0)
+  pag_ibig_deduction       Decimal @db.Decimal(20, 4) @default(0)
+  cash_advance             Decimal @db.Decimal(20, 4) @default(0)
+  damage_shortage          Decimal @db.Decimal(20, 4) @default(0)
+  other_deductions         Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Totals
+  gross_total_earnings     Decimal @db.Decimal(20, 4) @default(0)
+  total_deductions         Decimal @db.Decimal(20, 4) @default(0)
+  net_pay                  Decimal @db.Decimal(20, 4) @default(0)
+  
+  // Status and dates
+  status                   String   @default("Pending") // "Released" | "Pending"
+  date_released            DateTime?
+  
+  // Metadata
+  created_by               String
+  created_at               DateTime @default(now())
+  updated_by               String?
+  updated_at               DateTime?
+  is_deleted               Boolean  @default(false)
+  
+  @@unique([employee_number, payroll_start_date, payroll_end_date])
+  @@index([payroll_start_date, payroll_end_date])
+  @@index([employee_number, is_deleted])
 }

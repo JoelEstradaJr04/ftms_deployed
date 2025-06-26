@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+/* @import "tw-animate-css"; */
 /* ---break---*/
 @custom-variant dark (&:is(.dark *));
 
@@ -8,6 +8,29 @@
   margin: 0;
   box-sizing: border-box;
   font-family: "Open Sans", sans-serif !important;
+}
+
+button {
+  text-align: center !important;
+}
+
+.requiredTags {
+  color: var(--error-color);
+  font-weight: bold;
+}
+
+input.input-error,
+select.input-error,
+textarea.input-error {
+  outline: 2px solid var(--error-color) !important;
+  /* Or use border for more visibility: */
+  border: 2px solid var(--error-color) !important;
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 0.7em;
+  margin-top: 2px;
 }
 
 .viewField {

@@ -9,26 +9,63 @@ import type { Receipt } from '../../types/receipt';
 
 type Assignment = {
   assignment_id: string;
-  bus_bodynumber: string;
-  bus_platenumber: string;
+  bus_plate_number: string;
   bus_route: string;
   bus_type: string;
-  driver_name: string;
-  conductor_name: string;
+  driver_id: string;
+  conductor_id: string;
   date_assigned: string;
   trip_fuel_expense: number;
+  driver_name?: string;
+  conductor_name?: string;
+};
+
+type Reimbursement = {
+  reimbursement_id: string;
+  expense_id: string;
+  employee_id: string;
+  employee_name: string;
+  job_title?: string;
+  amount: number;
+  status: {
+    id: string;
+    name: string;
+  };
+  requested_date: string;
+  approved_by?: string;
+  approved_date?: string;
+  rejection_reason?: string;
+  paid_by?: string;
+  paid_date?: string;
+  payment_reference?: string;
+  payment_method?: string;
+  created_by: string;
+  created_at: string;
+  updated_by?: string;
+  updated_at?: string;
+  is_deleted: boolean;
+  cancelled_by?: string;
+  cancelled_date?: string;
 };
 
 type ViewExpenseModalProps = {
   record: {
     expense_id: string;
-    category: string;
+    category: {
+      category_id: string;
+      name: string;
+    };
     other_category?: string;
     total_amount: number;
     expense_date: string;
     assignment?: Assignment;
     receipt?: Receipt;
     other_source?: string;
+    payment_method: {
+      id: string;
+      name: string;
+    };
+    reimbursements?: Reimbursement[];
   };
   onClose: () => void;
 };
@@ -48,18 +85,16 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         item: item.item ? {
           ...item.item,
           // Provide fallbacks for required fields
-          item_name: item.item.item_name || '', // Use only nested item property
-          unit: item.item.unit || '',           // Use only nested item property
-          category: item.item.category || '',
-          other_unit: item.item.other_unit || '',
-          other_category: item.item.other_category || ''
+          item_name: item.item.item_name || '',
+          unit: item.item.unit || { id: '', name: '' },
+          category: item.item.category || { category_id: '', name: '' },
+          other_unit: item.item.other_unit || ''
         } : {
           item_id: item.item_id || '',
-          item_name: '',    // ReceiptItem does not have top-level item_name
-          unit: '',         // ReceiptItem does not have top-level unit
-          category: '',
-          other_unit: '',
-          other_category: ''
+          item_name: '',
+          unit: { id: '', name: '' },
+          category: { category_id: '', name: '' },
+          other_unit: ''
         }
       }))
     };
@@ -75,12 +110,8 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
       <div className="operationsDetails">
         <h3>Operations Details</h3>
         <div className="detailRow">
-          <span className="label">Bus Body Number:</span>
-          <span className="value">{record.assignment.bus_bodynumber}</span>
-        </div>
-        <div className="detailRow">
           <span className="label">Bus Plate Number:</span>
-          <span className="value">{record.assignment.bus_platenumber}</span>
+          <span className="value">{record.assignment.bus_plate_number}</span>
         </div>
         <div className="detailRow">
           <span className="label">Bus Route:</span>
@@ -92,11 +123,11 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         </div>
         <div className="detailRow">
           <span className="label">Driver:</span>
-          <span className="value">{record.assignment.driver_name}</span>
+          <span className="value">{record.assignment.driver_name || record.assignment.driver_id}</span>
         </div>
         <div className="detailRow">
           <span className="label">Conductor:</span>
-          <span className="value">{record.assignment.conductor_name}</span>
+          <span className="value">{record.assignment.conductor_name || record.assignment.conductor_id}</span>
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
@@ -112,7 +143,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
 
   return (
     <div className="modalOverlay">
-      <div className="modalContent">
+      <div className="viewExpenseModal">
         <div className="modalHeader">
           <h2>View Expense</h2>
           <button className="closeButton" onClick={onClose}>&times;</button>
@@ -122,7 +153,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {record.category === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category)}
+              {record.category.name === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category.name)}
             </span>
           </div>
           <div className="detailRow">
@@ -133,6 +164,21 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
             <span className="label">Date:</span>
             <span className="value">{formatDate(record.expense_date)}</span>
           </div>
+          <div className="detailRow">
+            <span className="label">Payment Method:</span>
+            <span className="value">{record.payment_method.name === 'REIMBURSEMENT' ? 'Employee Reimbursement' : 'Company Paid (CASH)'}</span>
+          </div>
+          {/* Reimbursement breakdown */}
+          {record.payment_method.name === 'REIMBURSEMENT' && record.reimbursements && record.reimbursements.length > 0 && (
+            <div className="detailRow">
+              <span className="label">Reimbursements:</span>
+              <span className="value">
+                {record.reimbursements.map((r: Reimbursement, idx: number) => (
+                  <div key={idx}>{r.job_title ? r.job_title + ': ' : ''}{r.employee_name} (₱{Number(r.amount).toLocaleString()})</div>
+                ))}
+              </span>
+            </div>
+          )}
         </div>
 
         {record.assignment && renderOperationsDetails()}

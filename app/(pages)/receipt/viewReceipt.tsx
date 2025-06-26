@@ -11,14 +11,12 @@ type ReceiptItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
-  ocr_confidence?: number;
   item: {
     item_id: string;
     item_name: string;
-    unit: string;
-    category: string;
+    unit: { id: string; name: string };
+    category: { category_id: string; name: string };
     other_unit?: string;
-    other_category?: string;
   };
 };
 
@@ -27,24 +25,34 @@ type Receipt = {
   supplier: string;
   transaction_date: string;
   vat_reg_tin?: string;
-  terms?: string;
+  terms?: {
+    id: string;
+    name: string;
+  } | string;
   date_paid?: string;
-  payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
-  record_status: 'Active' | 'Inactive';
+  payment_status?: {
+    id: string;
+    name: string;
+  } | string;
   total_amount: number;
   vat_amount?: number;
   total_amount_due: number;
+  category?: {
+    category_id: string;
+    name: string;
+  } | string;
+  source?: {
+    source_id: string;
+    name: string;
+  } | string;
+  remarks?: string;
+  is_expense_recorded: boolean;
+  items: ReceiptItem[];
+  created_by: string;
   created_at: string;
   updated_at?: string;
-  created_by: string;
   updated_by?: string;
-  source: 'Manual_Entry' | 'OCR_Camera' | 'OCR_File';
-  category: string;
-  other_category?: string;
-  remarks?: string;
-  ocr_confidence?: number;
-  ocr_file_path?: string;
-  items: ReceiptItem[];
+  is_deleted: boolean;
 };
 
 type ViewReceiptModalProps = {
@@ -53,8 +61,34 @@ type ViewReceiptModalProps = {
 };
 
 const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }): React.ReactElement => {
-  const getStatusBadgeClass = (status: string) => {
-    switch (status.toLowerCase()) {
+  console.log('ViewReceiptModal received record:', record);
+  
+  // Add defensive check for undefined record
+  if (!record) {
+    console.log('ViewReceiptModal: record is undefined or null');
+    return (
+      <div className="viewReceipt__modalOverlay">
+        <div className="viewReceipt__modalContent">
+          <div className="viewReceipt__modalHeader">
+            <h2>View Receipt</h2>
+            <button className="closeButton" onClick={onClose}>&times;</button>
+          </div>
+          <div className="mainDetails">
+            <div className="detailRow">
+              <span className="label">Error:</span>
+              <span className="value">Receipt data not available</span>
+            </div>
+          </div>
+          <div className="modalFooter">
+            <button className="closeBtn" onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusBadgeClass = (status?: string) => {
+    switch (status?.toLowerCase()) {
       case 'paid': return 'statusBadge paid';
       case 'pending': return 'statusBadge pending';
       case 'cancelled': return 'statusBadge cancelled';
@@ -63,40 +97,37 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
     }
   };
 
-  const getOcrConfidenceClass = (confidence: number) => {
-    if (confidence >= 0.9) return 'ocrConfidence high';
-    if (confidence >= 0.7) return 'ocrConfidence medium';
-    return 'ocrConfidence low';
-  };
-
-  const renderOcrConfidence = (confidence?: number) => {
-    if (confidence === undefined) return null;
-    const percentage = (confidence * 100).toFixed(1);
-    return (
-      <span className={getOcrConfidenceClass(confidence)}>
-        <i className="ri-eye-line" />
-        {percentage}% Confidence
-      </span>
-    );
-  };
-
   const getDisplayUnit = (item: ReceiptItem) => {
     if (!item.item) return '';
-    if (item.item.unit === 'Other' && item.item.other_unit) {
+    if (item.item.unit.name === 'Other' && item.item.other_unit) {
       return formatDisplayText(item.item.other_unit);
     }
-    return formatDisplayText(item.item.unit);
+    return formatDisplayText(item.item.unit.name);
   };
 
-  const getDisplayCategory = (item: ReceiptItem) => {
+  const getDisplayCategory = (receipt: Receipt) => {
+    const categoryName = typeof receipt.category === 'string' ? receipt.category : receipt.category?.name;
+    if (categoryName === 'Other') {
+      return formatDisplayText('Other'); // You might want to add other_category field if needed
+    }
+    return formatDisplayText(categoryName || '');
+  };
+
+  const getItemDisplayCategory = (item: ReceiptItem) => {
     if (!item.item) return '';
-    if (item.item.category === 'Other' && item.item.other_category) {
-      return formatDisplayText(item.item.other_category);
-    }
-    if (item.item.category === 'Multiple_Categories') {
-      return 'Multiple Categories';
-    }
-    return formatDisplayText(item.item.category);
+    return formatDisplayText(item.item.category.name);
+  };
+
+  const getStatusName = (receipt: Receipt) => {
+    return typeof receipt.payment_status === 'string' ? receipt.payment_status : receipt.payment_status?.name;
+  };
+
+  const getTermsName = (receipt: Receipt) => {
+    return typeof receipt.terms === 'string' ? receipt.terms : receipt.terms?.name;
+  };
+
+  const getSourceName = (receipt: Receipt) => {
+    return typeof receipt.source === 'string' ? receipt.source : receipt.source?.name;
   };
 
   return (
@@ -115,15 +146,14 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {record.category === 'Other' 
-                ? formatDisplayText(record.other_category || '')
-                : formatDisplayText(record.category)}
+              {getDisplayCategory(record)}
             </span>
           </div>
           <div className="detailRow">
             <span className="label">Status:</span>
-            <span className={getStatusBadgeClass(record.payment_status)}>
-              {record.payment_status}
+            <span className={getStatusBadgeClass(getStatusName(record))}
+              title={getStatusName(record)}>
+              {formatDisplayText(getStatusName(record) || 'N/A')}
             </span>
           </div>
         </div>
@@ -140,7 +170,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           </div>
           <div className="detailRow">
             <span className="label">Terms:</span>
-            <span className="value">{record.terms ? formatDisplayText(record.terms) : 'N/A'}</span>
+            <span className="value">{formatDisplayText(getTermsName(record) || 'N/A')}</span>
           </div>
           <div className="detailRow">
             <span className="label">Date Paid:</span>
@@ -161,8 +191,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           <div className="detailRow">
             <span className="label">Source:</span>
             <span className="value">
-              {formatDisplayText(record.source)}
-              {record.ocr_confidence && renderOcrConfidence(record.ocr_confidence)}
+              {formatDisplayText(getSourceName(record) || 'N/A')}
             </span>
           </div>
           {record.remarks && (
@@ -174,7 +203,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
         </div>
 
         {record.items && record.items.length > 0 && (
-          <div className="itemsSection">
+          <div className="view_itemsSection">
             <h4>Items</h4>
             <table>
               <thead>
@@ -185,7 +214,6 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
                   <th>Unit Price</th>
                   <th>Total Price</th>
                   <th>Category</th>
-                  {record.source !== 'Manual_Entry' && <th>OCR Confidence</th>}
                 </tr>
               </thead>
               <tbody>
@@ -196,10 +224,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
                     <td>{Number(item.quantity).toLocaleString()}</td>
                     <td>₱{Number(item.unit_price).toLocaleString()}</td>
                     <td>₱{Number(item.total_price).toLocaleString()}</td>
-                    <td>{getDisplayCategory(item)}</td>
-                    {record.source !== 'Manual_Entry' && (
-                      <td>{item.ocr_confidence ? `${(item.ocr_confidence * 100).toFixed(1)}%` : 'N/A'}</td>
-                    )}
+                    <td>{getItemDisplayCategory(item)}</td>
                   </tr>
                 ))}
               </tbody>

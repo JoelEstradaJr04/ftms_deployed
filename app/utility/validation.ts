@@ -28,3 +28,52 @@ export const isValidSource = (source: string): boolean => {
 export function isValidAmount(amount: number): boolean {
   return !isNaN(amount) && amount > 0;
 }
+
+export type ValidationRule = {
+  required?: boolean;
+  pattern?: RegExp;
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  custom?: (value: unknown) => string | null;
+  label?: string;
+};
+
+
+export function validateField(value: unknown, rules: ValidationRule): string[] {
+  const errors: string[] = [];
+
+  // Required check works for string/number/null/undefined
+  if (rules.required && (value === null || value === undefined || value === '')) {
+    errors.push(`${rules.label || 'This field'} is required.`);
+  }
+
+  if (rules.pattern && typeof value === 'string' && !rules.pattern.test(value)) {
+    errors.push(`${rules.label || 'This field'} format is invalid.`);
+  }
+
+  if (rules.minLength && typeof value === 'string' && value.length < rules.minLength) {
+    errors.push(`${rules.label || 'This field'} must be at least ${rules.minLength} characters.`);
+  }
+
+  if (rules.maxLength && typeof value === 'string' && value.length > rules.maxLength) {
+    errors.push(`${rules.label || 'This field'} must be at most ${rules.maxLength} characters.`);
+  }
+
+  if (typeof value === 'number') {
+    if (rules.min !== undefined && value < rules.min) {
+      errors.push(`${rules.label || 'This field'} must be at least ${rules.min}.`);
+    }
+    if (rules.max !== undefined && value > rules.max) {
+      errors.push(`${rules.label || 'This field'} must be at most ${rules.max}.`);
+    }
+  }
+
+  if (rules.custom) {
+    const customError = rules.custom(value);
+    if (customError) errors.push(customError);
+  }
+
+  return errors;
+}

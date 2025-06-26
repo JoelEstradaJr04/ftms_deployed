@@ -1,5 +1,5 @@
 /* ---------- viewExpense.css ---------- */
-.viewExpense__modalOverlay {
+.modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,21 +12,21 @@
   z-index: 1000;
 }
 
-.viewExpense__modalContent {
+.viewExpenseModal {
   background: white;
   padding: 2rem;
   border-radius: 8px;
-  width: 80%; 
-  max-width: 900px; /* Increased from 600px */
-  min-width: 700px; /* Added minimum width */
-  max-height: 90vh;
+  width: 50%; /* Reduced width */
+  max-width: 600px; /* Smaller max-width */
+  min-width: 400px; /* Smaller min-width */
+  max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);  
   position: relative;
   box-sizing: border-box;
 }
 
-.viewExpense__modalHeader {
+.modalHeader {
   display: block; 
   margin-bottom: 2rem;
   padding-bottom: 1rem;
@@ -34,7 +34,7 @@
   position: relative;
 }
 
-.viewExpense__modalHeader h2 {
+.modalHeader h2 {
   font-size: var(--title-font-size);
   font-weight: var(--title-font-weight);
   margin: 0; 
@@ -60,32 +60,36 @@
   color: var(--primary-text-color);
 }
 
-.viewExpense__modalContent .mainDetails {
+.mainDetails {
   margin-bottom: 2rem;
 }
 
-.viewExpense__modalContent .operationsDetails,
-.viewExpense__modalContent .receiptDetails,
-.viewExpense__modalContent .otherDetails {
+.operationsDetails,
+.receiptDetails,
+.otherDetails {
   margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #eee;
 }
 
-.viewExpense__modalContent .operationsDetails h3,
-.viewExpense__modalContent .receiptDetails h3,
-.viewExpense__modalContent .otherDetails h3 {
+.operationsDetails h3,
+.receiptDetails h3,
+.otherDetails h3 {
   color: #333;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #eee;
 }
 
-.viewExpense__modalContent .detailRow {
+.detailRow {
   display: flex;
   margin-bottom: 0.5rem;
   word-break: break-word;
 }
 
-.viewExpense__modalContent .label {
+.label {
   font-weight: 500;
   color: #666;
   width: 150px;
@@ -93,46 +97,46 @@
   margin-right: 1rem;
 }
 
-.viewExpense__modalContent .value {
+.value {
   color: #333;
   flex: 1;
 }
 
-.viewExpense__modalContent .itemsSection {
+.itemsSection {
   margin-top: 2rem;
   overflow-x: auto;
 }
 
-.viewExpense__modalContent .itemsSection h4 {
+.itemsSection h4 {
   color: #333;
   margin-bottom: 1rem;
 }
 
-.viewExpense__modalContent .itemsSection table {
+.itemsSection table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
   min-width: 650px; 
 }
 
-.viewExpense__modalContent .itemsSection table th,
-.viewExpense__modalContent .itemsSection table td {
+.itemsSection table th,
+.itemsSection table td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid #eee;
 }
 
-.viewExpense__modalContent .itemsSection table th {
+.itemsSection table th {
   background-color: #f8f9fa;
   font-weight: 500;
   color: #666;
 }
 
-.viewExpense__modalContent .itemsSection table tr:hover {
+.itemsSection table tr:hover {
   background-color: #f8f9fa;
 }
 
-.viewExpense__modalContent .modalFooter {
+.modalFooter {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid #eee;
@@ -140,7 +144,7 @@
   justify-content: flex-end;
 }
 
-.viewExpense__modalContent .closeBtn {
+.closeBtn {
   padding: 0.5rem 1.5rem;
   background-color: #f8f9fa;
   border: 1px solid #ddd;
@@ -150,7 +154,7 @@
   font-weight: 500;
 }
 
-.viewExpense__modalContent .closeBtn:hover {
+.closeBtn:hover {
   background-color: #e9ecef;
   color: #4b4b4b;
 }
@@ -158,38 +162,37 @@
 /* ---------- Responsive Styles ---------- */
 
 @media (max-width: 768px) {
-  .viewExpense__modalContent {
-    width: 95%;
-    max-width: none;
-    min-width: auto; 
-    padding: 1rem;
+  .viewExpenseModal {
+    width: 90%;
+    min-width: 0;
     margin: 1rem;
+    padding: 1rem;
   }
 
-  .viewExpense__modalHeader {
+  .modalHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
 
-  .viewExpense__modalContent .closeButton {
+  .closeButton {
     position: absolute;
     top: 0.5rem; 
     right: 0.5rem;
     margin: 0;
   }
 
-  .viewExpense__modalContent .detailRow {
+  .detailRow {
     flex-direction: column;
     gap: 0.25rem;
   }
 
-  .viewExpense__modalContent .label {
+  .label {
     width: auto;
     margin-right: 0;
   }
 
-  .viewExpense__modalContent .itemsSection table {
+  .itemsSection table {
     min-width: auto; 
   }
 }

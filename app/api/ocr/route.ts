@@ -24,18 +24,36 @@ export async function POST(request: Request) {
 
     // Run EasyOCR
     const result = await new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python', [
-        '-c',
-        `
+const pythonProcess = spawn('python', [
+  '-c',
+  `
 import easyocr
 import json
 import sys
 
 reader = easyocr.Reader(['en'])
-result = reader.readtext('${tempFilePath}')
-print(json.dumps(result))
-        `
-      ]);
+result = reader.readtext(r'${tempFilePath}')
+
+def to_native(val):
+    if isinstance(val, (list, tuple)):
+        return [to_native(x) for x in val]
+    try:
+        return val.item()
+    except AttributeError:
+        return val
+
+output = [
+    {
+        "bbox": to_native(item[0]),
+        "text": item[1],
+        "confidence": float(item[2])
+    }
+    for item in result
+]
+
+print(json.dumps(output))
+`.trim()
+]);
 
       let output = '';
       let error = '';

@@ -8,36 +8,71 @@ import PaginationComponent from "../../Components/pagination";
 import AddRevenue from "./addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "./editRevenue";
+import ViewRevenue from "./viewRevenue"; // Import the new ViewRevenue component
 import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError} from '../../utility/Alerts';
+import { formatDateTime } from "../../utility/dateFormatter";
+import { formatDisplayText } from '@/app/utils/formatting';
+
+interface GlobalCategory {
+  category_id: string;
+  name: string;
+  applicable_modules: string[];
+  is_deleted: boolean;
+}
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
   revenue_id: string;        
   assignment_id?: string;    
-  category: 'Boundary' | 'Percentage' | 'Bus_Rental' | 'Other'; 
+  category_id: string;
+  source_id?: string;
+  category: {
+    category_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
+  source?: {
+    source_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
   total_amount: number;      
   collection_date: string;              
   created_by: string;        
   created_at: string;        
   updated_at?: string;       
   is_deleted: boolean;
-  other_source?: string; // Add this line
 }
 
 // Updated Assignment interface to include assignment_type and is_revenue_recorded
 // Update the Assignment interface
 interface RevenueData {
   revenue_id: string;
-  category: string;
+  category: {
+    category_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
+  source?: {
+    source_id: string;
+    name: string;
+    applicable_modules: string[];
+  };
   total_amount: number;
   collection_date: string;
-  created_by: string;
+  created_by: string;  // Add this line
+  created_at: string;  // Add this line
   assignment_id?: string;
-  other_source?: string;
 }
+
+type Employee = {
+  employee_id: string;
+  name: string;
+  job_title: string;
+};
 
 const RevenuePage = () => {
   const [data, setData] = useState<RevenueData[]>([]);
@@ -46,25 +81,38 @@ const RevenuePage = () => {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [maxDate, setMaxDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<RevenueData | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
 
-  // Reuse the same format function from addRevenue.tsx
-  const formatAssignment = (assignment: Assignment): string => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    return `${busType} | ${assignment.bus_bodynumber} - ${assignment.bus_route} | ${assignment.driver_name.split(' ').pop()} & ${assignment.conductor_name.split(' ').pop()} | ${formatDate(assignment.date_assigned)}`;
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/globals/categories?module=revenue');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const categoriesData = await response.json();
+      // Filter categories that are applicable to revenue module and not deleted
+      const revenueCategories = categoriesData.filter((cat: GlobalCategory) => 
+        cat.applicable_modules.includes('revenue') && !cat.is_deleted
+      );
+      setAvailableCategories(revenueCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      showError('Failed to load categories', 'Error');
+    }
   };
 
   // Fetch assignments with periodic refresh and error handling
   const fetchAssignments = async () => {
     try {
-      setAssignmentsLoading(true);
       // Get unrecorded revenue assignments for the dropdown
       const unrecordedAssignments = await getUnrecordedRevenueAssignments();
       setAssignments(unrecordedAssignments);
@@ -76,10 +124,14 @@ const RevenuePage = () => {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       console.error('Error fetching assignments:', errorMessage);
       // Don't show error toast here as it might be too frequent with auto-refresh
-    } finally {
-      setAssignmentsLoading(false);
     }
   };
+
+  // Set maxDate to today on mount
+  useEffect(() => {
+    const today = new Date();
+    setMaxDate(today.toISOString().split('T')[0]);
+  }, []);
 
   // Set up periodic refresh of assignments with error boundary
   useEffect(() => {
@@ -99,44 +151,58 @@ const RevenuePage = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       setLoading(true);
-      setAssignmentsLoading(true);
-      
+      console.log('[FETCH] Starting fetchAllData');
       try {
+        // Fetch employees for assignment display
+        const employeesResponse = await fetch('/api/employees');
+        console.log('[FETCH] /api/employees status:', employeesResponse.status);
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json();
+          setAllEmployees(employeesData);
+        }
+
+        // Fetch categories for the filter dropdown
+        await fetchCategories();
+
         // Fetch all assignments for displaying in the table
         const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
+        console.log('[FETCH] /api/assignments/cache status:', assignmentsResponse.status);
         if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
         const { data: assignmentsData } = await assignmentsResponse.json();
-        
+
         // Filter out recorded assignments for the AddRevenue modal
         const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
         setAssignments(unrecordedAssignments);
-        
+
         // Store all assignments for table display
         setAllAssignments(assignmentsData);
-        
+
         // Then fetch revenues
         const revenuesResponse = await fetch('/api/revenues');
+        console.log('[FETCH] /api/revenues status:', revenuesResponse.status);
         if (!revenuesResponse.ok) throw new Error('Failed to fetch revenues');
-        
+
         const revenues: RevenueRecord[] = await revenuesResponse.json();
-        
+
         const transformedData: RevenueData[] = revenues.map(revenue => ({
           revenue_id: revenue.revenue_id,
           category: revenue.category,
+          source: revenue.source,
           total_amount: Number(revenue.total_amount),
           collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
           created_by: revenue.created_by,
+          created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
-          other_source: revenue.other_source || undefined
         }));
-        
+
         setData(transformedData);
+        console.log('[FETCH] Data loaded successfully');
       } catch (error) {
         console.error('Error fetching data:', error);
         showError('Failed to load data', 'Error');
       } finally {
         setLoading(false);
-        setAssignmentsLoading(false);
+        console.log('[FETCH] setLoading(false) called');
       }
     };
     
@@ -147,7 +213,13 @@ const RevenuePage = () => {
       fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`)
         .then(response => response.json())
         .then(({ data }) => {
-          if (data) setAssignments(data);
+          if (data) {
+            // Filter out recorded assignments for the AddRevenue modal
+            const unrecordedAssignments = data.filter((a: Assignment) => !a.is_revenue_recorded);
+            setAssignments(unrecordedAssignments);
+            // Store all assignments for table display
+            setAllAssignments(data);
+          }
         })
         .catch(error => console.error('Background refresh failed:', error));
     }, 30000); // Refresh every 30 seconds
@@ -157,11 +229,34 @@ const RevenuePage = () => {
 
   // Filter and pagination logic
   const filteredData = data.filter((item: RevenueData) => {
-    const matchesSearch = (item.category?.toLowerCase() || '').includes(search.toLowerCase()) ||
-                         (item.category === 'Other' && (item.other_source?.toLowerCase() || '').includes(search.toLowerCase()));
-    const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
+    // Convert search to lowercase for case-insensitive comparison
+    const searchLower = search.toLowerCase();
+
+    // Lookup the related assignment
+    const assignment = item.assignment_id 
+    ? allAssignments.find(a => a.assignment_id === item.assignment_id)
+    : null;
+
+    // Check if search term exists in any field
+    const matchesSearch = search === '' || 
+    // Basic revenue fields
+    formatDate(item.collection_date).toLowerCase().includes(searchLower) ||
+    (item.category?.name?.toLowerCase() || '').includes(searchLower) ||
+    (item.source?.name?.toLowerCase() || '').includes(searchLower) ||
+    item.total_amount.toString().includes(searchLower) ||
+    (item.created_by?.toLowerCase() || '').includes(searchLower) ||
+
+    // Assignment related fields (if available)
+    (assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.bus_plate_number?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.driver_id?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.conductor_id?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
+
+    const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
     const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
-                      (!dateTo || item.collection_date <= dateTo);
+            (!dateTo || item.collection_date <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
   });
 
@@ -171,16 +266,15 @@ const RevenuePage = () => {
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
   const handleAddRevenue = async (newRevenue: {
-    category: string;
+    category_id: string;
     assignment_id?: string;
     total_amount: number;
     collection_date: string;
     created_by: string;
-    other_source?: string;
   }) => {
     try {
-      // Check for duplicates if category is not "Other"
-      if (newRevenue.category !== 'Other') {
+      // Check for duplicates if assignment is provided
+      if (newRevenue.assignment_id) {
       const duplicate = data.find(item => {
         const assignment = assignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
         const itemAssignment = item.assignment_id 
@@ -191,10 +285,10 @@ const RevenuePage = () => {
 
         return (
           new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
-          assignment.bus_bodynumber === itemAssignment.bus_bodynumber &&
-          item.category === newRevenue.category &&
-          assignment.driver_name === itemAssignment.driver_name &&
-          assignment.conductor_name === itemAssignment.conductor_name
+          assignment.bus_plate_number === itemAssignment.bus_plate_number &&
+          item.category.name === 'Boundary' && // This will need to be updated based on the category
+          assignment.driver_id === itemAssignment.driver_id &&
+          assignment.conductor_id === itemAssignment.conductor_id
         );
       });
 
@@ -209,12 +303,11 @@ const RevenuePage = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        category: newRevenue.category,
+        category_id: newRevenue.category_id,
         total_amount: newRevenue.total_amount,
         collection_date: new Date(newRevenue.collection_date).toISOString(),
         created_by: newRevenue.created_by,
         assignment_id: newRevenue.assignment_id || null,
-        other_source: newRevenue.category === 'Other' ? newRevenue.other_source : null
       })
     });
 
@@ -226,11 +319,12 @@ const RevenuePage = () => {
     setData(prev => [{
       revenue_id: result.revenue_id,
       category: result.category,
+      source: result.source,
       total_amount: Number(result.total_amount),
       collection_date: new Date(result.collection_date).toISOString().split('T')[0],
       created_by: result.created_by,
+      created_at: result.created_at, // Ensure created_at is included
       assignment_id: result.assignment_id,
-      other_source: result.other_source || undefined
     }, ...prev]); // Prepend new record instead of appending
 
     // Update assignments state locally instead of re-fetching
@@ -291,7 +385,6 @@ const RevenuePage = () => {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
-    other_source?: string;
   }) => {
     try {
       const response = await fetch(`/api/revenues/${updatedRecord.revenue_id}`, {
@@ -308,15 +401,16 @@ const RevenuePage = () => {
       setData(prev => {
         // Remove the old version of the record
         const filtered = prev.filter(rec => rec.revenue_id !== updatedRecord.revenue_id);
-        // Create the updated record
-        const updated = {
+        // Create the updated record with all required fields
+        const updated: RevenueData = {
           revenue_id: result.revenue_id,
           category: result.category,
+          source: result.source,
           total_amount: Number(result.total_amount),
           collection_date: new Date(result.collection_date).toISOString().split('T')[0],
           created_by: result.created_by,
+          created_at: result.created_at,
           assignment_id: result.assignment_id,
-          other_source: result.other_source || undefined
         };
         // Add the updated record at the beginning of the array
         return [updated, ...filtered];
@@ -358,37 +452,28 @@ const RevenuePage = () => {
     const baseColumns = [
       "Collection Date",
       "Category",
-      "Amount",
-      "Source Type"
+      "Amount"
     ];
 
     if (!categoryFilter) {
       return [
         ...baseColumns,
         "Bus Type",
-        "Body Number",
+        "Plate Number",
         "Route",
-        "Driver Name",
-        "Conductor Name",
-        "Assignment Date",
-        "Other Source Description"
-      ];
-    }
-
-    if (categoryFilter === 'Other') {
-      return [
-        ...baseColumns,
-        "Other Source Description"
+        "Driver ID",
+        "Conductor ID",
+        "Assignment Date"
       ];
     }
 
     return [
       ...baseColumns,
       "Bus Type",
-      "Body Number",
+      "Plate Number",
       "Route",
-      "Driver Name",
-      "Conductor Name",
+      "Driver ID",
+      "Conductor ID",
       "Assignment Date"
     ];
   };
@@ -572,34 +657,28 @@ const RevenuePage = () => {
                 rowData.push(escapeField(formatDate(item.collection_date)));
                 break;
               case "Category":
-                rowData.push(escapeField(item.category));
+                rowData.push(escapeField(item.category?.name || 'N/A'));
                 break;
               case "Amount":
                 rowData.push(item.total_amount.toFixed(2));
                 break;
-              case "Source Type":
-                rowData.push(assignment ? 'Assignment' : 'Other');
-                break;
               case "Bus Type":
                 rowData.push(escapeField(assignment?.bus_type));
                 break;
-              case "Body Number":
-                rowData.push(escapeField(assignment?.bus_bodynumber));
+              case "Plate Number":
+                rowData.push(escapeField(assignment?.bus_plate_number));
                 break;
               case "Route":
                 rowData.push(escapeField(assignment?.bus_route));
                 break;
-              case "Driver Name":
-                rowData.push(escapeField(assignment?.driver_name));
+              case "Driver ID":
+                rowData.push(escapeField(assignment?.driver_id));
                 break;
-              case "Conductor Name":
-                rowData.push(escapeField(assignment?.conductor_name));
+              case "Conductor ID":
+                rowData.push(escapeField(assignment?.conductor_id));
                 break;
               case "Assignment Date":
                 rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
-                break;
-                        case "Other Source Description":
-                rowData.push(escapeField(item.other_source));
                 break;
               default:
                 rowData.push('');
@@ -634,15 +713,15 @@ const RevenuePage = () => {
   return (
     <div className="card">
       <div className="elements">
-        {/* {(loading || assignmentsLoading) && <div className="loading">Loading...</div>} */}
         <div className="title"> 
           <h1>Revenue Records</h1> 
         </div>
         <div className="settings">
           {/* search bar */}
-          <div className="searchBar">
+          <div className="revenue_searchBar">
             <i className="ri-search-line" />
             <input
+              className="searchInput"
               type="text"
               placeholder="Search here..."
               value={search}
@@ -656,6 +735,7 @@ const RevenuePage = () => {
               className="dateFilter"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
+              max={maxDate}
             />
 
             <input
@@ -663,6 +743,7 @@ const RevenuePage = () => {
               className="dateFilter"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
+              max={maxDate}
             />
 
             <select
@@ -671,18 +752,17 @@ const RevenuePage = () => {
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value="Boundary">Boundary</option>
-              <option value="Percentage">Percentage</option>
-              <option value="Bus_Rental">Bus Rental</option>
-              <option value="Other">Other</option>
+              {availableCategories.map((category) => (
+                <option key={category.category_id} value={category.name}>
+                  {formatDisplayText(category.name)}
+                </option>
+              ))}
             </select>
 
             {/* Export CSV */}
             <button id="export" onClick={handleExport}><i className="ri-receipt-line" /> Export CSV</button>
             {/* Add Revenue */}
             <button onClick={() => setShowModal(true)} id='addRevenue'><i className="ri-add-line" /> Add Revenue</button>
-          
-            
           </div>
         </div>
 
@@ -692,8 +772,8 @@ const RevenuePage = () => {
               <thead>
                 <tr>
                   <th>Collection Date</th>
-                  <th>Source</th>
                   <th>Category</th>
+                  <th>Assignment</th>
                   <th>Amount</th>
                   <th>Action</th>
                 </tr>
@@ -706,35 +786,61 @@ const RevenuePage = () => {
 
                   console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
 
-                  let source: string;
-                  if (item.category === 'Other') {
-                    source = item.other_source || 'N/A';
-                  } else if (assignmentsLoading) {
-                    source = 'Loading...';
-                  } else if (assignment) {
-                    source = formatAssignment(assignment);
-                  } else {
-                    // More descriptive message when assignment is not found
-                    source = item.assignment_id 
-                      ? `Assignment ${item.assignment_id} not found`
-                      : 'No assignment linked';
-                  }
+                  // Format assignment for display
+                  const formatAssignment = (assignment: Assignment | null | undefined) => {
+                    if (!assignment) return 'N/A';
+                    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+                    
+                    // Calculate display amount based on category
+                    const selectedCategory = item.category;
+                    let displayAmount = assignment.trip_revenue;
+                    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
+                      displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                    }
+                    
+                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
+                  };
 
                   return (
                     <tr key={item.revenue_id}>
-                      <td>{formatDate(item.collection_date)}</td>
-                      <td>{source}</td>
-                      <td>{item.category === 'Other' ? 'Other' : item.category.replace('_', ' ')}</td>
+                      <td>{formatDateTime(item.collection_date)}</td>
+                      <td>{item.category?.name || 'N/A'}</td>
+                      <td>{formatAssignment(assignment)}</td>
                       <td>₱{item.total_amount.toLocaleString()}</td>
-                      <td className="actionButtons">
-
+                      <td className="styles.actionButtons">
                         <div className="actionButtonsContainer">
+                          {/* view button */}
+                          <button 
+                            className="viewBtn" 
+                            onClick={() => {
+                              setRecordToView(item);
+                              setViewModalOpen(true);
+                            }} 
+                            title="View Record"
+                          >
+                            <i className="ri-eye-line" />
+                          </button>
+                          
                           {/* edit button */}
-                          <button className="editBtn" onClick={() => {setRecordToEdit(item);setEditModalOpen(true);}} title="Edit Record">
+                          <button 
+                            className="editBtn" 
+                            onClick={() => {
+                              setRecordToEdit(item);
+                              setEditModalOpen(true);
+                            }} 
+                            title="Edit Record"
+                          >
                             <i className="ri-edit-2-line" />
                           </button>
+                          
                           {/* delete button */}
-                          <button className="deleteBtn" onClick={() => handleDelete(item.revenue_id)} title="Delete Record">
+                          <button 
+                            className="deleteBtn" 
+                            onClick={() => handleDelete(item.revenue_id)} 
+                            title="Delete Record"
+                          >
                             <i className="ri-delete-bin-line" />
                           </button>
                         </div>
@@ -770,19 +876,34 @@ const RevenuePage = () => {
             record={{
               revenue_id: recordToEdit.revenue_id,
               collection_date: recordToEdit.collection_date,
-              category: recordToEdit.category,
-              source: recordToEdit.assignment_id 
-                ? formatAssignment(allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)!)
-                : recordToEdit.other_source || 'N/A',
+              category: recordToEdit.category.name,
               amount: recordToEdit.total_amount,
               assignment_id: recordToEdit.assignment_id,
-              other_source: recordToEdit.other_source
             }}
             onClose={() => {
               setEditModalOpen(false);
               setRecordToEdit(null);
             }}
             onSave={handleSaveEdit}
+          />
+        )}
+
+        {viewModalOpen && recordToView && (
+          <ViewRevenue
+            record={{
+              revenue_id: recordToView.revenue_id,
+              category: recordToView.category,
+              total_amount: recordToView.total_amount,
+              collection_date: recordToView.collection_date,
+              created_at: recordToView.created_at,
+              assignment: recordToView.assignment_id 
+                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
+                : undefined,
+            }}
+            onClose={() => {
+              setViewModalOpen(false);
+              setRecordToView(null);
+            }}
           />
         )}
       </div>

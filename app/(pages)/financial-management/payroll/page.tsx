@@ -1,129 +1,246 @@
+// financial-management\payroll\page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback} from "react";
 import "../../../styles/payroll.css";
 import "../../../styles/table.css";
 import "../../../styles/chips.css";
 import PaginationComponent from "../../../Components/pagination";
 import Loading from '../../../Components/loading';
+import Swal from 'sweetalert2';
 import { showSuccess } from '../../../utility/Alerts';
+import ViewPayrollModal from "./viewPayroll";
 
 // Payroll record type
 type PayrollRecord = {
   payroll_id: string;
+  employee_number: string;
   employee_name: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  suffix?: string;
+  employee_status: string;
+  hire_date: string;
+  termination_date?: string | null;
   job_title: string;
   department: string;
   payroll_period: "Monthly" | "Weekly";
+  payroll_start_date: string;
+  payroll_end_date: string;
+  basic_rate: number;
+  days_worked: number;
+  // Earnings
+  basic_pay: number;
+  overtime_regular: number;
+  overtime_holiday: number;
+  service_incentive_leave: number;
+  holiday_pay: number;
+  thirteenth_month_pay: number;
+  // Benefits
+  revenue_benefit: number;
+  safety_benefit: number;
+  additional_benefits: number;
+  // Deductions
+  sss_deduction: number;
+  philhealth_deduction: number;
+  pag_ibig_deduction: number;
+  cash_advance: number;
+  damage_shortage: number;
+  other_deductions: number;
+  // Totals
+  gross_total_earnings: number;
+  total_deductions: number;
   net_pay: number;
-  deduction: number;
-  salary: number;
+  // Status
   status: "Released" | "Pending" | string;
+  date_released?: string | null;
 };
 
-// Dummy data for demonstration
-const dummyPayrolls: PayrollRecord[] = [
-  {
-    payroll_id: "1",
-    employee_name: "Juan Dela Cruz",
-    job_title: "Driver",
-    department: "Operations",
-    payroll_period: "Monthly",
-    net_pay: 18000,
-    deduction: 2000,
-    salary: 20000,
-    status: "Released",
-  },
-  {
-    payroll_id: "2",
-    employee_name: "Maria Santos",
-    job_title: "Conductor",
-    department: "Operations",
-    payroll_period: "Weekly",
-    net_pay: 4500,
-    deduction: 500,
-    salary: 5000,
-    status: "Pending",
-  },
-  // Add more dummy records as needed
-];
-
 const PayrollPage = () => {
-  // Selected Employee IDs
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    
   // State
   const [data, setData] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setError] = useState<string | null>(null); // Fixed: use error state correctly
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [periodFilter, setPeriodFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const handleEdit = (item: PayrollRecord) => {
-    console.log("Editing payroll:", item);
-  };
+  // View Payroll modal
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [recordToView, setRecordToView] = useState<PayrollRecord | null>(null);
 
-  // Fetch payroll data (simulate API)
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    // Simulate API delay
-    setTimeout(() => {
-      try {
-        // Replace with real API call
-        setData(dummyPayrolls);
-        setLoading(false);
-      } catch (err) { 
-        console.error("Error fetching payroll data:", err);
-        setError("Error retrieving payroll data.");
-        setLoading(false);
-      }
-    }, 800);
-  }, []); // No need to include setError
-
-  // Filter logic
-  const filteredData = data.filter((item) => {
-    const matchesSearch =
-      item.employee_name.toLowerCase().includes(search.toLowerCase()) ||
-      item.job_title.toLowerCase().includes(search.toLowerCase());
-    const matchesDept = departmentFilter
-      ? item.department === departmentFilter
-      : true;
-    const matchesPeriod = periodFilter
-      ? item.payroll_period === periodFilter
-      : true;
-    return matchesSearch && matchesDept && matchesPeriod;
+  // Add state for start/end date
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1); // default to first of month
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
   });
 
-  // Pagination logic
-  const indexOfLastRecord = currentPage * pageSize;
-  const indexOfFirstRecord = indexOfLastRecord - pageSize;
-  const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
-  const totalPages = Math.ceil(filteredData.length / pageSize);
+  // Fetch payroll data from API
+  const fetchPayrollData = useCallback(async (isSearch = false) => {
+    try {
+      if (isSearch) {
+        setSearchLoading(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      
+      // Build query parameters with proper date formatting
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+        start: startDate, // Already in YYYY-MM-DD format
+        end: endDate,     // Already in YYYY-MM-DD format
+      });
+      
+      if (search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      const response = await fetch(`/api/payroll?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setData(result.data);
+      setTotalPages(result.pagination?.totalPages || 1);
+      
+      if (isSearch) {
+        setSearchLoading(false);
+      } else {
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error fetching payroll data:", err);
+      setError("Error retrieving payroll data.");
+      if (isSearch) {
+        setSearchLoading(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [currentPage, pageSize, startDate, endDate, search]); // Add dependencies that the function uses
 
-  // Unique departments and periods for filter dropdowns
-  const departments = Array.from(new Set(data.map((d) => d.department)));
-  const periods = Array.from(new Set(data.map((d) => d.payroll_period)));
+  // Fetch data when component mounts or filters change (excluding search)
+  useEffect(() => {
+    fetchPayrollData(false);
+  }, [fetchPayrollData]);  // Added currentPage and pageSize dependencies
+
+  // Separate effect for search with debouncing
+// Separate effect for search with debouncing
+useEffect(() => {
+  const timeoutId = setTimeout(() => {
+    // Reset to first page when searching
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      fetchPayrollData(true);
+    }
+  }, 500); // 500ms delay
+
+  return () => clearTimeout(timeoutId);
+}, [search, currentPage, fetchPayrollData]); // Add missing dependencies
+
+// Effect to handle page changes
+useEffect(() => {
+  if (currentPage !== 1) {
+    fetchPayrollData(false);
+  }
+}, [currentPage, pageSize, fetchPayrollData]); // Add missing fetchPayrollData dependency
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault(); // Prevent any form submission
+    setSearch(e.target.value);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent form submission and page reload
+  };
+
+  // Handle key press in search input
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent form submission on Enter
+    }
+  };
+
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearch("");
+  };
+
+  // Handle retry
+  const handleRetry = () => {
+    fetchPayrollData(false);
+  };
+
+  // Filter logic for client-side filtering
+  const filteredData = data.filter(item =>
+    (!statusFilter || item.status.toLowerCase() === statusFilter.toLowerCase()) &&
+    (!positionFilter || item.job_title === positionFilter) &&
+    (!search || (
+      item.employee_name.toLowerCase().includes(search.toLowerCase()) ||
+      item.job_title.toLowerCase().includes(search.toLowerCase()) ||
+      item.department.toLowerCase().includes(search.toLowerCase())
+    ))
+  );
+
+  // Unique positions for filter dropdowns
+  const positions = Array.from(new Set(data.map((d) => d.job_title)));
+
+  const handleReleaseWithConfirm = (ids: string[]) => {
+    Swal.fire({
+      title: 'Confirm Release',
+      text: 'Are you sure you want to release this payroll?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#13CE66',
+      cancelButtonColor: '#FEB71F',
+      confirmButtonText: 'Yes, Release',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      background: 'white',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleRelease(ids);
+      }
+    });
+  };
 
   // Handle release action
-  const handleRelease = (ids: string[]) => {
+  const handleRelease = async (ids: string[]) => {
     if (ids.length === 0) return;
-    setData(prev =>
-      prev.map(item =>
-        ids.includes(item.payroll_id) && item.status === "Pending"
-          ? { ...item, status: "Released" }
-          : item
-      )
-    );
-    setSelectedIds([]);
-    showSuccess('Payroll released!', 'Success');
+    try {
+      // Find the full records in memory
+      const recordsToRelease = filteredData.filter(r => ids.includes(r.payroll_id));
+      // Send the full records to the backend
+      await fetch('/api/payroll', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recordsToRelease),
+      });
+      await fetchPayrollData(false);
+      showSuccess('Payroll released!', 'Success');
+    } catch {
+      setError('Failed to release payroll');
+    }
   };
 
   if (loading) {
@@ -131,6 +248,20 @@ const PayrollPage = () => {
       <div className="card">
         <h1 className="title">Payroll Management</h1>
         <Loading />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card">
+        <h1 className="title">Payroll Management</h1>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+          <p>{error}</p>
+          <button onClick={handleRetry} style={{ marginTop: '1rem' }}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -144,48 +275,80 @@ const PayrollPage = () => {
 
         <div className="settings">
           <div className="searchBar">
-            <i className="ri-search-line" />
-            <input
-              type="text"
-              placeholder="Search employee or job title…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <form onSubmit={handleSearchSubmit} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+              <i className="ri-search-line" />
+              <input
+                type="text"
+                placeholder="Search here..."
+                value={search}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyPress}
+                disabled={searchLoading}
+              />
+              {searchLoading && (
+                <div style={{ marginLeft: '8px', color: '#666' }}>
+                  <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+              {search && !searchLoading && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </form>
           </div>
 
           <div className="filters">
+            <label style={{marginRight: 8}}>Start Date:
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                style={{marginLeft: 4, marginRight: 16}}
+              />
+            </label>
+            <label style={{marginRight: 8}}>End Date:
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                style={{marginLeft: 4, marginRight: 16}}
+              />
+            </label>
+            {/*FILTERS*/}
             <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="filterSelect"
             >
-              <option value="">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
+              <option value="">All Status</option>
+              <option key="pending" value="pending">Pending</option>
+              <option key="released" value="released">Released</option>
             </select>
 
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              value={positionFilter}
+              onChange={(e) => setPositionFilter(e.target.value)}
               className="filterSelect"
             >
-              <option value="">All Payroll Periods</option>
-              {periods.map((period) => (
-                <option key={period} value={period}>
-                  {period}
+              <option value="">All Positions</option>
+              {positions.map((position) => (
+                <option key={position} value={position}>
+                  {position}
                 </option>
               ))}
             </select>
 
             <button
               className="releaseAllBtn"
-              disabled={selectedIds.length === 0}
-              onClick={() => handleRelease(selectedIds)}
+              disabled={filteredData.filter(r => r.status === "Pending").length === 0}
+              onClick={() => handleReleaseWithConfirm(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id))}
             >
-              <i className="ri-check-double-line" /> Release
+              <i className="ri-check-double-line" /> Release All Pending
             </button>
           </div>
         </div>
@@ -196,58 +359,39 @@ const PayrollPage = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={
-                        filteredData.length > 0 &&
-                        filteredData.filter(r => r.status === "Pending").every(r => selectedIds.includes(r.payroll_id))
-                      }
-                      onChange={e => {
-                        if (e.target.checked) {
-                          setSelectedIds(filteredData.filter(r => r.status === "Pending").map(r => r.payroll_id));
-                        } else {
-                          setSelectedIds([]);
-                        }
-                      }}
-                    />
-                  </th>
+                  <th>#</th>
+                  <th>Employee Number</th>
                   <th>Employee Name</th>
                   <th>Job Title</th>
                   <th>Department</th>
+                  <th>Employee Status</th>
                   <th>Payroll Period</th>
                   <th>Net Pay</th>
-                  <th>Deduction</th>
-                  <th>Salary</th>
+                  <th>Total Deductions</th>
+                  <th>Gross Earnings</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {currentRecords.map((item) => (
-                  <tr key={item.payroll_id}>
-                    <td>
-                      {item.status === "Pending" && (
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.payroll_id)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedIds(prev => [...prev, item.payroll_id]);
-                            } else {
-                              setSelectedIds(prev => prev.filter(id => id !== item.payroll_id));
-                            }
-                          }}
-                        />
-                      )}
-                    </td>
+                {filteredData.map((item, index) => (
+                  <tr key={item.payroll_id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      setRecordToView(item);
+                      setViewModalOpen(true);
+                    }}
+                  >
+                    <td>{(currentPage - 1) * pageSize + index + 1}</td>
+                    <td>{item.employee_number}</td>
                     <td>{item.employee_name}</td>
                     <td>{item.job_title}</td>
                     <td>{item.department}</td>
+                    <td>{item.employee_status}</td>
                     <td>{item.payroll_period}</td>
                     <td className="netPay">₱{item.net_pay.toLocaleString()}</td>
-                    <td className="deduction">₱{item.deduction.toLocaleString()}</td>
-                    <td className="salary">₱{item.salary.toLocaleString()}</td>
+                    <td className="deduction">₱{item.total_deductions.toLocaleString()}</td>
+                    <td className="salary">₱{item.gross_total_earnings.toLocaleString()}</td>
                     <td>
                       <span className={`chip ${item.status}`}>
                         {item.status}
@@ -258,7 +402,10 @@ const PayrollPage = () => {
                         {item.status === "Pending" ? (
                           <button
                             className="releaseBtn"
-                            onClick={() => handleRelease([item.payroll_id])}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReleaseWithConfirm([item.payroll_id]);
+                            }}
                             title="Release Payroll"
                           >
                             <i className="ri-check-double-line" />
@@ -268,14 +415,6 @@ const PayrollPage = () => {
                             <i className="ri-check-double-line" />
                           </button>
                         )}
-                        <button
-                          className="editBtn"
-                          onClick={() => handleEdit(item)}
-                          title="Edit Payroll"
-                          disabled={item.status !== "Pending"} // Disable if not pending
-                        >
-                          <i className="ri-edit-2-line" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -295,6 +434,16 @@ const PayrollPage = () => {
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
+
+        {viewModalOpen && recordToView && (
+          <ViewPayrollModal
+            record={recordToView}
+            onClose={() => {
+              setViewModalOpen(false);
+              setRecordToView(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

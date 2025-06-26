@@ -40,6 +40,17 @@
   color: var(--primary-text-color) !important;
 }
 
+.editRevenue_modalContent {
+  width: var(--modal-content-width) !important;
+  max-width: 100% !important;
+  height: var(--modal-content-height) !important;
+  background-color: var(--modal-content-background-color) !important;
+  padding: var(--modal-content-padding) !important;
+  border-radius: var(--modal-content-border-radius) !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+}
+
 .editRevenueModal form {
   width: 100% !important;
   overflow-y: auto !important;
@@ -273,3 +284,16 @@
   justify-content: space-between !important;
   align-items: center !important;
 }
+
+/* ---------- Error Message for Data Validation ---------- */
+.input-error {
+  border-color: #ff4d4f !important;
+  background-color: #fff6f6;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+

@@ -4,202 +4,253 @@ import Swal from 'sweetalert2';
 import '../../styles/editReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 
-type ReceiptItem = {
+// Global types, aligned with schema
+interface GlobalCategory { category_id: string; name: string; }
+interface GlobalTerm { id: string; name: string; }
+interface GlobalPaymentStatus { id: string; name: string; }
+interface GlobalItemUnit { id: string; name: string; }
+
+// Prop type for a single receipt item, as it comes from the parent component
+type ReceiptItemProp = {
   receipt_item_id: string;
   item_id: string;
   item: {
     item_id: string;
     item_name: string;
-    unit: string;
-    category: string;
-    other_category?: string;
-    other_unit?: string;
+    unit: { id: string, name: string };
+    category: { category_id: string, name: string };
+    other_unit?: string | null;
   };
   quantity: number;
   unit_price: number;
   total_price: number;
-  ocr_confidence?: number;
 };
 
-type ItemField = 'item_name' | 'unit' | 'category' | 'other_category' | 'other_unit' | 'quantity' | 'unit_price';
+// Type for the receipt object prop
+type ReceiptProp = {
+    receipt_id: string;
+    supplier: string;
+    transaction_date: string;
+    vat_reg_tin?: string | null;
+    terms_id: string;
+    date_paid?: string | null;
+    payment_status_id: string;
+    total_amount: number;
+    vat_amount?: number | null;
+    total_amount_due: number;
+    category_id: string;
+    source_id: string;  // Add this field
+    created_by: string; // Add this field
+    remarks?: string | null;
+    items: ReceiptItemProp[];
+};
+
+// Type for items being edited in the modal's state
+type EditReceiptItem = {
+    receipt_item_id: string; // For key prop
+    item_id: string; // To identify existing items
+    item_name: string;
+    unit_id: string;
+    other_unit?: string;
+    category_id: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+};
+
+export type UpdatedReceiptData = {
+  receipt_id: string;
+  supplier: string;
+  transaction_date: string;
+  vat_reg_tin?: string | null;
+  terms_id: string;
+  date_paid?: string | null;
+  payment_status_id: string;
+  category_id: string;
+  source_id: string;  // Add this - required by AddReceiptSubmitData
+  remarks?: string | null;
+  total_amount: number;
+  vat_amount: number;
+  total_amount_due: number;
+  items: {
+    item_name: string;
+    unit_id: string;
+    other_unit?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    category_id: string;
+  }[];
+  created_by: string;  // Add this - required by AddReceiptSubmitData
+  updated_by: string;
+};
+
 
 type EditReceiptModalProps = {
-  record: {
-    receipt_id: string;
-    supplier: string;
-    transaction_date: string;
-    vat_reg_tin?: string;
-    terms?: string;
-    date_paid?: string;
-    payment_status: 'Paid' | 'Pending' | 'Cancelled' | 'Dued';
-    record_status: 'Active' | 'Inactive';
-    total_amount: number;
-    vat_amount?: number;
-    total_amount_due: number;
-    category: string;
-    other_category?: string;
-    remarks?: string;
-    items: ReceiptItem[];
-  };
+  receipt: ReceiptProp;
   onClose: () => void;
-  onSave: (updatedRecord: {
-    receipt_id: string;
-    supplier: string;
-    transaction_date: string;
-    vat_reg_tin?: string;
-    terms?: string;
-    date_paid?: string;
-    payment_status: string;
-    total_amount: number;
-    vat_amount?: number;
-    total_amount_due: number;
-    category: string;
-    other_category?: string;
-    remarks?: string;
-    items: Array<{
-      receipt_item_id: string;
-      item_name: string;
-      unit: string;
-      other_unit?: string;
-      quantity: number;
-      unit_price: number;
-      total_price: number;
-      category: string;
-      other_category?: string;
-    }>;
-  }) => void;
+  onSave: (updatedRecord: UpdatedReceiptData) => void;
+  categories: GlobalCategory[];
+  terms: GlobalTerm[];
+  paymentStatuses: GlobalPaymentStatus[];
+  itemUnits: GlobalItemUnit[];
 };
 
-const EXPENSE_CATEGORIES = [
-  'Fuel',
-  'Vehicle_Parts',
-  'Tools',
-  'Equipment',
-  'Supplies',
-  'Other'
-];
-
-const ITEM_UNITS = [
-  'piece(s)',
-  'box(es)',
-  'pack(s)',
-  'gallon(s)',
-  'liter(s)',
-  'milliliter(s)',
-  'kilogram(s)',
-  'gram(s)',
-  'pound(s)',
-  'meter(s)',
-  'foot/feet',
-  'roll(s)',
-  'set(s)',
-  'pair(s)',
-  'Other'
-];
 
 const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
-  record,
+  receipt,
   onClose,
-  onSave
+  onSave,
+  categories,
+  terms: globalTerms,
+  paymentStatuses,
+  itemUnits,
 }) => {
-  // Update state initializations to use record values
-  const [supplier, setSupplier] = useState(record.supplier || '');
+  const [supplier, setSupplier] = useState(receipt?.supplier || '');
   const [transactionDate, setTransactionDate] = useState(() => {
-    // Format date string to YYYY-MM-DD for input[type="date"]
-    const date = record.transaction_date ? new Date(record.transaction_date) : new Date();
-    return date.toISOString().split('T')[0];
+    const date = receipt?.transaction_date ? new Date(receipt.transaction_date) : new Date();
+    return date.toISOString().slice(0, 16); // Include time (YYYY-MM-DDTHH:mm)
   });
-  const [vatRegTin, setVatRegTin] = useState(record.vat_reg_tin || '');
-  const [terms, setTerms] = useState(record.terms || 'Cash');
+  const [vatRegTin, setVatRegTin] = useState(receipt?.vat_reg_tin || '');
+  const [termsId, setTermsId] = useState(receipt?.terms_id || '');
   const [datePaid, setDatePaid] = useState(() => {
-    // Format date paid if it exists
-    if (record.date_paid) {
-      const date = new Date(record.date_paid);
+    if (receipt?.date_paid) {
+      const date = new Date(receipt.date_paid);
       return date.toISOString().split('T')[0];
     }
     return '';
   });
-  const [paymentStatus, setPaymentStatus] = useState(record.payment_status);
-  const [totalAmount, setTotalAmount] = useState(record.total_amount || 0);
-  const [vatAmount, setVatAmount] = useState(record.vat_amount || 0);
-  const [totalAmountDue, setTotalAmountDue] = useState(record.total_amount_due || 0);
-  const [category, setCategory] = useState(record.category || '');
-  const [remarks, setRemarks] = useState(record.remarks || '');
-  const [items, setItems] = useState<ReceiptItem[]>(() => {
-    // Ensure all items have a stable receipt_item_id
-    return (record.items || []).map((item, index) => ({
-      ...item,
-      receipt_item_id: item.receipt_item_id || `existing-${index}-${record.receipt_id}`
+  const [paymentStatusId, setPaymentStatusId] = useState(receipt?.payment_status_id || '');
+  const [totalAmount, setTotalAmount] = useState(receipt?.total_amount || 0);
+  const [vatAmount, setVatAmount] = useState(receipt?.vat_amount || 0);
+  const [totalAmountDue, setTotalAmountDue] = useState(receipt?.total_amount_due || 0);
+  const [categoryId, setCategoryId] = useState(receipt?.category_id || '');
+  const [remarks, setRemarks] = useState(receipt?.remarks || '');
+  const [items, setItems] = useState<EditReceiptItem[]>(() => {
+    return (receipt?.items || []).map(item => ({
+      receipt_item_id: item.receipt_item_id,
+      item_id: item.item_id,
+      item_name: item.item.item_name,
+      unit_id: item.item.unit.id,
+      other_unit: item.item.other_unit || undefined,
+      category_id: item.item.category.category_id,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      total_price: Number(item.total_price),
     }));
   });
-  const [isOtherCategory, setIsOtherCategory] = useState(record.category === 'Other');
-  const [otherCategory, setOtherCategory] = useState(record.other_category || '');
-  const [categoryOverride, setCategoryOverride] = useState(false);
 
-  // Add useEffect to update state when record changes
   useEffect(() => {
-    if (record) {
-      setSupplier(record.supplier || '');
-      setTransactionDate(new Date(record.transaction_date).toISOString().split('T')[0]);
-      setVatRegTin(record.vat_reg_tin || '');
-      setTerms(record.terms || 'Cash');
-      if (record.date_paid) {
-        setDatePaid(new Date(record.date_paid).toISOString().split('T')[0]);
+    if (receipt) {
+      setSupplier(receipt.supplier || '');
+      setTransactionDate(new Date(receipt.transaction_date).toISOString().slice(0, 16)); // Include time
+      setVatRegTin(receipt.vat_reg_tin || '');
+      setTermsId(receipt.terms_id || '');
+      if (receipt.date_paid) {
+        setDatePaid(new Date(receipt.date_paid).toISOString().split('T')[0]);
+      } else {
+        setDatePaid('');
       }
-      setPaymentStatus(record.payment_status);
-      setTotalAmount(record.total_amount || 0);
-      setVatAmount(record.vat_amount || 0);
-      setTotalAmountDue(record.total_amount_due || 0);
-      setCategory(record.category || '');
-      setRemarks(record.remarks || '');
-      // Ensure stable IDs for items
-      setItems((record.items || []).map((item, index) => ({
-        ...item,
-        receipt_item_id: item.receipt_item_id || `existing-${index}-${record.receipt_id}`
+      setPaymentStatusId(receipt.payment_status_id);
+      setTotalAmount(receipt.total_amount || 0);
+      setVatAmount(receipt.vat_amount || 0);
+      setTotalAmountDue(receipt.total_amount_due || 0);
+      setCategoryId(receipt.category_id || '');
+      setRemarks(receipt.remarks || '');
+      setItems((receipt.items || []).map(item => ({
+        receipt_item_id: item.receipt_item_id,
+        item_id: item.item_id,
+        item_name: item.item.item_name,
+        unit_id: item.item.unit.id,
+        other_unit: item.item.other_unit || undefined,
+        category_id: item.item.category.category_id,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        total_price: Number(item.total_price),
       })));
-      setIsOtherCategory(record.category === 'Other');
-      setOtherCategory(record.other_category || '');
-      setCategoryOverride(false);
     }
-  }, [record]);
+  }, [receipt]);
 
-  // Add useEffect to handle VAT amount changes
   useEffect(() => {
-    setTotalAmountDue(Number(totalAmount) + Number(vatAmount || 0));
-  }, [vatAmount, totalAmount]);
+    const newTotal = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    setTotalAmount(newTotal);
+  }, [items]);
 
-  // Utility for formatting numbers
-  const formatMoney = (amount: number) => {
-    return Number(amount || 0).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+  useEffect(() => {
+    setTotalAmountDue(totalAmount + vatAmount);
+  }, [totalAmount, vatAmount]);
+
+  if (!receipt) {
+    return null;
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'supplier') setSupplier(value);
+    else if (name === 'transaction_date') setTransactionDate(value);
+    else if (name === 'vat_reg_tin') setVatRegTin(value);
+    else if (name === 'terms_id') setTermsId(value);
+    else if (name === 'date_paid') setDatePaid(value);
+    else if (name === 'payment_status_id') setPaymentStatusId(value);
+    else if (name === 'category_id') setCategoryId(value);
+    else if (name === 'remarks') setRemarks(value);
   };
 
+  const handleItemChange = (index: number, field: keyof EditReceiptItem, value: string | number) => {
+    const updatedItems = [...items];
+    const currentItem = { ...updatedItems[index] };
+    
+    if (field === 'quantity' || field === 'unit_price') {
+        const numericValue = Number(value) || 0;
+        if(field === 'quantity') currentItem.quantity = numericValue;
+        if(field === 'unit_price') currentItem.unit_price = numericValue;
+        currentItem.total_price = (currentItem.quantity || 0) * (currentItem.unit_price || 0);
+    } else if (field === 'unit_id') {
+      if(value === 'Other') {
+        currentItem.unit_id = 'Other';
+        currentItem.other_unit = '';
+      } else {
+        currentItem.unit_id = value as string;
+        delete currentItem.other_unit;
+      }
+    } else if (field === 'item_name' || field === 'category_id' || field === 'other_unit') {
+        currentItem[field] = value as string;
+    }
+    
+    updatedItems[index] = currentItem;
+    setItems(updatedItems);
+  };
+  
+  const addNewItem = () => {
+    setItems([...items, {
+      receipt_item_id: `temp-${Date.now()}`,
+      item_id: '',
+      item_name: '',
+      unit_id: '',
+      other_unit: '',
+      quantity: 0,
+      unit_price: 0,
+      total_price: 0,
+      category_id: '',
+    }]);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+  
   const handleSave = async () => {
-    if (!supplier || !transactionDate || !paymentStatus || !category) {
+    if (!supplier || !transactionDate || !paymentStatusId || !categoryId) {
       Swal.fire('Error', 'Please fill in all required fields', 'error');
       return;
     }
 
-    // Filter out empty items
     const validItems = items.filter(item => 
-      item.item.item_name && item.item.unit && item.quantity > 0 && item.unit_price > 0
+      item.item_name && item.unit_id && item.quantity > 0 && item.unit_price > 0 && item.category_id
     );
 
     if (validItems.length === 0) {
-      Swal.fire('Error', 'Please add at least one item', 'error');
-      return;
-    }
-
-    // Validate that all items have a valid category
-    const invalidItems = validItems.filter(item => 
-      !item.item.category || 
-      (item.item.category === 'Other' && !item.item.other_category)
-    );
-
-    if (invalidItems.length > 0) {
-      Swal.fire('Error', 'Please specify a category for all items. If "Other" is selected, please provide a custom category.', 'error');
+      Swal.fire('Error', 'Please add at least one valid item', 'error');
       return;
     }
 
@@ -216,179 +267,39 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
     if (result.isConfirmed) {
       try {
-        // Prepare the data with proper category handling
-        const submitData = {
-          receipt_id: record.receipt_id,
+        const updatedData: UpdatedReceiptData = {
+          receipt_id: receipt.receipt_id,
           supplier,
           transaction_date: transactionDate,
-          vat_reg_tin: vatRegTin || undefined,
-          terms: terms || undefined,
-          date_paid: datePaid || undefined,
-          payment_status: paymentStatus,
+          vat_reg_tin: vatRegTin,
+          terms_id: termsId,
+          date_paid: datePaid,
+          payment_status_id: paymentStatusId,
+          category_id: categoryId,
+          source_id: receipt.source_id,  // Use existing source_id from receipt
+          remarks,
           total_amount: totalAmount,
-          vat_amount: vatAmount || undefined,
+          vat_amount: vatAmount,
           total_amount_due: totalAmountDue,
-          category: EXPENSE_CATEGORIES.includes(category) 
-            ? category 
-            : 'Other',
-          other_category: EXPENSE_CATEGORIES.includes(category)
-            ? undefined
-            : category,
-          remarks: remarks || undefined,
           items: validItems.map(item => ({
-            receipt_item_id: item.receipt_item_id,
-            item_name: item.item.item_name,
-            unit: ITEM_UNITS.includes(item.item.unit)
-              ? item.item.unit
-              : 'Other',
-            other_unit: item.item.unit === 'Other' ? item.item.other_unit : undefined,
+            item_name: item.item_name,
+            unit_id: item.unit_id,
+            other_unit: item.other_unit,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
-            category: EXPENSE_CATEGORIES.includes(item.item.category)
-              ? item.item.category
-              : 'Other',
-            other_category: item.item.category === 'Other' ? item.item.other_category : undefined
-          }))
+            category_id: item.category_id,
+          })),
+          created_by: receipt.created_by,  // Use existing created_by from receipt
+          updated_by: 'ftms_user'
         };
-
-        await onSave(submitData);
-        Swal.fire('Success', 'Receipt updated successfully', 'success');
-        onClose();
+        
+        onSave(updatedData);
       } catch (error) {
         console.error('Error updating receipt:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        Swal.fire('Error', 'Failed to update receipt: ' + errorMessage, 'error');
+        Swal.fire('Error', 'An error occurred while updating the receipt', 'error');
       }
     }
-  };
-
-  const computeSummaryCategory = (items: ReceiptItem[]): string => {
-    if (items.length === 0) return 'Fuel';
-    // Get unique categories
-    const uniqueCategories = Array.from(new Set(items.map(item => {
-      // Resolve the actual category value
-      return item.item.category === 'Other' && item.item.other_category 
-        ? item.item.other_category 
-        : item.item.category;
-    }).filter(Boolean)));
-    if (uniqueCategories.length === 0) return 'Fuel';
-    if (uniqueCategories.length === 1) {
-      return uniqueCategories[0];
-    }
-    // Multiple different categories
-    return 'Multiple_Categories';
-  };
-
-  const isCategoryEditable = (items: ReceiptItem[]) => {
-    if (categoryOverride) return true;
-    if (items.length === 0) return true;
-    return false;
-  };
-
-  const getDisplayCategory = (category: string, otherCategory?: string) => {
-    if (category === 'Other' && otherCategory) {
-      return otherCategory;
-    }
-    return formatDisplayText(category);
-  };
-
-  useEffect(() => {
-    if (!categoryOverride) {
-      const summaryCategory = computeSummaryCategory(items);
-      setCategory(summaryCategory);
-      if (summaryCategory === 'Other') {
-        setOtherCategory(otherCategory || '');
-      }
-    }
-  }, [items, categoryOverride, otherCategory]);
-
-  const handleItemChange = (
-    index: number, 
-    field: ItemField,
-    value: string | number
-  ) => {
-    setItems(prevItems => {
-      const updatedItems = [...prevItems];
-      const item = { ...updatedItems[index] };
-      
-      if (field === 'quantity' || field === 'unit_price') {
-        let numValue: number;
-        if (typeof value === 'string') {
-          const cleaned = value.replace(/^0+(?!\.|$)/, '');
-          numValue = Number(cleaned) || 0;
-        } else {
-          numValue = value;
-        }
-        item[field] = numValue;
-        item.total_price = Number(item.quantity || 0) * Number(item.unit_price || 0);
-        updatedItems[index] = item;
-        const newTotalAmount = updatedItems.reduce((sum, currentItem) => sum + Number(currentItem.total_price || 0), 0);
-        setTotalAmount(newTotalAmount);
-        setTotalAmountDue(Number(newTotalAmount) + Number(vatAmount || 0));
-      } else if (field === 'category') {
-        if (value === 'Other') {
-          item.item.category = 'Other';
-          item.item.other_category = '';
-        } else {
-          item.item.category = value as string;
-          item.item.other_category = undefined;
-        }
-        updatedItems[index] = item;
-      } else if (field === 'other_category') {
-        item.item.other_category = value as string;
-        updatedItems[index] = item;
-      } else if (field === 'unit') {
-        if (value === 'Other') {
-          item.item.unit = 'Other';
-          item.item.other_unit = '';
-        } else {
-          item.item.unit = value as string;
-          item.item.other_unit = undefined;
-        }
-        updatedItems[index] = item;
-      } else if (field === 'other_unit') {
-        item.item.other_unit = value as string;
-        updatedItems[index] = item;
-      } else if (field === 'item_name') {
-        item.item.item_name = value as string;
-        updatedItems[index] = item;
-      }
-      
-      // Only auto-set summary category if not overridden
-      if (!categoryOverride) {
-        setCategory(computeSummaryCategory(updatedItems));
-      }
-      return updatedItems;
-    });
-  };
-
-  const addNewItem = () => {
-    const temporaryId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newItem: ReceiptItem = {
-      receipt_item_id: temporaryId,
-      item_id: '',
-      item: {
-        item_id: '',
-        item_name: '',
-        unit: '',
-        category: '',
-      },
-      quantity: 0,
-      unit_price: 0,
-      total_price: 0
-    };
-    setItems(prevItems => [...prevItems, newItem]);
-  };
-
-  const removeItem = (index: number) => {
-    const updatedItems = items.filter((_, idx) => idx !== index);
-    const newTotalAmount = updatedItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
-    Promise.resolve().then(() => {
-      setItems(updatedItems);
-      setTotalAmount(newTotalAmount);
-      setTotalAmountDue(Number(newTotalAmount) + Number(vatAmount || 0));
-    });
   };
 
   return (
@@ -406,19 +317,21 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
           <label>Supplier</label>
           <input
             type="text"
+            name="supplier"
             value={supplier}
-            onChange={(e) => setSupplier(e.target.value)}
+            onChange={handleInputChange}
             required
           />
         </div>
 
         <div className="formRow">
           <div className="formGroup">
-            <label>Transaction Date</label>
+            <label>Transaction Date & Time</label>
             <input
-              type="date"
+              type="datetime-local"
+              name="transaction_date"
               value={transactionDate}
-              onChange={(e) => setTransactionDate(e.target.value)}
+              onChange={handleInputChange}
               required
             />
           </div>
@@ -426,9 +339,9 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             <label>Date Paid</label>
             <input
               type="date"
+              name="date_paid"
               value={datePaid}
-              onChange={(e) => setDatePaid(e.target.value)}
-              disabled={paymentStatus === 'Pending' || paymentStatus === 'Cancelled'}
+              onChange={handleInputChange}
               className="formInput"
             />
           </div>
@@ -439,23 +352,21 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             <label>VAT Reg TIN</label>
             <input
               type="text"
+              name="vat_reg_tin"
               value={vatRegTin}
-              onChange={(e) => setVatRegTin(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Optional"
             />
           </div>
           <div className="formGroup">
             <label>Terms</label>
             <select
-              value={terms}
-              onChange={(e) => setTerms(e.target.value)}
+              name="terms_id"
+              value={termsId}
+              onChange={handleInputChange}
               className="formSelect"
             >
-              <option value="Cash">Cash</option>
-              <option value="Net_15">{formatDisplayText('Net_15')}</option>
-              <option value="Net_30">{formatDisplayText('Net_30')}</option>
-              <option value="Net_60">{formatDisplayText('Net_60')}</option>
-              <option value="Net_90">{formatDisplayText('Net_90')}</option>
+              {globalTerms.map(t => <option key={t.id} value={t.id}>{formatDisplayText(t.name)}</option>)}
             </select>
           </div>
         </div>
@@ -463,89 +374,28 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         <div className="formRow">
           <div className="formGroup">
             <label>Category</label>
-            {isCategoryEditable(items) ? (
-              !isOtherCategory ? (
-                <div className="categoryField">
-                  <select
-                    value={category}
-                    onChange={(e) => {
-                      if (e.target.value === 'Other') {
-                        setIsOtherCategory(true);
-                      }
-                      setCategory(e.target.value);
-                    }}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {EXPENSE_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{formatDisplayText(cat)}</option>
-                    ))}
-                  </select>
-                  {items.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setCategoryOverride(!categoryOverride)}
-                      className="overrideBtn"
-                      title={categoryOverride ? "Disable manual override" : "Enable manual override"}
-                    >
-                      <i className={categoryOverride ? "ri-lock-line" : "ri-lock-unlock-line"} />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="otherCategoryInput">
-                  <input
-                    type="text"
-                    value={otherCategory}
-                    onChange={(e) => setOtherCategory(e.target.value)}
-                    placeholder="Enter category"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOtherCategory(false);
-                      setOtherCategory('');
-                      setCategory('Fuel');
-                    }}
-                    className="clearCategoryBtn"
-                  >
-                    <i className="ri-close-line" />
-                  </button>
-                </div>
-              )
-            ) : (
-              <div className="readOnlyCategory">
-                <input
-                  type="text"
-                  value={formatDisplayText(getDisplayCategory(category, otherCategory))}
-                  readOnly
-                />
-                <div className="categoryTooltip">
-                  <i className="ri-information-line" />
-                  <span className="tooltipText">
-                    {category === 'Multiple_Categories' 
-                      ? "Multiple categories detected in items. Click the lock icon to override."
-                      : "Category is automatically determined by item categories. Click the lock icon to override."}
-                  </span>
-                </div>
-              </div>
-            )}
-            {!isCategoryEditable(items) && (
-              <small className="categoryNote"></small>
-            )}
+            <select
+                name="category_id"
+                value={categoryId}
+                onChange={handleInputChange}
+                required
+              >
+              <option value="">Select Category</option>
+              {categories.map(cat => (
+                  <option key={cat.category_id} value={cat.category_id}>{formatDisplayText(cat.name)}</option>
+              ))}
+            </select>
           </div>
           <div className="formGroup">
             <label>Payment Status</label>
             <select
-              value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value as 'Paid' | 'Pending' | 'Cancelled' | 'Dued')}
+              name="payment_status_id"
+              value={paymentStatusId}
+              onChange={handleInputChange}
               required
             >
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Dued">Dued</option>
+              <option value="">Select Status</option>
+              {paymentStatuses.map(ps => <option key={ps.id} value={ps.id}>{formatDisplayText(ps.name)}</option>)}
             </select>
           </div>
         </div>
@@ -553,8 +403,9 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         <div className="formGroup">
           <label>Remarks</label>
           <textarea
+            name="remarks"
             value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Optional"
             rows={3}
           />
@@ -586,25 +437,25 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                   <td>
                     <input
                       type="text"
-                      value={item.item.item_name}
+                      value={item.item_name}
                       onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
                       required
                       placeholder="Enter item name"
                     />
                   </td>
                   <td>
-                    {item.item.unit === 'Other' ? (
+                    {item.unit_id === 'Other' ? (
                       <div className="otherUnitInput">
                         <input
                           type="text"
-                          value={item.item.other_unit || ''}
+                          value={item.other_unit || ''}
                           onChange={(e) => handleItemChange(index, 'other_unit', e.target.value)}
                           placeholder="Specify unit"
                           required
                         />
                         <button
                           type="button"
-                          onClick={() => handleItemChange(index, 'unit', 'piece(s)')}
+                          onClick={() => handleItemChange(index, 'unit_id', itemUnits[0]?.id || '')}
                           className="clearUnitBtn"
                         >
                           <i className="ri-close-line" />
@@ -612,81 +463,52 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                       </div>
                     ) : (
                       <select
-                        value={item.item.unit}
-                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                        value={item.unit_id}
+                        onChange={(e) => handleItemChange(index, 'unit_id', e.target.value)}
                         required
                       >
                         <option value="">Select Unit</option>
-                        {ITEM_UNITS.map(unit => (
-                          <option key={unit} value={unit}>{unit}</option>
+                        {itemUnits.map(unit => (
+                          <option key={unit.id} value={unit.id}>{unit.name}</option>
                         ))}
+                        <option value="Other">Other</option>
                       </select>
                     )}
                   </td>
                   <td>
                     <input
-                      type="text"
-                      inputMode="decimal"
+                      type="number"
                       value={item.quantity || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          handleItemChange(index, 'quantity', value);
-                        }
-                      }}
+                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                       min="0"
-                      step="0.01"
+                      step="any"
                       required
                       placeholder="0"
                     />
                   </td>
                   <td>
                     <input
-                      type="text"
-                      inputMode="decimal"
+                      type="number"
                       value={item.unit_price || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          handleItemChange(index, 'unit_price', value);
-                        }
-                      }}
+                      onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                       min="0"
-                      step="0.01"
+                      step="any"
                       required
                       placeholder="0"
                     />
                   </td>
-                  <td>₱{formatMoney(item.total_price)}</td>
+                  <td>₱{(item.total_price || 0).toLocaleString()}</td>
                   <td>
-                    {item.item.category === 'Other' ? (
-                      <div className="otherCategoryInput">
-                        <input
-                          type="text"
-                          value={item.item.other_category || ''}
-                          onChange={(e) => handleItemChange(index, 'other_category', e.target.value)}
-                          placeholder="Specify category"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleItemChange(index, 'category', 'Fuel')}
-                          className="clearCategoryBtn"
-                        >
-                          <i className="ri-close-line" />
-                        </button>
-                      </div>
-                    ) : (
-                      <select
-                        value={item.item.category}
-                        onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                        required
-                      >
-                        {EXPENSE_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{formatDisplayText(cat)}</option>
-                        ))}
-                      </select>
-                    )}
+                    <select
+                      value={item.category_id}
+                      onChange={(e) => handleItemChange(index, 'category_id', e.target.value)}
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat.category_id} value={cat.category_id}>{formatDisplayText(cat.name)}</option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <button
@@ -710,7 +532,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <label>Total Amount</label>
               <input
                 type="text"
-                value={`₱${formatMoney(totalAmount)}`}
+                value={`₱${totalAmount.toLocaleString()}`}
                 readOnly
               />
             </div>
@@ -718,14 +540,10 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <label>VAT Amount</label>
               <input
                 type="number"
-                value={vatAmount || ''}
-                onChange={(e) => {
-                  const newVatAmount = Number(e.target.value) || 0;
-                  setVatAmount(newVatAmount);
-                  setTotalAmountDue(Number(totalAmount) + newVatAmount);
-                }}
+                value={vatAmount}
+                onChange={(e) => setVatAmount(Number(e.target.value))}
                 min="0"
-                step="0.01"
+                step="any"
                 placeholder="0"
               />
             </div>
@@ -733,7 +551,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <label>Total Amount Due</label>
               <input
                 type="text"
-                value={`₱${formatMoney(totalAmountDue)}`}
+                value={`₱${totalAmountDue.toLocaleString()}`}
                 readOnly
               />
             </div>

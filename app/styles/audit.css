@@ -5,87 +5,91 @@
 
 /* ---------- Base ---------- */
 .auditPage {
-  padding: 20px;
-  font-family: var(--font-sans);
-  color: var(--primary-text-color);
+  padding: 20px !important;
+  font-family: var(--font-sans) !important;
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Settings / Filter Bar ---------- */
 .settings {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 0px;
-  justify-content: space-between;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-bottom: 0px !important;
+  justify-content: space-between !important;
 }
 
 .settings input[type="date"],
 .settings select {
-  padding: 0 8px;
-  font-size: var(--page-button-font-size);  
-  border: none;
-  border-radius: 4px;
-  background-color: var(--foreground-color);
-  color: var(--primary-text-color);
-  box-shadow: var(--box-shadow);
-  transition: border-color 0.2s;
-  width: 125px;
-  height: var(--search-input-height);
+  padding: 0 8px !important;
+  font-size: var(--page-button-font-size) !important;  
+  border: none !important;
+  border-radius: 4px !important;
+  background-color: var(--foreground-color) !important;
+  color: var(--primary-text-color) !important;
+  box-shadow: var(--box-shadow) !important;
+  transition: border-color 0.2s !important;
+  width: 125px !important;
+  height: var(--search-input-height) !important;
 }
 
 .settings button {
-  font-size: var(--page-button-font-size);
-  cursor: pointer;
-  border-radius: 5px;
-  border: none;
-  background-color: var(--secondary-color);
-  color: var(--button-font-color);
-  transition: background-color 0.2s;
-  box-shadow: var(--box-shadow);
-  width: 125px;
-  height: var(--search-input-height);
+  font-size: var(--page-button-font-size) !important;
+  cursor: pointer !important;
+  border-radius: 5px !important;
+  border: none !important;
+  background-color: var(--secondary-color) !important;
+  color: var(--button-font-color) !important;
+  transition: background-color 0.2s !important;
+  box-shadow: var(--box-shadow) !important;
+  width: 125px !important;
+  height: var(--search-input-height) !important;
 }
 .settings button:hover {
-  background-color: var(--secondary-hover-color);
+  background-color: var(--secondary-hover-color) !important;
 }
 
 
 .searchBar {
-  display: flex;
-  flex-direction: row;
-  padding: var(--search-input-padding-right);
-  justify-content: space-between;
-  align-items: center;
-  width: var(--search-input-width);
-  height: var(--search-input-height);
-  border: 1px solid var(--border-color);
+  display: flex !important;
+  flex-direction: row !important;
+  padding: var(--search-input-padding-right) !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: var(--search-input-width) !important;
+  height: var(--search-input-height) !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: var(--search-input-border-radius) !important;
 }
 
 .searchBar input[type="text"] {
-  flex: 1;
+  flex: 1 !important;
   padding-right: 0 8px !important;
   border: none !important;
   outline: none !important;
-  border-radius: var(--search-bar-border-radius);
-  font-size: 14px;
-  width: var(--search-input-width);
-  height: var(--search-input-height);
+  border-radius: var(--search-bar-border-radius) !important;
+  font-size: 14px !important;
+  width: var(--search-input-width) !important;
+  height: var(--search-input-height) !important;
 }
 
 
 /* ---------- Filter Inputs ---------- */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+.filterDate {
+  margin-right: 1rem !important;
 }
 
 .dateFilter,
 #categoryFilter {
-  padding: 0 8px;
-  gap: var(--page-button-gap);
-  font-size: var(--page-button-font-size);
+  padding: 0 8px !important;
+  gap: var(--page-button-gap) !important;
+  font-size: var(--page-button-font-size) !important;
   height: var(--page-button-height) !important;
   width: var(--page-button-width) !important;
   border-radius: var(--page-button-border-radius)!important;
@@ -93,20 +97,20 @@
 }
 
 #categoryFilter {
-  max-width: max-content;
+  max-width: max-content !important;
 }
 
 /* ---------- Import / Export ---------- */
  #export{
   height: var(--page-button-height) !important;
   width: var(--page-button-width) !important;
-  font-size: var(--page-button-font-size);
+  font-size: var(--page-button-font-size) !important;
   border-radius: var(--page-button-border-radius)!important;
-  cursor: pointer;
-  border: none;
+  cursor: pointer !important;
+  border: none !important;
   background-color: var(--secondary-color) !important;
-  color: var(--button-font-color);
-  transition: background-color 0.3s;
+  color: var(--button-font-color) !important;
+  transition: background-color 0.3s !important;
 }
 
  #export:hover {
@@ -115,129 +119,129 @@
 
 /* ---------- View Button (table) ---------- */
 .viewButton {
-  background-color: var(--info-color);
-  color: var(--button-font-color);
-  border: none;
-  padding: 6px 12px;
-  border-radius: var(--table-action-button-border-radius);
-  cursor: pointer;
-  transition: background-color 0.2s;
+  background-color: var(--info-color) !important;
+  color: var(--button-font-color) !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  border-radius: var(--table-action-button-border-radius) !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
 }
 .viewButton:hover {
-  background-color: var(--info-hover-color);
+  background-color: var(--info-hover-color) !important;
 }
 
 /* ---------- Export Button (separate action) ---------- */
 .exportButton {
-  background-color: var(--success-color);
-  color: var(--button-font-color);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  background-color: var(--success-color) !important;
+  color: var(--button-font-color) !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  transition: background-color 0.2s !important;
 }
 .exportButton:hover {
-  background-color: var(--success-hover-color);
+  background-color: var(--success-hover-color) !important;
 }
 
 /* ---------- View Details Modal ---------- */
 .modalOverlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  position: fixed !important;
+  inset: 0 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1000 !important;
 }
 
 .viewDetailsModal {
-  position: relative;
-  background: var(--foreground-color);
-  padding: var(--modal-padding);
-  border-radius: var(--modal-border-radius);
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--box-shadow);
-  border: 1px solid var(--border-color);
+  position: relative !important;
+  background: var(--foreground-color) !important;
+  padding: var(--modal-padding) !important;
+  border-radius: var(--modal-border-radius) !important;
+  width: 90% !important;
+  max-width: 600px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  box-shadow: var(--box-shadow) !important;
+  border: 1px solid var(--border-color) !important;
 }
 
 .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid var(--border-color) !important;
 }
 
 .modalHeader h2 {
-  margin: 0;
-  font-size: var(--title-font-size);
-  font-weight: var(--title-font-weight);
-  color: var(--primary-text-color);
+  margin: 0 !important;
+  font-size: var(--title-font-size) !important;
+  font-weight: var(--title-font-weight) !important;
+  color: var(--primary-text-color) !important;
 }
 
 .closeButton {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--secondary-text-color);
+  background: none !important;
+  border: none !important;
+  font-size: 24px !important;
+  cursor: pointer !important;
+  color: var(--secondary-text-color) !important;
 }
 .closeButton:hover {
-  color: var(--primary-text-color);
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Modal Content ---------- */
 .modalContent {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 15px !important;
 }
 
-.detailRow {
-  display: flex;
-  gap: 10px;
-  padding: 8px 0;
+detailRow {
+  display: flex !important;
+  gap: 10px !important;
+  padding: 8px 0 !important;
 }
 
-.detailRow strong {
-  min-width: 120px;
-  color: var(--secondary-text-color);
+detailRow strong {
+  min-width: 120px !important;
+  color: var(--secondary-text-color) !important;
 }
 
 .fullDetails {
-  white-space: pre-wrap;
-  color: var(--primary-text-color);
+  white-space: pre-wrap !important;
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
   .auditPage {
-    padding: 1rem;
+    padding: 1rem !important;
   }
 
   .settings {
-    flex-direction: column;
-    gap: 1rem;
+    flex-direction: column !important;
+    gap: 1rem !important;
   }
 
   .filters input[type="date"],
   .filters select {
-    width: 100%;
+    width: 100% !important;
   }
 
   .importExport {
-    justify-content: space-between;
+    justify-content: space-between !important;
   }
 
   .viewDetailsModal {
-    width: 95%;
-    padding: 1rem;
+    width: 95% !important;
+    padding: 1rem !important;
   }
 }
