@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/busSelector.css"
@@ -42,7 +42,44 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading,] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Focus the search input when modal opens
+      searchInputRef.current?.focus();
+
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
+    }
+  }, [isOpen, onClose]);
+
+  const handleOverlayClick = (event: React.MouseEvent) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
 
   // Filter and sort assignments (only those not recorded)
   const filteredAssignments = useMemo(() => {
@@ -71,53 +108,87 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modalOverlay">
-      <div className="addExpenseModal">
-        <button type="button" className="closeButton" onClick={onClose}>
+    <div
+      className="modalOverlay"
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bus-selector-title"
+      aria-describedby="bus-selector-description"
+    >
+      <div
+        className="addExpenseModal"
+        ref={modalRef}
+        role="document"
+      >
+        <button
+          type="button"
+          className="closeButton"
+          onClick={onClose}
+          aria-label="Close bus selector modal"
+        >
           <i className="ri-close-line"></i>
         </button>
         <div className="modalHeader">
-          <h1>Select Bus Assignment</h1>
+          <h1 id="bus-selector-title">Select Bus Assignment</h1>
         </div>
         <div className="modalContent">
+          <div id="bus-selector-description" className="sr-only">
+            Search and select a bus assignment from the list below. Use the search field to filter by plate number or route.
+          </div>
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search by plate or route"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="formInput"
             style={{ marginBottom: 12, width: "100%" }}
+            aria-label="Search bus assignments by plate number or route"
           />
           {isLoading ? (
             <Loading />
           ) : (
-            <table className="data-table">
+            <table className="data-table" role="table" aria-label="Bus assignments">
               <thead>
                 <tr>
-                  <th>Date Assigned</th>
-                  <th>Trip Fuel Expense</th>
-                  <th>Plate Number</th>
-                  <th>Bus Type</th>
-                  <th>Route</th>
-                  <th>Driver</th>
-                  <th>Conductor</th>
+                  <th scope="col">Date Assigned</th>
+                  <th scope="col">Trip Fuel Expense</th>
+                  <th scope="col">Plate Number</th>
+                  <th scope="col">Bus Type</th>
+                  <th scope="col">Route</th>
+                  <th scope="col">Driver</th>
+                  <th scope="col">Conductor</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedAssignments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center" }}>
+                    <td colSpan={7} style={{ textAlign: "center" }}>
                       No assignments found.
                     </td>
                   </tr>
                 ) : (
-                  paginatedAssignments.map(assignment => (
-                    <tr key={assignment.assignment_id}  
+                  paginatedAssignments.map((assignment, index) => (
+                    <tr
+                      key={assignment.assignment_id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Select bus assignment ${assignment.bus_plate_number} on route ${assignment.bus_route}`}
                       onClick={() => {
                         onSelect(assignment);
                         onClose();
                       }}
-                        >
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelect(assignment);
+                          onClose();
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      className="selectable-row"
+                    >
                       <td>{assignment.date_assigned.split("T")[0]}</td>
                       <td>₱ {assignment.trip_fuel_expense}</td>
                       <td>{assignment.bus_plate_number}</td>
