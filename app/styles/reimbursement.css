@@ -225,7 +225,7 @@
 }
 
 .action-btn.approve-btn {
-  background: var(--secondary-color) !important;
+  background: var(--success-color) !important;
   color: #fff !important;
   border: none !important;
   border-radius: 4px !important;
@@ -234,6 +234,30 @@
   cursor: pointer !important;
   transition: background 0.2s !important;
 }
+
+.action-btn.reject-btn {
+  background: var(--error-color) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 0.4em 1em !important;
+  font-size: 1em !important;
+  cursor: pointer !important;
+  transition: background 0.2s !important;
+}
+
+.action-btn.cancel-btn {
+  background: #aaaaaa !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 0.4em 1em !important;
+  font-size: 1em !important;
+  cursor: pointer !important;
+  transition: background 0.2s !important;
+}
+
+
 .action-btn.reimburse-btn:hover {
   background: var(--secondary-hover-color) !important;
 }
