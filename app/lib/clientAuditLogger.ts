@@ -1,6 +1,6 @@
 interface AuditLogParams {
   action: string;
-  table_affected: 'RevenueRecord' | 'ExpenseRecord' | 'Receipt' | 'Revenue AND Expense';
+  table_affected: 'RevenueRecord' | 'ExpenseRecord' | 'Receipt' | 'Revenue AND Expense' | 'Reimbursement';
   record_id: string;
   performed_by: string;
   details: string;
@@ -22,4 +22,4 @@ export async function logAuditToServer(params: AuditLogParams): Promise<void> {
   } catch (error) {
     console.error('Failed to log audit:', error);
   }
-} 
+}

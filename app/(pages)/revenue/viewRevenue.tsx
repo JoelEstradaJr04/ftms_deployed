@@ -33,7 +33,8 @@ type Employee = {
 type ViewRevenueProps = {
   record: {
     revenue_id: string;
-    category: GlobalCategory;
+    category?: GlobalCategory;
+    category_id?: string;
     total_amount: number;
     collection_date: string;
     created_at: string;
@@ -44,8 +45,9 @@ type ViewRevenueProps = {
 
 const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [categoryName, setCategoryName] = useState<string>('Loading...');
 
-  // Fetch employees on component mount
+  // Fetch employees and category data on component mount
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -59,8 +61,33 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
       }
     };
 
+    const fetchCategoryName = async () => {
+      if (record.category?.name) {
+        setCategoryName(record.category.name);
+        return;
+      }
+
+      if (record.category_id) {
+        try {
+          const response = await fetch(`/api/categories/${record.category_id}`);
+          if (response.ok) {
+            const categoryData = await response.json();
+            setCategoryName(categoryData.name);
+          } else {
+            setCategoryName('Unknown Category');
+          }
+        } catch (error) {
+          console.error('Error fetching category:', error);
+          setCategoryName('Unknown Category');
+        }
+      } else {
+        setCategoryName('Unknown Category');
+      }
+    };
+
     fetchEmployees();
-  }, []);
+    fetchCategoryName();
+  }, [record.category, record.category_id]);
 
   const renderAssignmentDetails = () => {
     if (!record.assignment) return null;
@@ -118,7 +145,7 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Category:</span>
-            <span className="value">{record.category.name}</span>
+            <span className="value">{categoryName}</span>
           </div>
           <div className="detailRow">
             <span className="label">Amount:</span>

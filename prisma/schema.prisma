@@ -262,6 +262,7 @@ model Reimbursement {
   paid_date        DateTime?
   payment_reference String?
   payment_method   String?
+  remarks          String? 
   created_by       String
   created_at       DateTime @default(now())
   updated_by       String?

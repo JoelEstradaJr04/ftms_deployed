@@ -3,20 +3,22 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
-  void request; // Unused parameter, but kept for consistency with the original code
+  void request;
+
   try {
-    const receipts = await prisma.receipt.findMany({
+    const transactions = await prisma.itemTransaction.findMany({
       where: {
         is_deleted: false,
-        items: {
-          some: {
+        receipt: {
+          is_deleted: false,
+        },
+        item: {
+          is_deleted: false,
+          unit: {
             is_deleted: false,
-            is_inventory_processed: false,
-            item: {
-              is_deleted: false,
-              unit: { is_deleted: false },
-              category: { is_deleted: false }
-            }
+          },
+          category: {
+            is_deleted: false,
           }
         }
       },
@@ -24,27 +26,17 @@ export async function GET(request: Request) {
         transaction_date: 'desc'
       },
       select: {
+        transaction_id: true,
         transaction_date: true,
-         items: {
-          where: {
-            is_deleted: false,
-            is_inventory_processed: false,
-            item: {
-              is_deleted: false,
-              unit: { is_deleted: false },
-              category: { is_deleted: false }
-            }
-          },
+        quantity: true,
+        item: {
           select: {
-            quantity: true,
-            item: {
+            item_id: true,
+            item_name: true,
+            unit: {
               select: {
-                item_name: true,
-                unit: {
-                  select: {
-                    name: true
-                  }
-                }
+                id: true,
+                name: true
               }
             }
           }
@@ -52,14 +44,13 @@ export async function GET(request: Request) {
       }
     });
 
-    // Format response: hide IDs, return only item details
-    const formatted = receipts.map(receipt => ({
-      transaction_date: receipt.transaction_date,
-      items: receipt.items.map(item => ({
-        item_name: item.item.item_name,
-        unit: item.item.unit.name,
-        quantity: parseFloat(item.quantity.toString())
-      }))
+    const formatted = transactions.map(tx => ({
+      transaction_id: tx.transaction_id,
+      transaction_date: tx.transaction_date,
+      item_id: tx.item.item_id,
+      item_name: tx.item.item_name,
+      item_unit: tx.item.unit.name,
+      quantity: parseFloat(tx.quantity.toString())
     }));
 
     return Response.json({
@@ -68,9 +59,9 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching inventory items:', error);
+    console.error('Error fetching inventory transactions:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Failed to fetch inventory items' }),
+      JSON.stringify({ success: false, error: 'Failed to fetch inventory transactions' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }

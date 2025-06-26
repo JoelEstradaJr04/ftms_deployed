@@ -25,6 +25,7 @@ type Reimbursement = {
   paid_date: string | null;
   payment_reference: string | null;
   notes: string;
+  remarks?: string | null; // Add remarks field
   cancelled_by?: string | null;
   cancelled_date?: string | null;
   updated_at?: string | null;
@@ -49,6 +50,7 @@ type ApiReimbursement = {
   rejection_reason: string | null;
   paid_date: string | null;
   payment_reference: string | null;
+  remarks?: string | null; // Add remarks field
   cancelled_by?: string | null;
   cancelled_date?: string | null;
   updated_at?: string | null;
@@ -80,6 +82,10 @@ const ReimbursementPage = () => {
   // Add state for reject modal
   const [rejectModal, setRejectModal] = useState<{ open: boolean, id: string | null }>({ open: false, id: null });
   const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Add state for reimburse modal
+  const [reimburseModal, setReimburseModal] = useState<{ open: boolean, id: string | null }>({ open: false, id: null });
+  const [reimburseRemarks, setReimburseRemarks] = useState('');
 
   // Fetch reimbursements (replace with your actual fetch logic)
   const fetchReimbursements = async (
@@ -115,6 +121,7 @@ const ReimbursementPage = () => {
             paid_date: item.paid_date ? item.paid_date : null,
             payment_reference: item.payment_reference,
             notes: '',
+            remarks: item.remarks || null, // Map remarks field
             cancelled_by: item.cancelled_by ?? null,
             cancelled_date: item.cancelled_date ? item.cancelled_date : null,
             updated_at: item.updated_at ? item.updated_at : null,
@@ -138,34 +145,37 @@ const ReimbursementPage = () => {
     fetchReimbursements(setLoading, setReimbursements);
   }, []);
 
-  // Handle reimburse action
-  const handleReimburse = async (reimbursementId: string) => {
-    const result = await showConfirmation(
-      'Process Reimbursement',
-      'Are you sure you want to process this reimbursement?'
-    );
+  // Handle reimburse action with remarks
+  const handleReimburse = async (reimbursementId: string, remarks: string) => {
+    if (!remarks.trim()) {
+      showError('Remarks is required', 'Error');
+      return;
+    }
     
-    if (result.isConfirmed) {
-      try {
-        const res = await fetch('/api/reimbursement', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            reimbursement_id: reimbursementId,
-            action: 'PAY',
-            performed_by: 'ftms_user', // Replace with actual user
-            payment_reference: `PAY${Date.now()}`,
-            payment_method: 'CASH', // Or get from UI if needed
-          })
-        });
-        if (!res.ok) throw new Error('Failed to process reimbursement');
-        showSuccess('Reimbursement processed successfully!', 'Success');
-        fetchReimbursements(setLoading, setReimbursements);
-      } catch {
-        showError('Failed to process reimbursement', 'Error');
-      }
+    try {
+      const res = await fetch('/api/reimbursement', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reimbursement_id: reimbursementId,
+          action: 'PAY',
+          performed_by: 'ftms_user', // Replace with actual user
+          payment_reference: `PAY${Date.now()}`,
+          payment_method: 'CASH', // Or get from UI if needed
+          remarks: remarks,
+        })
+      });
+      if (!res.ok) throw new Error('Failed to process reimbursement');
+      showSuccess('Reimbursement processed successfully!', 'Success');
+      setReimburseModal({ open: false, id: null });
+      setReimburseRemarks('');
+      fetchReimbursements(setLoading, setReimbursements);
+    } catch {
+      showError('Failed to process reimbursement', 'Error');
     }
   };
+
+  // ...existing code...
 
   const filteredReimbursements = reimbursements.filter(reimbursement => {
     const searchLower = search.toLowerCase();
@@ -468,7 +478,7 @@ const ReimbursementPage = () => {
                         case 'approved':
                           return (
                             <button
-                              onClick={e => { e.stopPropagation(); handleReimburse(item.reimbursement_id); }}
+                              onClick={e => { e.stopPropagation(); setReimburseModal({ open: true, id: item.reimbursement_id }); }}
                               className="action-btn reimburse-btn"
                             >
                               Reimburse
@@ -528,6 +538,8 @@ const ReimbursementPage = () => {
         onClose={() => setViewModalOpen(false)}
         record={selectedReimbursement}
       />
+      
+      {/* Reject Modal */}
       {rejectModal.open && (
         <div className={styles.modalOverlay} onClick={() => setRejectModal({ open: false, id: null })}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
@@ -547,6 +559,33 @@ const ReimbursementPage = () => {
               <button className={styles.cancelButton} onClick={() => setRejectModal({ open: false, id: null })}>Cancel</button>
               <button className={styles.confirmButton} onClick={() => handleReject(rejectModal.id!, rejectionReason)} disabled={!rejectionReason.trim()}>
                 Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reimburse Modal */}
+      {reimburseModal.open && (
+        <div className={styles.modalOverlay} onClick={() => setReimburseModal({ open: false, id: null })}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <h2>Process Reimbursement</h2>
+            <div style={{ margin: '1rem 0' }}>
+              <label htmlFor="reimburseRemarks" style={{ display: 'block', marginBottom: 8 }}>Remarks<span style={{ color: '#961C1E' }}>*</span></label>
+              <textarea
+                id="reimburseRemarks"
+                value={reimburseRemarks}
+                onChange={e => setReimburseRemarks(e.target.value)}
+                rows={3}
+                required
+                placeholder="Enter remarks for processing this reimbursement..."
+                style={{ width: '100%', borderRadius: 4, border: '1px solid #ccc', padding: 8 }}
+              />
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelButton} onClick={() => setReimburseModal({ open: false, id: null })}>Cancel</button>
+              <button className={styles.confirmButton} onClick={() => handleReimburse(reimburseModal.id!, reimburseRemarks)} disabled={!reimburseRemarks.trim()}>
+                Process Reimbursement
               </button>
             </div>
           </div>

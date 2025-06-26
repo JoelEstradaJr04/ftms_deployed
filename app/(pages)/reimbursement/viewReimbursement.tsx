@@ -1,12 +1,33 @@
 "use client";
-import React from "react";
-import '../../styles/viewReimbursement.css'; // Use the same modal CSS as payroll
+import React, { useState } from "react";
+import ViewExpenseModal from '../expense/viewExpense';
+import '../../styles/viewReimbursement.css';
+
+type ExpenseRecord = {
+  expense_id: string;
+  category: {
+    category_id: string;
+    name: string;
+  };
+  other_category?: string;
+  total_amount: number;
+  expense_date: string;
+  assignment?: any;
+  receipt?: any;
+  other_source?: string;
+  payment_method: {
+    id: string;
+    name: string;
+  };
+  reimbursements?: any[];
+};
 
 type Reimbursement = {
   reimbursement_id: string;
   expense_id: string;
   employee_id: string;
   employee_name: string;
+  job_title?: string;
   submitted_date: string;
   approved_by: string | null;
   approved_date: string | null;
@@ -16,14 +37,17 @@ type Reimbursement = {
   paid_date: string | null;
   payment_reference: string | null;
   notes: string;
+  remarks?: string | null; // Add remarks field
   cancelled_by?: string | null;
   cancelled_date?: string | null;
+  expense?: ExpenseRecord; // Add expense details
 };
 
 interface ViewReimbursementProps {
   isOpen: boolean;
   onClose: () => void;
   record: Reimbursement | null;
+  onReimburse?: (reimbursementId: string, notes: string) => void;
 }
 
 const formatDisplay = (value: string | number | null | undefined) =>
@@ -32,97 +56,122 @@ const formatDisplay = (value: string | number | null | undefined) =>
 const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
   isOpen,
   onClose,
-  record,
+  record
 }) => {
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+
   if (!isOpen || !record) return null;
 
   return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div className="modalContent" onClick={e => e.stopPropagation()}>
-        <div className="modalHeader">
-          <h2>Reimbursement Details</h2>
-          <button className="closeButton" onClick={onClose}>
-            <i className="ri-close-line"></i>
-          </button>
-        </div>
-        <div className="modalBody">
-          <div className="mainDetails">
-            <div className="detailRow">
-              <span className="label">Reimbursement ID:</span>
-              <span className="value">{record.reimbursement_id}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Expense ID:</span>
-              <span className="value">{record.expense_id}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Employee ID:</span>
-              <span className="value">{record.employee_id}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Employee Name:</span>
-              <span className="value">{record.employee_name}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Submitted Date:</span>
-              <span className="value">{formatDisplay(record.submitted_date)}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Status:</span>
-              <span className={`value viewStatus ${typeof record.status === 'string' ? record.status.toLowerCase() : ''} ${record.status === 'Cancelled' ? 'status-cancelled' : ''}`}>
-                {record.status || '-'}
-              </span>
-            </div>
-            {record.status === "Cancelled" && (
-              <>
-                <div className="detailRow">
-                  <span className="label">Cancelled By:</span>
-                  <span className="value">{formatDisplay(record.cancelled_by)}</span>
-                </div>
-                <div className="detailRow">
-                  <span className="label">Cancelled Date:</span>
-                  <span className="value">{formatDisplay(record.cancelled_date ? new Date(record.cancelled_date).toLocaleDateString() : null)}</span>
-                </div>
-              </>
-            )}
-            <div className="detailRow">
-              <span className="label">Approved By:</span>
-              <span className="value">{formatDisplay(record.approved_by)}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Approved Date:</span>
-              <span className="value">{formatDisplay(record.approved_date)}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Approved Amount:</span>
-              <span className="value">
-                {record.amount !== null
-                  ? `₱${record.amount.toFixed(2)}`
-                  : "-"}
-              </span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Paid Date:</span>
-              <span className="value">{formatDisplay(record.paid_date)}</span>
-            </div>
-            <div className="detailRow">
-              <span className="label">Payment Reference:</span>
-              <span className="value">{formatDisplay(record.payment_reference)}</span>
-            </div>
-            {record.status === "Rejected" && (
+    <>
+      <div className="modalOverlay" onClick={onClose}>
+        <div className="modalContent" onClick={e => e.stopPropagation()}>
+          <div className="modalHeader">
+            <h2>Reimbursement Details</h2>
+            <button className="closeButton" onClick={onClose}>
+              <i className="ri-close-line"></i>
+            </button>
+          </div>
+          <div className="modalBody">
+            <div className="mainDetails">
               <div className="detailRow">
-                <span className="label">Rejection Reason:</span>
-                <span className="value">{formatDisplay(record.rejection_reason)}</span>
+                <span className="label">Employee Name:</span>
+                <span className="value">{record.employee_name}</span>
               </div>
-            )}
-            <div className="detailRow">
-              <span className="label">Notes:</span>
-              <span className="value fullDetails">{formatDisplay(record.notes)}</span>
+              {record.job_title && (
+                <div className="detailRow">
+                  <span className="label">Job Title:</span>
+                  <span className="value">{record.job_title}</span>
+                </div>
+              )}
+              <div className="detailRow">
+                <span className="label">Expense Reference:</span>
+                <span className="value">
+                  <button 
+                    className="linkButton"
+                    onClick={() => setShowExpenseModal(true)}
+                    disabled={!record.expense}
+                  >
+                    {record.expense ? 
+                      `View Expense - ${record.expense.category.name} (₱${record.expense.total_amount.toLocaleString()})` : 
+                      'Expense details not available'
+                    }
+                  </button>
+                </span>
+              </div>
+              <div className="detailRow">
+                <span className="label">Submitted Date:</span>
+                <span className="value">{formatDisplay(record.submitted_date)}</span>
+              </div>
+              <div className="detailRow">
+                <span className="label">Status:</span>
+                <span className={`value viewStatus ${typeof record.status === 'string' ? record.status.toLowerCase() : ''} ${record.status === 'Cancelled' ? 'status-cancelled' : ''}`}>
+                  {record.status || '-'}
+                </span>
+              </div>
+              {record.status === "Cancelled" && (
+                <>
+                  <div className="detailRow">
+                    <span className="label">Cancelled By:</span>
+                    <span className="value">{formatDisplay(record.cancelled_by)}</span>
+                  </div>
+                  <div className="detailRow">
+                    <span className="label">Cancelled Date:</span>
+                    <span className="value">{formatDisplay(record.cancelled_date ? new Date(record.cancelled_date).toLocaleDateString() : null)}</span>
+                  </div>
+                </>
+              )}
+              <div className="detailRow">
+                <span className="label">Approved By:</span>
+                <span className="value">{formatDisplay(record.approved_by)}</span>
+              </div>
+              <div className="detailRow">
+                <span className="label">Approved Date:</span>
+                <span className="value">{formatDisplay(record.approved_date)}</span>
+              </div>
+              <div className="detailRow">
+                <span className="label">Approved Amount:</span>
+                <span className="value">
+                  {record.amount !== null
+                    ? `₱${record.amount.toFixed(2)}`
+                    : "-"}
+                </span>
+              </div>
+              <div className="detailRow">
+                <span className="label">Paid Date:</span>
+                <span className="value">{formatDisplay(record.paid_date)}</span>
+              </div>
+              {record.status === "Rejected" && (
+                <div className="detailRow">
+                  <span className="label">Rejection Reason:</span>
+                  <span className="value fullDetails">{formatDisplay(record.rejection_reason)}</span>
+                </div>
+              )}
+              {/* Display remarks if they exist - not just for Paid status */}
+              {record.remarks && record.remarks.trim() !== '' && (
+                <div className="detailRow">
+                  <span className="label">Remarks:</span>
+                  <span className="value fullDetails">{formatDisplay(record.remarks)}</span>
+                </div>
+              )}
             </div>
+          </div>
+          <div className="modalFooter">
+            <button className="closeBtn" onClick={onClose}>
+              Close
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Expense Modal */}
+      {showExpenseModal && record.expense && (
+        <ViewExpenseModal
+          record={record.expense}
+          onClose={() => setShowExpenseModal(false)}
+        />
+      )}
+    </>
   );
 };
 

@@ -218,26 +218,109 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+// ...existing code...
+
 // DELETE /api/receipts/[id]
-// export async function DELETE(req: NextRequest) {
-//   try {
-//     const id = req.nextUrl.pathname.split('/').pop();
-//     const { reason } = await req.json();
+export async function DELETE(req: NextRequest) {
+  try {
+    const id = req.nextUrl.pathname.split('/').pop()!;
+    const body = await req.json();
+    const { reason } = body;
 
-//     // Soft delete: set is_deleted = true
-//     const deleted = await prisma.receipt.update({
-//       where: { receipt_id: id },
-//       data: {
-//         is_deleted: true,
-//         deleted_at: new Date(),
-//         deleted_by: 'ftms_user', // or get from session/user
-//         deletion_reason: reason || null,
-//       },
-//     });
+    const clientIp = await getClientIp(req);
 
-//     return NextResponse.json({ success: true });
-//   } catch (error) {
-//     console.error('Error deleting receipt:', error);
-//     return NextResponse.json({ error: 'Failed to delete receipt' }, { status: 500 });
-//   }
-// }
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if receipt exists
+      const existingReceipt = await tx.receipt.findUnique({
+        where: { receipt_id: id, is_deleted: false },
+        include: {
+          items: true,
+          expense: true
+        }
+      });
+
+      if (!existingReceipt) {
+        throw new Error('Receipt not found or already deleted');
+      }
+
+      // Soft delete the receipt
+      const deletedReceipt = await tx.receipt.update({
+        where: { receipt_id: id },
+        data: {
+          is_deleted: true,
+          deleted_at: new Date(),
+          deleted_by: 'ftms_user',
+          deletion_reason: reason || null,
+          updated_at: new Date(),
+          updated_by: 'ftms_user'
+        },
+      });
+
+      // Soft delete associated receipt items
+      await tx.receiptItem.updateMany({
+        where: { receipt_id: id },
+        data: {
+          is_deleted: true,
+          updated_at: new Date(),
+          updated_by: 'ftms_user'
+        }
+      });
+
+      // Soft delete associated item transactions
+      await tx.itemTransaction.updateMany({
+        where: { receipt_id: id },
+        data: {
+          is_deleted: true,
+          updated_at: new Date()
+        }
+      });
+
+      // If there's an associated expense record, soft delete it too
+      if (existingReceipt.expense) {
+        await tx.expenseRecord.update({
+          where: { expense_id: existingReceipt.expense.expense_id },
+          data: {
+            is_deleted: true,
+            updated_at: new Date()
+          }
+        });
+      }
+
+      // Create audit log
+      await tx.auditLog.create({
+        data: {
+          log_id: await generateId('LOG'),
+          action: 'DELETE',
+          table_affected: 'Receipt',
+          record_id: id,
+          performed_by: 'ftms_user',
+          ip_address: clientIp,
+          details: JSON.parse(JSON.stringify({
+            deleted_receipt: {
+              ...existingReceipt,
+              deletion_reason: reason
+            }
+          }, (key, value) =>
+            typeof value === 'bigint' ? value.toString() :
+            value instanceof Prisma.Decimal ? value.toNumber() :
+            value
+          )),
+        },
+      });
+
+      return deletedReceipt;
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Receipt deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Error deleting receipt:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json(
+      { error: 'Failed to delete receipt: ' + errorMessage }, 
+      { status: 500 }
+    );
+  }
+}

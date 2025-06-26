@@ -282,6 +282,7 @@ const AuditPage = () => {
               <option value="ExpenseRecord">Expense Records</option>
               <option value="RevenueRecord">Revenue Records</option>
               <option value="Receipt">Receipts</option>
+              <option value="Reimbursement">Reimbursements</option>
             </select>
             
             <button onClick={handleExport} id="export"><i className="ri-receipt-line" /> Export Logs</button>

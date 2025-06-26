@@ -14,6 +14,14 @@ import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError} from '../../utility/Alerts';
 import { formatDateTime } from "../../utility/dateFormatter";
+import { formatDisplayText } from '@/app/utils/formatting';
+
+interface GlobalCategory {
+  category_id: string;
+  name: string;
+  applicable_modules: string[];
+  is_deleted: boolean;
+}
 
 // Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
@@ -84,6 +92,23 @@ const RevenuePage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/globals/categories?module=revenue');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const categoriesData = await response.json();
+      // Filter categories that are applicable to revenue module and not deleted
+      const revenueCategories = categoriesData.filter((cat: GlobalCategory) => 
+        cat.applicable_modules.includes('revenue') && !cat.is_deleted
+      );
+      setAvailableCategories(revenueCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      showError('Failed to load categories', 'Error');
+    }
+  };
 
   // Fetch assignments with periodic refresh and error handling
   const fetchAssignments = async () => {
@@ -135,6 +160,9 @@ const RevenuePage = () => {
           const employeesData = await employeesResponse.json();
           setAllEmployees(employeesData);
         }
+
+        // Fetch categories for the filter dropdown
+        await fetchCategories();
 
         // Fetch all assignments for displaying in the table
         const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
@@ -685,7 +713,6 @@ const RevenuePage = () => {
   return (
     <div className="card">
       <div className="elements">
-        {/* {(loading || assignmentsLoading) && <div className="loading">Loading...</div>} */}
         <div className="title"> 
           <h1>Revenue Records</h1> 
         </div>
@@ -725,16 +752,17 @@ const RevenuePage = () => {
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value="Boundary">Boundary</option>
-              <option value="Percentage">Percentage</option>
+              {availableCategories.map((category) => (
+                <option key={category.category_id} value={category.name}>
+                  {formatDisplayText(category.name)}
+                </option>
+              ))}
             </select>
 
             {/* Export CSV */}
             <button id="export" onClick={handleExport}><i className="ri-receipt-line" /> Export CSV</button>
             {/* Add Revenue */}
             <button onClick={() => setShowModal(true)} id='addRevenue'><i className="ri-add-line" /> Add Revenue</button>
-          
-            
           </div>
         </div>
 

@@ -15,11 +15,24 @@ export async function GET(req: NextRequest) {
       include: {
         status: true,
         expense: {
-          select: {
+          include: {
             category: true,
-            expense_date: true,
-            total_amount: true,
             payment_method: true,
+            source: true,
+            receipt: {
+              include: {
+                items: {
+                  include: {
+                    item: {
+                      include: {
+                        unit: true,
+                        category: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -39,7 +52,7 @@ export async function GET(req: NextRequest) {
 // PATCH: Approve, pay, reject, or cancel a reimbursement
 export async function PATCH(req: NextRequest) {
   try {
-    const { reimbursement_id, action, performed_by, payment_reference, payment_method, rejection_reason } = await req.json();
+    const { reimbursement_id, action, performed_by, payment_reference, payment_method, rejection_reason, remarks } = await req.json();
     const reimbursement = await prisma.reimbursement.findUnique({ where: { reimbursement_id } });
     if (!reimbursement) {
       return NextResponse.json({ error: 'Reimbursement not found' }, { status: 404 });
@@ -75,8 +88,12 @@ export async function PATCH(req: NextRequest) {
       updateData.paid_date = new Date();
       updateData.payment_reference = payment_reference;
       updateData.payment_method = payment_method;
+      // Add remarks to the update data
+      if (remarks) {
+        updateData.remarks = remarks;
+      }
       auditAction = 'PAY';
-      auditDetails = `Reimbursement paid. Reference: ${payment_reference}`;
+      auditDetails = `Reimbursement paid. Reference: ${payment_reference}${remarks ? `. Remarks: ${remarks}` : ''}`;
     } else if (action === 'REJECT') {
       if (currentStatus !== 'PENDING') {
         return NextResponse.json({ error: 'Can only reject from PENDING status' }, { status: 400 });
@@ -111,7 +128,7 @@ export async function PATCH(req: NextRequest) {
 
     await logAudit({
       action: auditAction,
-      table_affected: 'ExpenseRecord',
+      table_affected: 'Reimbursement',
       record_id: reimbursement_id,
       performed_by,
       details: auditDetails
@@ -125,4 +142,4 @@ export async function PATCH(req: NextRequest) {
     console.error('Error updating reimbursement:', error);
     return NextResponse.json({ error: 'Failed to update reimbursement' }, { status: 500 });
   }
-} 
+}

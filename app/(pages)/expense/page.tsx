@@ -19,6 +19,13 @@ import { Receipt } from '@/app/types/receipt';
 
 
 // Add interface for new expense creation
+interface GlobalCategory {
+  category_id: string;
+  name: string;
+  applicable_modules: string[];
+  is_deleted: boolean;
+}
+
 interface NewExpense {
   category?: string;
   category_id?: string;
@@ -142,6 +149,24 @@ const ExpensePage = () => {
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
+  
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/globals/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const categoriesData = await response.json();
+      // Filter categories that are applicable to expense module
+      const expenseCategories = categoriesData.filter((cat: GlobalCategory) => 
+        cat.applicable_modules.includes('expense') && !cat.is_deleted
+      );
+      setAvailableCategories(expenseCategories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      showError('Failed to load categories', 'Error');
+    }
+  };
 
   // Format assignment for display
   const formatAssignment = (assignment: Assignment): string => {
@@ -199,7 +224,12 @@ const ExpensePage = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchExpenses(), fetchAssignments(), fetchEmployees()]);
+      await Promise.all([
+        fetchExpenses(), 
+        fetchAssignments(), 
+        fetchEmployees(),
+        fetchCategories() // Add this
+      ]);
       setLoading(false);
     };
     loadData();
@@ -429,18 +459,6 @@ const filteredData = data.filter((item: ExpenseData) => {
         "Receipt Status",
         "Receipt VAT Amount",
         "Receipt Total Due",
-        "Other Source Description",
-        "Other Category",
-        "Payment Method",
-        "Employee"
-      ];
-    }
-
-    if (categoryFilter === 'Other') {
-      return [
-        ...baseColumns,
-        "Other Source Description",
-        "Other Category",
         "Payment Method",
         "Employee"
       ];
@@ -673,7 +691,6 @@ const filteredData = data.filter((item: ExpenseData) => {
         </div>
         
         <div className="settings">
-
           <div className="expense_searchBar">
             <i className="ri-search-line" />
             <input
@@ -685,9 +702,7 @@ const filteredData = data.filter((item: ExpenseData) => {
             /> 
           </div>
           
-
           <div className="filters">
-
             <div className="filter">
                 {/* <Filter
                     sections={filterSections}
@@ -717,12 +732,11 @@ const filteredData = data.filter((item: ExpenseData) => {
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value="Fuel">Fuel</option>
-              <option value="Vehicle_Parts">Vehicle Parts</option>
-              <option value="Tools">Tools</option>
-              <option value="Equipment">Equipment</option>
-              <option value="Supplies">Supplies</option>
-              <option value="Other">Other</option>
+              {availableCategories.map((category) => (
+                <option key={category.category_id} value={category.name}>
+                  {formatDisplayText(category.name)}
+                </option>
+              ))}
             </select>
 
             <button onClick={handleExport} id="export"><i className="ri-receipt-line" /> Export CSV</button>
