@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const { assignment_id, category_id, total_amount, collection_date, created_by } = data;
 
   try {
-    let finalAmount = total_amount;
+    const finalAmount = total_amount;
     let assignmentData = null;
 
     // Convert collection_date string to Date object for comparison and storage
@@ -48,13 +48,6 @@ export async function POST(req: NextRequest) {
           { status: 404 }
         );
       }
-      if (assignmentData.trip_revenue == null || assignmentData.trip_revenue === undefined) {
-        return NextResponse.json(
-          { error: 'Assignment found but missing trip_revenue in Operations API' },
-          { status: 400 }
-        );
-      }
-      finalAmount = assignmentData.trip_revenue;
     } else {
       // For non-assignment revenues, check for duplicate by category, amount, and exact datetime
       const duplicate = await prisma.revenueRecord.findFirst({
@@ -76,11 +69,10 @@ export async function POST(req: NextRequest) {
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
-        bus_trip_id: assignmentData?.bus_trip_id ?? null,
         category_id,
         source_id: null,
         total_amount: finalAmount,
-        collection_date: collectionDateTime, // Store as DateTime
+        collection_date: collectionDateTime,
         created_by,
         created_at: new Date(),
         updated_at: null,

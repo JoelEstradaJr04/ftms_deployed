@@ -334,7 +334,7 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
     <div className="modalOverlay">
       <div className="addRevenueModal">
         {/* Close Button */}
-        <button type="button" className="addRevenue_closeButton" onClick={() => { console.log('[EVENT] Close button clicked'); onClose(); }}>
+        <button type="button" className="closeButton" onClick={() => { console.log('[EVENT] Close button clicked'); onClose(); }}>
           <i className="ri-close-line"></i>
         </button>
 

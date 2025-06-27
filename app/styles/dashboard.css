@@ -76,11 +76,11 @@ button:hover {
   display: flex !important;
   gap: 0.5rem !important;
 }
-.date, .filter {
+.date, .dashboard_filter {
   display: flex !important;
   flex-direction: column !important;
 }
-.date label, .filter label {
+.date label, .dashboard_filter label {
   font-size: var(--input-label-font-size) !important;
   color: var(--secondary-text-color) !important;
   margin-right: 0.5rem !important;

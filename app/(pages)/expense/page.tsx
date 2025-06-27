@@ -781,7 +781,7 @@ const filteredData = data.filter((item: ExpenseData) => {
                 })}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
           </div>
         </div>
 

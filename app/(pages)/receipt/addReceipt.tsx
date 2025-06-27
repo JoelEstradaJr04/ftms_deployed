@@ -477,9 +477,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   return (
     <div className="modalOverlay">
       <div className="receiptModal">
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
+        
 
         <div className="modalHeader">
           <h1>Add Receipt</h1>
@@ -487,6 +485,9 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
             <div className="currTime">{currentTime}</div>
             <div className="currDate">{currentDate}</div>
           </div>
+          <button type="button" className="closeButton" onClick={onClose}>
+            <i className="ri-close-line"></i>
+          </button>
         </div>
 
         <form onSubmit={handleSubmit}>

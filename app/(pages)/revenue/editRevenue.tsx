@@ -99,7 +99,15 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
           if (res.ok) {
             const data = await res.json();
             setAssignment(data);
-            setOriginalAutoFilledAmount(data.trip_revenue);
+            
+            // Calculate the correct default amount based on category type
+            let calculatedAmount = data.trip_revenue || 0;
+            const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+            if (selectedCategory?.name === 'Percentage' && data.assignment_value) {
+              calculatedAmount = (data.trip_revenue || 0) * (data.assignment_value);
+            }
+            setOriginalAutoFilledAmount(calculatedAmount);
+            
             // Set original date to assignment date with current time (like AddRevenue)
             if (data.date_assigned) {
               const assignmentDate = new Date(data.date_assigned);
@@ -123,7 +131,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
       }
     };
     fetchAssignment();
-  }, [record.assignment_id]);
+  }, [record.assignment_id, selectedCategoryId, categories]);
 
   // Fix: Update validation rules to match ValidationRule type signature and schema
   const validationRules: Record<string, ValidationRule> = {
@@ -291,8 +299,15 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     }
     const driverName = assignment.driver_name || 'N/A';
     const conductorName = assignment.conductor_name || 'N/A';
-    const displayAmount = assignment.trip_revenue;
-    return `${assignment.date_assigned ? assignment.date_assigned.split('T')[0] : 'N/A'} | ₱ ${displayAmount?.toLocaleString() || 'N/A'} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
+    
+    // Calculate display amount based on category type (matching page.tsx logic)
+    let displayAmount = assignment.trip_revenue || 0;
+    const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
+      displayAmount = (assignment.trip_revenue || 0) * (assignment.assignment_value);
+    }
+    
+    return `${assignment.date_assigned ? assignment.date_assigned.split('T')[0] : 'N/A'} | ₱ ${displayAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
   };
 
   // 3. Amount deviation calculation (same as AddRevenue)
@@ -425,7 +440,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
 
                   {/* AMOUNT */}
                   <div className="formField">
-                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
+                    <label htmlFor="amount">Remitted Amount<span className='requiredTags'> *</span></label>
                     <input
                       type="number"
                       id="amount"

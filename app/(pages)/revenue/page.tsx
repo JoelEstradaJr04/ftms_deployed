@@ -757,7 +757,7 @@ const RevenuePage = () => {
                   <th>Collection Date</th>
                   <th>Category</th>
                   <th>Source</th>
-                  <th>Amount</th>
+                  <th>Remitted Amount</th>
                   <th>Action</th>
                 </tr>
               </thead>

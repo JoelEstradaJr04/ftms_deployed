@@ -164,7 +164,7 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
             <span className="value">{categoryName}</span>
           </div>
           <div className="detailRow">
-            <span className="label">Amount:</span>
+            <span className="label">Remitted Amount:</span>
             <span className="value">₱{(() => {
               if (categoryName === 'Percentage' && record.assignment?.assignment_value) {
                 return (record.total_amount * record.assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
