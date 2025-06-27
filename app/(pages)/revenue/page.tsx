@@ -358,8 +358,9 @@ const RevenuePage = () => {
       text: 'This will delete the record permanently.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#FEB71F',
+      reverseButtons: true,
       confirmButtonText: 'Yes, delete it!',
       background: 'white',
     });

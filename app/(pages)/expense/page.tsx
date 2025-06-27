@@ -572,7 +572,7 @@ const filteredData = data.filter((item: ExpenseData) => {
       html: generateConfirmationMessage(),
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
+      confirmButtonColor: '#961C1E',
       cancelButtonColor: '#FEB71F',
       confirmButtonText: 'Export',
       background: 'white',

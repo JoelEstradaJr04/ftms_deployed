@@ -171,7 +171,6 @@ export const showConfirmation = (message: string, title: string) => {
     background: 'white',
     confirmButtonColor: '#961C1E',
     cancelButtonColor: '#FEB71F',
-    backdrop: false,
     reverseButtons: true,
     customClass: {
     popup: 'swal-custom-popup'

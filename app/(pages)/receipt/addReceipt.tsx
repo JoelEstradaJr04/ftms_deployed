@@ -376,9 +376,9 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       showCancelButton: true,
       confirmButtonColor: '#961C1E',
       cancelButtonColor: '#FEB71F',
+      reverseButtons: true,
       confirmButtonText: 'Yes, add it!',
       background: 'white',
-      reverseButtons: true,
     });
 
     if (result.isConfirmed) {
