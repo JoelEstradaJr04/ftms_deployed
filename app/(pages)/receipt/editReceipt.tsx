@@ -47,15 +47,15 @@ type ReceiptProp = {
 
 // Type for items being edited in the modal's state
 type EditReceiptItem = {
-    receipt_item_id: string; // For key prop
-    item_id: string; // To identify existing items
+    receipt_item_id: string;
+    item_id: string;
     item_name: string;
     unit_id: string;
-    other_unit?: string;
     category_id: string;
     quantity: number;
     unit_price: number;
     total_price: number;
+    is_deleted?: boolean;
 };
 
 export type UpdatedReceiptData = {
@@ -67,7 +67,7 @@ export type UpdatedReceiptData = {
   date_paid?: string | null;
   payment_status_id: string;
   category_id: string;
-  source_id: string;  // Add this - required by AddReceiptSubmitData
+  source_id: string;
   remarks?: string | null;
   total_amount: number;
   vat_amount: number;
@@ -75,13 +75,12 @@ export type UpdatedReceiptData = {
   items: {
     item_name: string;
     unit_id: string;
-    other_unit?: string;
     quantity: number;
     unit_price: number;
     total_price: number;
     category_id: string;
   }[];
-  created_by: string;  // Add this - required by AddReceiptSubmitData
+  created_by: string;
   updated_by: string;
 };
 
@@ -122,17 +121,48 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   });
   const [paymentStatusId, setPaymentStatusId] = useState(receipt?.payment_status_id || '');
   const [totalAmount, setTotalAmount] = useState(receipt?.total_amount || 0);
-  const [vatAmount, setVatAmount] = useState(receipt?.vat_amount || 0);
+  const [vatAmount, setVatAmount] = useState(() => {
+    const vat = receipt?.vat_amount;
+    return vat !== null && vat !== undefined ? Number(vat) : 0;
+  });
   const [totalAmountDue, setTotalAmountDue] = useState(receipt?.total_amount_due || 0);
   const [categoryId, setCategoryId] = useState(receipt?.category_id || '');
   const [remarks, setRemarks] = useState(receipt?.remarks || '');
+
+  // Function to compute summary category based on items
+  const computeSummaryCategory = (items: EditReceiptItem[]): string => {
+    if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    
+    const validItems = items.filter(item => 
+      item.item_name && item.unit_id && item.quantity > 0 && item.unit_price > 0 && item.category_id
+    );
+    
+    if (validItems.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    
+    const uniqueCategories = [...new Set(validItems.map(item => item.category_id))];
+    
+    if (uniqueCategories.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (uniqueCategories.length === 1) {
+      return uniqueCategories[0];
+    }
+    
+    // Multiple categories - return Multiple_Categories category
+    return categories.find(c => c.name === 'Multiple_Categories')?.category_id || '';
+  };
+
+  // Function to get display text for category
+  const getDisplayCategory = (categoryId: string) => {
+    const category = categories.find(c => c.category_id === categoryId);
+    if (!category) return 'N/A';
+    return formatDisplayText(category.name);
+  };
+
   const [items, setItems] = useState<EditReceiptItem[]>(() => {
     return (receipt?.items || []).map(item => ({
       receipt_item_id: item.receipt_item_id,
       item_id: item.item_id,
       item_name: item.item.item_name,
       unit_id: item.item.unit.id,
-      other_unit: item.item.other_unit || undefined,
       category_id: item.item.category.category_id,
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
@@ -153,7 +183,10 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       }
       setPaymentStatusId(receipt.payment_status_id);
       setTotalAmount(receipt.total_amount || 0);
-      setVatAmount(receipt.vat_amount || 0);
+      setVatAmount(() => {
+        const vat = receipt.vat_amount;
+        return vat !== null && vat !== undefined ? Number(vat) : 0;
+      });
       setTotalAmountDue(receipt.total_amount_due || 0);
       setCategoryId(receipt.category_id || '');
       setRemarks(receipt.remarks || '');
@@ -162,7 +195,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         item_id: item.item_id,
         item_name: item.item.item_name,
         unit_id: item.item.unit.id,
-        other_unit: item.item.other_unit || undefined,
         category_id: item.item.category.category_id,
         quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
@@ -172,13 +204,22 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   }, [receipt]);
 
   useEffect(() => {
-    const newTotal = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    const newTotal = items
+      .filter(item => !item.is_deleted)
+      .reduce((sum, item) => sum + Number(item.total_price || 0), 0);
     setTotalAmount(newTotal);
   }, [items]);
 
   useEffect(() => {
-    setTotalAmountDue(totalAmount + vatAmount);
+    setTotalAmountDue(Number(totalAmount) + Number(vatAmount));
   }, [totalAmount, vatAmount]);
+
+  // Auto-update category when items change
+  useEffect(() => {
+    const activeItems = items.filter(item => !item.is_deleted);
+    const summaryCategoryId = computeSummaryCategory(activeItems);
+    setCategoryId(summaryCategoryId);
+  }, [items, categories]);
 
   if (!receipt) {
     return null;
@@ -192,7 +233,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     else if (name === 'terms_id') setTermsId(value);
     else if (name === 'date_paid') setDatePaid(value);
     else if (name === 'payment_status_id') setPaymentStatusId(value);
-    else if (name === 'category_id') setCategoryId(value);
     else if (name === 'remarks') setRemarks(value);
   };
 
@@ -206,14 +246,8 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         if(field === 'unit_price') currentItem.unit_price = numericValue;
         currentItem.total_price = (currentItem.quantity || 0) * (currentItem.unit_price || 0);
     } else if (field === 'unit_id') {
-      if(value === 'Other') {
-        currentItem.unit_id = 'Other';
-        currentItem.other_unit = '';
-      } else {
-        currentItem.unit_id = value as string;
-        delete currentItem.other_unit;
-      }
-    } else if (field === 'item_name' || field === 'category_id' || field === 'other_unit') {
+      currentItem.unit_id = value as string;
+    } else if (field === 'item_name' || field === 'category_id') {
         currentItem[field] = value as string;
     }
     
@@ -227,7 +261,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       item_id: '',
       item_name: '',
       unit_id: '',
-      other_unit: '',
       quantity: 0,
       unit_price: 0,
       total_price: 0,
@@ -236,18 +269,22 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   };
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    const updatedItems = [...items];
+    updatedItems[index] = { ...updatedItems[index], is_deleted: true };
+    setItems(updatedItems);
   };
   
   const handleSave = async () => {
-    if (!supplier || !transactionDate || !paymentStatusId || !categoryId) {
+    if (!supplier || !transactionDate || !paymentStatusId) {
       Swal.fire('Error', 'Please fill in all required fields', 'error');
       return;
     }
 
-    const validItems = items.filter(item => 
-      item.item_name && item.unit_id && item.quantity > 0 && item.unit_price > 0 && item.category_id
-    );
+    const validItems = items
+      .filter(item => !item.is_deleted)
+      .filter(item => 
+        item.item_name && item.unit_id && item.quantity > 0 && item.unit_price > 0 && item.category_id
+      );
 
     if (validItems.length === 0) {
       Swal.fire('Error', 'Please add at least one valid item', 'error');
@@ -285,7 +322,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
           items: validItems.map(item => ({
             item_name: item.item_name,
             unit_id: item.unit_id,
-            other_unit: item.other_unit,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
@@ -376,17 +412,22 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         <div className="formRow">
           <div className="formGroup">
             <label>Category</label>
-            <select
-                name="category_id"
-                value={categoryId}
-                onChange={handleInputChange}
-                required
-              >
-              <option value="">Select Category</option>
-              {categories.map(cat => (
-                  <option key={cat.category_id} value={cat.category_id}>{formatDisplayText(cat.name)}</option>
-              ))}
-            </select>
+            <div className="readOnlyCategory">
+              <input
+                type="text"
+                value={getDisplayCategory(categoryId)}
+                readOnly
+                className="formInput"
+              />
+              <div className="categoryTooltip">
+                <i className="ri-information-line" />
+                <span className="tooltipText">
+                  {categories.find(c => c.category_id === categoryId)?.name === 'Multiple_Categories' 
+                    ? "Multiple categories detected from items"
+                    : "Category determined by items"}
+                </span>
+              </div>
+            </div>
           </div>
           <div className="formGroup">
             <label>Payment Status</label>
@@ -434,96 +475,85 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               </tr>
             </thead>
             <tbody>
-              {items.map((item, index) => (
-                <tr key={item.receipt_item_id}>
-                  <td>
-                    <input
-                      type="text"
-                      value={item.item_name}
-                      onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
-                      required
-                      placeholder="Enter item name"
-                    />
-                  </td>
-                  <td>
-                    {item.unit_id === 'Other' ? (
-                      <div className="otherUnitInput">
+              {items
+                .filter(item => !item.is_deleted)
+                .map((item) => {
+                  const originalIndex = items.findIndex(i => i.receipt_item_id === item.receipt_item_id);
+                  const activeItemsCount = items.filter(i => !i.is_deleted).length;
+                  const isOnlyItem = activeItemsCount === 1;
+                  
+                  return (
+                    <tr key={item.receipt_item_id}>
+                      <td>
                         <input
                           type="text"
-                          value={item.other_unit || ''}
-                          onChange={(e) => handleItemChange(index, 'other_unit', e.target.value)}
-                          placeholder="Specify unit"
+                          value={item.item_name}
+                          onChange={(e) => handleItemChange(originalIndex, 'item_name', e.target.value)}
                           required
+                          placeholder="Enter item name"
                         />
+                      </td>
+                      <td>
+                        <select
+                          value={item.unit_id}
+                          onChange={(e) => handleItemChange(originalIndex, 'unit_id', e.target.value)}
+                          required
+                        >
+                          <option value="">Select Unit</option>
+                          {itemUnits.map(unit => (
+                            <option key={unit.id} value={unit.id}>{unit.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={item.quantity || ''}
+                          onChange={(e) => handleItemChange(originalIndex, 'quantity', e.target.value)}
+                          min="0"
+                          step="any"
+                          required
+                          placeholder="0"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={item.unit_price || ''}
+                          onChange={(e) => handleItemChange(originalIndex, 'unit_price', e.target.value)}
+                          min="0"
+                          step="any"
+                          required
+                          placeholder="0"
+                        />
+                      </td>
+                      <td>₱{(item.total_price || 0).toLocaleString()}</td>
+                      <td>
+                        <select
+                          value={item.category_id}
+                          onChange={(e) => handleItemChange(originalIndex, 'category_id', e.target.value)}
+                          required
+                        >
+                          <option value="">Select Category</option>
+                          {categories.map(cat => (
+                            <option key={cat.category_id} value={cat.category_id}>{formatDisplayText(cat.name)}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
                         <button
                           type="button"
-                          onClick={() => handleItemChange(index, 'unit_id', itemUnits[0]?.id || '')}
-                          className="clearUnitBtn"
+                          onClick={() => removeItem(originalIndex)}
+                          className="removeItemBtn"
+                          title={isOnlyItem ? "Cannot delete the last item" : "Remove Item"}
+                          disabled={isOnlyItem}
                         >
-                          <i className="ri-close-line" />
+                          <i className="ri-delete-bin-line" />
                         </button>
-                      </div>
-                    ) : (
-                      <select
-                        value={item.unit_id}
-                        onChange={(e) => handleItemChange(index, 'unit_id', e.target.value)}
-                        required
-                      >
-                        <option value="">Select Unit</option>
-                        {itemUnits.map(unit => (
-                          <option key={unit.id} value={unit.id}>{unit.name}</option>
-                        ))}
-                        <option value="Other">Other</option>
-                      </select>
-                    )}
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={item.quantity || ''}
-                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                      min="0"
-                      step="any"
-                      required
-                      placeholder="0"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={item.unit_price || ''}
-                      onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                      min="0"
-                      step="any"
-                      required
-                      placeholder="0"
-                    />
-                  </td>
-                  <td>₱{(item.total_price || 0).toLocaleString()}</td>
-                  <td>
-                    <select
-                      value={item.category_id}
-                      onChange={(e) => handleItemChange(index, 'category_id', e.target.value)}
-                      required
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat.category_id} value={cat.category_id}>{formatDisplayText(cat.name)}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="removeItemBtn"
-                      title="Remove Item"
-                    >
-                      <i className="ri-delete-bin-line" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
@@ -542,8 +572,8 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
               <label>VAT Amount</label>
               <input
                 type="number"
-                value={vatAmount}
-                onChange={(e) => setVatAmount(Number(e.target.value))}
+                value={vatAmount || ''}
+                onChange={(e) => setVatAmount(Number(e.target.value) || 0)}
                 min="0"
                 step="any"
                 placeholder="0"

@@ -1,7 +1,7 @@
 // app/(pages)/receipt/viewReceipt.tsx
 'use client';
 import React from 'react';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDate, formatDateTime } from '../../utility/dateFormatter';
 import '../../styles/viewReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 
@@ -162,7 +162,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           <h3>Receipt Details</h3>
           <div className="detailRow">
             <span className="label">Transaction Date:</span>
-            <span className="value">{formatDate(record.transaction_date)}</span>
+            <span className="value">{formatDateTime(record.transaction_date)}</span>
           </div>
           <div className="detailRow">
             <span className="label">VAT Reg TIN:</span>

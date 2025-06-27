@@ -4,7 +4,7 @@ import "../../styles/receipt.css";
 import "../../styles/table.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from 'sweetalert2';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDate, formatDateTime } from '../../utility/dateFormatter';
 import ViewReceiptModal from './viewReceipt';
 import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
@@ -456,7 +456,7 @@ const ReceiptPage = () => {
                 {currentRecords.map((item, index) => (
                   <tr key={item.receipt_id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{formatDate(item.transaction_date)}</td>
+                    <td>{formatDateTime(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
                     <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
                     <td>

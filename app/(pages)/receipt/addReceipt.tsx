@@ -501,18 +501,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 <p>Manual Entry</p>
               </div>
               <div 
-                className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
-                onClick={() => setSourceOption('OCR_Camera')}
+                // className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
+                // onClick={() => setSourceOption('OCR_Camera')}
               >
-                <i className="ri-camera-line"></i>
-                <p>Camera Scan</p>
+                {/* <i className="ri-camera-line"></i>
+                <p>Camera Scan</p> */}
               </div>
               <div 
-                className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
-                onClick={() => setSourceOption('OCR_File')}
+                // className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
+                // onClick={() => setSourceOption('OCR_File')}
               >
-                <i className="ri-upload-line"></i>
-                <p>File Upload</p>
+                {/* <i className="ri-upload-line"></i>
+                <p>File Upload</p> */}
               </div>
             </div>
 
@@ -861,33 +861,33 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               ) : (
                                 <select
                                   value={item.item.category}
-              onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
-              className="formSelect"
-              {...(!isLast && { required: true })}
-              disabled={disabled}
-            >
-              <option value="">Select Category</option>
-              {EXPENSE_CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-              ))}
-            </select>
-          )}
-        </td>
-        <td>
-          <button
-            type="button"
-            onClick={() => removeItem(idx)}
-            className="removeItemBtn"
-            title="Remove item"
-            disabled={disabled}
-          >
-            <i className="ri-delete-bin-line" />
-          </button>
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
+                                  onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+                                  className="formSelect"
+                                  {...(!isLast && { required: true })}
+                                  disabled={disabled}
+                                >
+                                  <option value="">Select Category</option>
+                                  {EXPENSE_CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => removeItem(idx)}
+                                className="removeItemBtn"
+                                title="Remove item"
+                                disabled={disabled}
+                              >
+                                <i className="ri-delete-bin-line" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
                   </table>
                 </div>
 
