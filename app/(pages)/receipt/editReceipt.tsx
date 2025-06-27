@@ -259,8 +259,9 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       text: 'Are you sure you want to update this receipt?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#FEB71F',
+      reverseButtons: true,
       confirmButtonText: 'Yes, update it!',
       background: 'white',
     });
