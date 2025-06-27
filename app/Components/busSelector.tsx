@@ -3,19 +3,8 @@ import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/busSelector.css"
 import "../styles/table.css"
-
-type Assignment = {
-  assignment_id: string;
-  bus_plate_number: string;
-  bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  is_expense_recorded: boolean;
-  payment_method: string;
-};
+import type { Assignment } from '@/lib/operations/assignments';
+import { formatDateTime } from '../utility/dateFormatter';
 
 type Employee = {
   employee_id: string;
@@ -46,17 +35,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 
   // Filter and sort assignments (only those not recorded)
   const filteredAssignments = useMemo(() => {
-    let filtered = assignments;
-    if (!selectedCategoryId) return [];
-    const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
-    if (!selectedCategory) return [];
-    
-    // Filter by assignment type based on category
-    filtered = filtered.filter(a => {
-      if (selectedCategory.name === "Boundary") return a.assignment_type === "Boundary";
-      if (selectedCategory.name === "Percentage") return a.assignment_type === "Percentage";
-      return false;
-    });
+    let filtered = assignments.filter(a => !a.is_expense_recorded);
     
     // Apply search filter
     if (search.trim()) {
@@ -69,7 +48,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
     return filtered.sort(
       (a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime()
     );
-  }, [assignments, categories, selectedCategoryId, search]);
+  }, [assignments, search]);
 
   const totalPages = Math.ceil(filteredAssignments.length / PAGE_SIZE);
   const paginatedAssignments = filteredAssignments.slice(
@@ -78,8 +57,32 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
   );
 
   // Helper to get employee name
-  const getEmployeeName = (id: string) =>
-    allEmployees.find(e => e.employee_id === id)?.name || "N/A";
+  const getEmployeeName = (assignment: Assignment, field: 'driver' | 'conductor') => {
+    if (field === 'driver' && assignment.driver_name) {
+      return assignment.driver_name;
+    }
+    if (field === 'conductor' && assignment.conductor_name) {
+      return assignment.conductor_name;
+    }
+    const id = field === 'driver' ? assignment.driver_id : assignment.conductor_id;
+    return allEmployees.find(e => e.employee_id === id)?.name || "N/A";
+  };
+
+  // Helper to format bus type correctly
+  const formatBusType = (busType: string | null): string => {
+    if (!busType) return 'N/A';
+    
+    // Normalize bus type values to display format
+    const normalizedType = busType.toLowerCase();
+    if (normalizedType === 'aircon' || normalizedType === 'airconditioned') {
+      return 'Airconditioned';
+    } else if (normalizedType === 'ordinary' || normalizedType === 'non-aircon') {
+      return 'Ordinary';
+    } else {
+      // For any other values, return the first letter capitalized
+      return busType.charAt(0).toUpperCase();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -138,13 +141,13 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                         onClose();
                     }}
                   >
-                    <td>{assignment.date_assigned.split("T")[0]}</td>
+                    <td>{formatDateTime(assignment.date_assigned)}</td>
                     <td>₱ {assignment.trip_fuel_expense}</td>
                       <td>{assignment.bus_plate_number}</td>
-                      <td>{assignment.bus_type === "Airconditioned" ? "A" : "O"}</td>
+                      <td>{formatBusType(assignment.bus_type)}</td>
                     <td>{assignment.bus_route}</td>
-                      <td>{getEmployeeName(assignment.driver_id)}</td>
-                      <td>{getEmployeeName(assignment.conductor_id)}</td>
+                      <td>{getEmployeeName(assignment, 'driver')}</td>
+                      <td>{getEmployeeName(assignment, 'conductor')}</td>
                   </tr>
                     );
                   })

@@ -10,6 +10,7 @@ import { validateField, isValidAmount, ValidationRule } from "../../utility/vali
 import type { Receipt as OriginalReceipt } from '../../types/receipt';
 import { formatDisplayText } from '../../utils/formatting';
 import BusSelector from '../../Components/busSelector';
+import type { Assignment } from '@/lib/operations/assignments';
 
 
 type Receipt = OriginalReceipt & {
@@ -53,22 +54,7 @@ type AddExpenseProps = {
     driver_reimbursement?: number;
     conductor_reimbursement?: number;
   }) => void;
-  assignments: {
-    assignment_id: string;
-    bus_trip_id?: string;
-    bus_plate_number: string | null;
-    bus_route: string;
-    bus_type: string | null;
-    driver_name?: string | null;
-    conductor_name?: string | null;
-    date_assigned: string;
-    trip_fuel_expense: number;
-    is_expense_recorded?: boolean;
-    payment_method: string;
-    // Legacy fields for backward compatibility
-    driver_id?: string;
-    conductor_id?: string;
-  }[];
+  assignments: Assignment[];
   currentUser: string;
 };
 
@@ -132,6 +118,10 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     amount: '',
     error: '',
   }]);
+
+  // Add state for original auto-filled values
+  const [originalAutoFilledAmount, setOriginalAutoFilledAmount] = useState<number | null>(null);
+  const [originalAutoFilledDate, setOriginalAutoFilledDate] = useState<string>('');
 
   // Helper: get available employees for a row (exclude already selected)
   const getAvailableEmployees = (rowIdx: number) => {
@@ -215,6 +205,16 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     other_category: { required: formData.category === 'Other', label: "Other Category", minLength: 2, maxLength: 50 },
   };
 
+  // Helper to get current datetime-local string
+  const getCurrentDateTimeLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -285,53 +285,99 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     if (formData.assignment_id) {
       const selectedAssignment = assignments.find(a => a.assignment_id === formData.assignment_id);
       if (selectedAssignment) {
+        // Set original auto-filled values
+        setOriginalAutoFilledAmount(selectedAssignment.trip_fuel_expense);
+        // Set date to assignment date with current time
+        const assignmentDate = new Date(selectedAssignment.date_assigned);
+        const now = new Date();
+        assignmentDate.setHours(now.getHours(), now.getMinutes());
+        const year = assignmentDate.getFullYear();
+        const month = String(assignmentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(assignmentDate.getDate()).padStart(2, '0');
+        const hours = String(assignmentDate.getHours()).padStart(2, '0');
+        const minutes = String(assignmentDate.getMinutes()).padStart(2, '0');
+        const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        setOriginalAutoFilledDate(dateTimeLocal);
+        
+        // Normalize payment_method from assignment to match form values
+        let normalizedPaymentMethod = 'CASH';
+        if (selectedAssignment.payment_method && selectedAssignment.payment_method.toUpperCase() === 'REIMBURSEMENT') {
+          normalizedPaymentMethod = 'REIMBURSEMENT';
+        }
+        
         setFormData(prev => ({
           ...prev,
           total_amount: selectedAssignment.trip_fuel_expense,
-          category: 'Fuel', // Always set to Fuel for operations
-          expense_date: selectedAssignment.date_assigned.split('T')[0],
+          expense_date: dateTimeLocal, // Always force update on assignment change
+          payment_method: normalizedPaymentMethod,
         }));
+        
+        // Update payment method state
+        setPaymentMethod(normalizedPaymentMethod as 'CASH' | 'REIMBURSEMENT');
       }
-    } else if (formData.receipt_id) {
-      const selectedReceipt = receipts.find(r => r.receipt_id === formData.receipt_id);
-      if (selectedReceipt) {
-        setFormData(prev => ({
-          ...prev,
-          total_amount: selectedReceipt.total_amount_due,
-          category: selectedReceipt.category_name || '',
-          category_id: selectedReceipt.category_id || '',
-          expense_date: selectedReceipt.transaction_date.split('T')[0],
-        }));
-      }
+    } else {
+      setOriginalAutoFilledAmount(null);
+      setOriginalAutoFilledDate('');
     }
-  }, [formData.assignment_id, formData.receipt_id, assignments, receipts]);
+  }, [formData.assignment_id, assignments]);
+
+  // Calculate amount deviation
+  const getAmountDeviation = () => {
+    if (originalAutoFilledAmount === null || originalAutoFilledAmount === 0) return null;
+    const currentAmount = Number(formData.total_amount);
+    if (currentAmount === originalAutoFilledAmount) return null;
+    const difference = currentAmount - originalAutoFilledAmount;
+    const percentageChange = Math.abs((difference / originalAutoFilledAmount) * 100);
+    const isIncrease = difference > 0;
+    return {
+      difference: Math.abs(difference),
+      percentage: percentageChange,
+      isIncrease,
+      formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
+      formattedPercentage: `${percentageChange.toFixed(1)}%`
+    };
+  };
+
+  // Calculate date deviation
+  const getDateDeviation = () => {
+    if (!originalAutoFilledDate || !formData.expense_date) return null;
+    const originalDate = new Date(originalAutoFilledDate);
+    const currentDate = new Date(formData.expense_date);
+    if (originalDate.getTime() === currentDate.getTime()) return null;
+    const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
+    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+    const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    let deviationText = '';
+    if (daysDifference > 0) {
+      deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
+      if (hoursDifference > 0) {
+        deviationText += `, ${hoursDifference}h`;
+      }
+    } else if (hoursDifference > 0) {
+      deviationText = `${hoursDifference}h`;
+      if (minutesDifference > 0) {
+        deviationText += ` ${minutesDifference}m`;
+      }
+    } else if (minutesDifference > 0) {
+      deviationText = `${minutesDifference}m`;
+    } else {
+      deviationText = 'few seconds';
+    }
+    const isLater = currentDate.getTime() > originalDate.getTime();
+    return {
+      deviationText,
+      isLater,
+      daysDifference,
+      hoursDifference,
+      minutesDifference
+    };
+  };
 
   // Filter assignments based on is_expense_recorded
   const filteredAssignments = assignments
     .filter(a => !a.is_expense_recorded)
     .sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
-
-  // When assignment changes, auto-fill and lock fields
-  useEffect(() => {
-    if (source === 'operations' && formData.assignment_id) {
-      const assignment = assignments.find(a => a.assignment_id === formData.assignment_id);
-      if (assignment) {
-        // Normalize payment_method from Supabase to match form values
-        let normalizedPaymentMethod = 'CASH';
-        if (assignment.payment_method && assignment.payment_method.toUpperCase() === 'REIMBURSEMENT') {
-          normalizedPaymentMethod = 'REIMBURSEMENT';
-        }
-        setFormData(prev => ({
-          ...prev,
-          category: 'Fuel',
-          total_amount: assignment.trip_fuel_expense,
-          expense_date: assignment.date_assigned.split('T')[0],
-          payment_method: normalizedPaymentMethod,
-        }));
-        setPaymentMethod(normalizedPaymentMethod as 'CASH' | 'REIMBURSEMENT');
-      }
-    }
-  }, [source, formData.assignment_id, assignments]);
 
   // Update reimbursement validation logic
   useEffect(() => {
@@ -513,8 +559,24 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   };
 
   // Format assignment for display
-  const formatAssignment = (assignment: typeof assignments[0]) => {
-    const busType = assignment.bus_type ? (assignment.bus_type === 'Airconditioned' ? 'A' : 'O') : 'N/A';
+  const formatAssignment = (assignment: Assignment) => {
+    // Helper to format bus type correctly
+    const formatBusType = (busType: string | null): string => {
+      if (!busType) return 'N/A';
+      
+      // Normalize bus type values to display format
+      const normalizedType = busType.toLowerCase();
+      if (normalizedType === 'aircon' || normalizedType === 'airconditioned') {
+        return 'A';
+      } else if (normalizedType === 'ordinary' || normalizedType === 'non-aircon') {
+        return 'O';
+      } else {
+        // For any other values, return the first letter capitalized
+        return busType.charAt(0).toUpperCase();
+      }
+    };
+
+    const busType = formatBusType(assignment.bus_type);
     const driverName = assignment.driver_name || 'N/A';
     const conductorName = assignment.conductor_name || 'N/A';
     return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_fuel_expense} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
@@ -667,27 +729,55 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         id="amount"
                         name="total_amount"
                         value={formData.total_amount}
-                        readOnly
+                        onChange={handleInputChange}
+                        min="0"
+                        step="0.01"
+                        required
                         className="formInput"
                       />
+                      {formData.assignment_id && (
+                        <span className="autofill-note">Auto-calculated from assignment (editable)</span>
+                      )}
+                      {(() => {
+                        const amountDeviation = getAmountDeviation();
+                        return amountDeviation && (
+                          <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                            <i className="ri-error-warning-line"></i> 
+                            {amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedDifference} 
+                            ({amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedPercentage}) 
+                            from auto-filled amount
+                          </div>
+                        );
+                      })()}
                     </div>
                 </div>
 
               
                 {/* DATE */}
                 <div className="formField">
-                  <label htmlFor="expense_date">Expense Date<span className='requiredTags'> *</span></label>
+                  <label htmlFor="expense_date">Expense Date & Time<span className='requiredTags'> *</span></label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     id="expense_date"
                     name="expense_date"
                     value={formData.expense_date}
-                    readOnly
+                    onChange={handleInputChange}
+                    required
                     className="formInput"
+                    max={getCurrentDateTimeLocal()}
                   />
-                  {source === 'receipt' && formData.receipt_id && (
-                    <span className="autofill-note">Autofilled from Receipt</span>
+                  {formData.assignment_id && (
+                    <span className="autofill-note">Auto-filled from assignment date with current time (editable)</span>
                   )}
+                  {(() => {
+                    const dateDeviation = getDateDeviation();
+                    return dateDeviation && (
+                      <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                        <i className="ri-time-line"></i> 
+                        {dateDeviation.deviationText} {dateDeviation.isLater ? 'after' : 'before'} auto-filled date
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* PAYMENT METHOD */}

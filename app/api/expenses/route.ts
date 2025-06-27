@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateId } from '@/lib/idGenerator'
 import { logAudit } from '@/lib/auditLogger'
+import { getAssignmentById } from '@/lib/operations/assignments'
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,13 +13,10 @@ export async function POST(req: NextRequest) {
       source_id,   // global
       payment_method_id, // global
       assignment_id,
-      bus_trip_id, // NEW: support bus_trip_id from frontend
       receipt_id,
       total_amount,
       expense_date,
       created_by,
-      driver_reimbursement,
-      conductor_reimbursement,
       reimbursements, // array for receipt-sourced
       category: legacy_category,
       payment_method: legacy_payment_method,
@@ -61,6 +59,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'category_id and payment_method_id are required.' }, { status: 400 });
     }
 
+    // Fetch assignment data if assignment_id is provided
+    let assignmentData = null;
+    if (assignment_id) {
+      assignmentData = await getAssignmentById(assignment_id);
+      if (!assignmentData) {
+        return NextResponse.json(
+          { error: 'Assignment not found in Operations API' },
+          { status: 404 }
+        );
+      }
+    }
+
     // Validate required global IDs
     const [category, paymentMethod, source] = await Promise.all([
       prisma.globalCategory.findUnique({ where: { category_id: final_category_id } }),
@@ -73,18 +83,17 @@ export async function POST(req: NextRequest) {
 
     // --- ANTI-DUPLICATE LOGIC (assignment-based) ---
     if (assignment_id) {
-      // Check for duplicate expense record for the same assignment, bus_trip_id, and expense_date
+      // Check for duplicate expense record for the same assignment and expense_date
       const duplicate = await prisma.expenseRecord.findFirst({
         where: {
           assignment_id,
-          bus_trip_id: bus_trip_id ?? null,
           expense_date: new Date(expense_date),
           category_id: final_category_id,
         },
       });
       if (duplicate) {
         return NextResponse.json(
-          { error: 'Expense record for this assignment, trip, and date already exists.' },
+          { error: 'Expense record for this assignment and date already exists.' },
           { status: 409 }
         );
       }
@@ -99,7 +108,7 @@ export async function POST(req: NextRequest) {
           source_id: final_source_id,
           payment_method_id: final_payment_method_id,
           assignment_id,
-          bus_trip_id: bus_trip_id ?? null,
+          bus_trip_id: assignmentData?.bus_trip_id ?? null,
           receipt_id,
           total_amount,
           expense_date: new Date(expense_date),
@@ -233,7 +242,6 @@ export async function POST(req: NextRequest) {
       // Transform the data to match frontend expectations
       const expenseWithDetails = {
         ...completeExpense,
-        bus_trip_id: completeExpense.bus_trip_id,
         total_amount: Number(completeExpense.total_amount),
         category_name: completeExpense.category?.name || null,
         payment_method_name: completeExpense.payment_method?.name || null,

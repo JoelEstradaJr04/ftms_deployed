@@ -19,8 +19,8 @@ export type Assignment = {
   bus_type: string | null;
   body_number: string | null;
   // Legacy fields for backward compatibility
-  driver_id?: string;
-  conductor_id?: string;
+  driver_id?: string | undefined;
+  conductor_id?: string | undefined;
 };
 
 // Raw assignment type from Operations API - matches exact API response
@@ -110,8 +110,8 @@ export async function fetchAssignmentsFromOperationsAPI(): Promise<Assignment[]>
         bus_plate_number: assignment.bus_plate_number,
         bus_type: normalizedBusType,
         body_number: assignment.body_number,
-        driver_id: assignment.driver_name || '',
-        conductor_id: assignment.conductor_name || '',
+        driver_id: assignment.driver_name || undefined,
+        conductor_id: assignment.conductor_name || undefined,
       };
     });
 
