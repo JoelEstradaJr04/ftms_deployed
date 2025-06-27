@@ -539,13 +539,13 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
                               >
                                 Reject
                               </button>
-                              <button
+                              {/* <button
                                 onClick={e => { e.stopPropagation(); handleCancel(item.reimbursement_id); }}
                                 className="action-btn cancel-btn"
                                 style={{ marginLeft: 8 }}
                               >
                                 Cancel
-                              </button>
+                              </button> */}
                             </>
                           );
                         case 'approved':
