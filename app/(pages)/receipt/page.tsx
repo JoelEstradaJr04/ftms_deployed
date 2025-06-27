@@ -423,12 +423,12 @@ const ReceiptPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="filter-select"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               {paymentStatuses.map(status => (
                 <option key={status.id} value={status.name}>{formatDisplayText(status.name)}</option>
               ))}
             </select>
-            <button onClick={() => setShowModal(true)} id='addButton'><i className="ri-add-line" /> Add Receipt</button>
+            <button onClick={() => setShowModal(true)} id='receipt_addButton'><i className="ri-add-line" /> Add Receipt</button>
           </div>
         </div>
 

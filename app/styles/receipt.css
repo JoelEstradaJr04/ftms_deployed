@@ -176,11 +176,11 @@
   align-items: center !important;
 }
 
-#addButton, .addButton {
+#receipt_addButton, .addButton {
   background: var(--primary-color) !important;
 }
 
-#addButton:hover, .addButton:hover {
+#receipt_addButton:hover, .addButton:hover {
   background: var(--primary-hover-color) !important;
 }
 
