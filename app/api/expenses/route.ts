@@ -121,55 +121,6 @@ export async function POST(req: NextRequest) {
       if (paymentMethod.name === 'REIMBURSEMENT') {
         const pendingStatus = await tx.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } });
         if (!pendingStatus) throw new Error('PENDING reimbursement status not found');
-        // Operations-sourced: assignment_id present
-        if (assignment_id) {
-          // Fetch assignment for names and employee IDs
-          const assignment = await tx.assignmentCache.findUnique({ where: { assignment_id } });
-          if (assignment) {
-            const { driver_id, conductor_id } = assignment;
-            // Find employee IDs for driver and conductor
-            const driver = await tx.employeeCache.findFirst({ where: { employee_id: driver_id } });
-            const conductor = await tx.employeeCache.findFirst({ where: { employee_id: conductor_id } });
-            if (!driver || !conductor) {
-              throw new Error('Missing employee IDs for driver or conductor');
-            }
-            // Determine reimbursement amounts
-            let driverAmount = Number(driver_reimbursement);
-            let conductorAmount = Number(conductor_reimbursement);
-            if (!driverAmount && !conductorAmount) {
-              // If not provided, split total_amount equally
-              driverAmount = conductorAmount = Number(total_amount) / 2;
-            } else if (!driverAmount) {
-              driverAmount = Number(total_amount) - Number(conductorAmount);
-            } else if (!conductorAmount) {
-              conductorAmount = Number(total_amount) - Number(driverAmount);
-            }
-            await tx.reimbursement.createMany({
-              data: [
-                {
-                  expense_id: expense.expense_id,
-                  employee_id: driver.employee_id,
-                  employee_name: driver.name,
-                  job_title: driver.job_title || 'Driver',
-                  amount: driverAmount,
-                  status_id: pendingStatus.id,
-                  created_by,
-                  is_deleted: false,
-                },
-                {
-                  expense_id: expense.expense_id,
-                  employee_id: conductor.employee_id,
-                  employee_name: conductor.name,
-                  job_title: conductor.job_title || 'Conductor',
-                  amount: conductorAmount,
-                  status_id: pendingStatus.id,
-                  created_by,
-                  is_deleted: false,
-                },
-              ]
-            });
-          }
-        }
         // Receipt-sourced: assignment_id not present
         if ((!source || source.name !== 'operations') && total_amount) {
           if (Array.isArray(reimbursements) && reimbursements.length > 0) {
@@ -223,14 +174,6 @@ export async function POST(req: NextRequest) {
       if (receipt_id) {
         await tx.receipt.update({
           where: { receipt_id },
-          data: { is_expense_recorded: true }
-        });
-      }
-
-      // If there's an assignment, update its is_expense_recorded flag
-      if (assignment_id) {
-        await tx.assignmentCache.update({
-          where: { assignment_id },
           data: { is_expense_recorded: true }
         });
       }

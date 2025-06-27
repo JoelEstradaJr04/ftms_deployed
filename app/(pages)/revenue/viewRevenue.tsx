@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import '../../styles/viewRevenue.css';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDate, formatDateTime } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
 
 type Assignment = {
@@ -130,11 +130,11 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
-          <span className="value">{formatDate(record.assignment.date_assigned)}</span>
+          <span className="value">{formatDateTime(record.assignment.date_assigned)}</span>
         </div>
         <div className="detailRow">
           <span className="label">Trip Revenue:</span>
-          <span className="value">₱{record.assignment.trip_revenue.toLocaleString()}</span>
+          <span className="value">₱{record.assignment.trip_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="detailRow">
           <span className="label">Assignment Value:</span>
@@ -144,10 +144,6 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
               : `₱${record.assignment.assignment_value.toLocaleString()}`
             }
           </span>
-        </div>
-        <div className="detailRow">
-          <span className="label">Payment Method:</span>
-          <span className="value">{record.assignment.payment_method}</span>
         </div>
       </div>
     );
@@ -169,15 +165,16 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
           </div>
           <div className="detailRow">
             <span className="label">Amount:</span>
-            <span className="value">₱{Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="value">₱{(() => {
+              if (categoryName === 'Percentage' && record.assignment?.assignment_value) {
+                return (record.total_amount * record.assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              }
+              return Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            })()}</span>
           </div>
           <div className="detailRow">
             <span className="label">Collection Date:</span>
-            <span className="value">{formatDate(record.collection_date)}</span>
-          </div>
-          <div className="detailRow">
-            <span className="label">Record Date:</span>
-            <span className="value">{formatDate(record.created_at)}</span>
+            <span className="value">{formatDateTime(record.collection_date)}</span>
           </div>
         </div>
 

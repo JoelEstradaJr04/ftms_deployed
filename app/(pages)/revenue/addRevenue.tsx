@@ -49,18 +49,32 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
   currentUser,
   existingRevenues
 }) => {
-  console.log('[RENDER] AddRevenue component rendering');
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const today = new Date().toISOString().split('T')[0];
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [categories, setCategories] = useState<GlobalCategory[]>([]);
+  
+  // Track original auto-filled values for deviation calculation
+  const [originalAutoFilledAmount, setOriginalAutoFilledAmount] = useState<number | null>(null);
+  const [originalAutoFilledDate, setOriginalAutoFilledDate] = useState<string>('');
+  
+  const getCurrentDateTimeLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
   
   const [formData, setFormData] = useState({
     category_id: '',
     assignment_id: '',
     total_amount: 0,
-    collection_date: new Date().toISOString().split('T')[0],
+    collection_date: getCurrentDateTimeLocal(), // Changed to include current datetime
     created_by: currentUser,
   });
 
@@ -133,17 +147,100 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
         console.log('[EFFECT] Selected category:', selectedCategory?.name);
         let calculatedAmount = selectedAssignment.trip_revenue;
         if (selectedCategory?.name === 'Percentage' && selectedAssignment.assignment_value) {
-          calculatedAmount = selectedAssignment.trip_revenue * (selectedAssignment.assignment_value / 100);
+          calculatedAmount = selectedAssignment.trip_revenue * (selectedAssignment.assignment_value);
         }
         console.log('[EFFECT] Updating form with calculated amount:', calculatedAmount);
+        
+        // Convert assignment date to datetime-local format with current time
+        const assignmentDate = new Date(selectedAssignment.date_assigned);
+        const now = new Date();
+        assignmentDate.setHours(now.getHours(), now.getMinutes());
+        const year = assignmentDate.getFullYear();
+        const month = String(assignmentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(assignmentDate.getDate()).padStart(2, '0');
+        const hours = String(assignmentDate.getHours()).padStart(2, '0');
+        const minutes = String(assignmentDate.getMinutes()).padStart(2, '0');
+        const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Store original auto-filled values for deviation tracking
+        setOriginalAutoFilledAmount(calculatedAmount);
+        setOriginalAutoFilledDate(dateTimeLocal);
+        
         setFormData(prev => ({
           ...prev,
           total_amount: calculatedAmount,
-          collection_date: selectedAssignment.date_assigned.split('T')[0],
+          collection_date: dateTimeLocal,
         }));
       }
+    } else {
+      // Reset original values when no assignment is selected
+      setOriginalAutoFilledAmount(null);
+      setOriginalAutoFilledDate('');
     }
-  }, [formData.assignment_id, formData.category_id, assignments, categories]); // Add formData.category_id to dependencies
+  }, [formData.assignment_id, formData.category_id, assignments, categories]);
+
+
+  // Calculate amount deviation
+  const getAmountDeviation = () => {
+    if (originalAutoFilledAmount === null || originalAutoFilledAmount === 0) return null;
+    
+    const currentAmount = Number(formData.total_amount);
+    if (currentAmount === originalAutoFilledAmount) return null;
+    
+    const difference = currentAmount - originalAutoFilledAmount;
+    const percentageChange = Math.abs((difference / originalAutoFilledAmount) * 100);
+    const isIncrease = difference > 0;
+    
+    return {
+      difference: Math.abs(difference),
+      percentage: percentageChange,
+      isIncrease,
+      formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
+      formattedPercentage: `${percentageChange.toFixed(1)}%`
+    };
+  };
+
+  // Calculate date deviation
+    const getDateDeviation = () => {
+      if (!originalAutoFilledDate || !formData.collection_date) return null;
+      
+      const originalDate = new Date(originalAutoFilledDate);
+      const currentDate = new Date(formData.collection_date);
+      
+      if (originalDate.getTime() === currentDate.getTime()) return null;
+      
+      const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
+      const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+      const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+      
+      let deviationText = '';
+      if (daysDifference > 0) {
+        deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
+        if (hoursDifference > 0) {
+          deviationText += `, ${hoursDifference}h`;
+        }
+      } else if (hoursDifference > 0) {
+        deviationText = `${hoursDifference}h`;
+        if (minutesDifference > 0) {
+          deviationText += ` ${minutesDifference}m`;
+        }
+      } else if (minutesDifference > 0) {
+        deviationText = `${minutesDifference}m`;
+      } else {
+        deviationText = 'few seconds';
+      }
+      
+      const isLater = currentDate.getTime() > originalDate.getTime();
+      
+      return {
+        deviationText,
+        isLater,
+        daysDifference,
+        hoursDifference,
+        minutesDifference
+      };
+    };
 
   // Reset form when category changes
 
@@ -152,7 +249,8 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
     console.log('[EVENT] Input changed:', name, value);
     let newValue: string | number = value;
     if (name === 'total_amount') {
-      newValue = parseFloat(value) || 0;
+      // Ensure we handle the amount field correctly - convert to number but allow empty string for editing
+      newValue = value === '' ? 0 : parseFloat(value) || 0;
     }
     setFormData(prev => ({
       ...prev,
@@ -227,7 +325,7 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
     const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
     let displayAmount = assignment.trip_revenue;
     if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
-      displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+      displayAmount = assignment.trip_revenue * (assignment.assignment_value);
     }
     return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
@@ -269,7 +367,7 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
                           category_id: value,
                           assignment_id: '',
                           total_amount: 0,
-                          collection_date: new Date().toISOString().split('T')[0],
+                          collection_date: getCurrentDateTimeLocal(), // Reset to current datetime
                         }));
                       }}
                       required
@@ -321,16 +419,29 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
                           const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
                           let calculatedAmount = assignment.trip_revenue;
                           if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
-                            calculatedAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                            calculatedAmount = assignment.trip_revenue * (assignment.assignment_value);
                           }
                           console.log('[MODAL] Setting form with amount:', calculatedAmount);
+                          
+                          // Convert assignment date to datetime-local format with current time
+                          const assignmentDate = new Date(assignment.date_assigned);
+                          const now = new Date();
+                          assignmentDate.setHours(now.getHours(), now.getMinutes());
+                          const year = assignmentDate.getFullYear();
+                          const month = String(assignmentDate.getMonth() + 1).padStart(2, '0');
+                          const day = String(assignmentDate.getDate()).padStart(2, '0');
+                          const hours = String(assignmentDate.getHours()).padStart(2, '0');
+                          const minutes = String(assignmentDate.getMinutes()).padStart(2, '0');
+                          const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+                          
                           setFormData(prev => ({
                             ...prev,
                             assignment_id: assignment.assignment_id,
                             total_amount: calculatedAmount,
-                            collection_date: assignment.date_assigned.split('T')[0],
+                            collection_date: dateTimeLocal,
                           }));
                         }}
+
                         onClose={() => { console.log('[EVENT] Close assignment selector modal'); setShowSourceSelector(false); }}
                         isOpen={showSourceSelector}
                       />
@@ -339,38 +450,62 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
                 </div>
 
                 <div className="formRow">
-                  {/* AMOUNT (read-only, auto-filled from assignment) */}
+                  {/* AMOUNT - Make editable with auto-fill */}
                   <div className="formField">
                     <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
                     <input
-                      type="text"
+                      type="number"
                       id="total_amount"
                       name="total_amount"
-                      value={formData.total_amount.toLocaleString()}
-                      readOnly
+                      value={formData.total_amount || ''}
+                      onChange={handleInputChange}
+                      min="0"
+                      step="0.01"
+                      required
                       className="formInput"
+                      placeholder="Enter amount"
                     />
                     {formData.assignment_id && (
-                      <span className="autofill-note">Autofilled from Assignment</span>
+                      <span className="autofill-note">Auto-calculated from assignment (editable)</span>
                     )}
+                    {(() => {
+                      const amountDeviation = getAmountDeviation();
+                      return amountDeviation && (
+                        <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                          <i className="ri-error-warning-line"></i> 
+                          {amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedDifference} 
+                          ({amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedPercentage}) 
+                          from auto-filled amount
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  {/* DATE */}
+                  {/* DATE - Now includes time */}
                   <div className="formField">
-                    <label htmlFor="collection_date">Collection Date <span className='requiredTags'> *</span></label>
+                    <label htmlFor="collection_date">Collection Date & Time <span className='requiredTags'> *</span></label>
                     <input
-                      type="date"
+                      type="datetime-local"
                       id="collection_date"
                       name="collection_date"
                       value={formData.collection_date}
                       onChange={handleInputChange}
                       required
                       className="formInput"
-                      max={today}
+                      max={new Date().toISOString().slice(0, 16)} // Current datetime limit
                     />
                     {formData.assignment_id && (
-                      <span className="autofill-note">Autofilled from Assignment</span>
+                      <span className="autofill-note">Auto-filled from assignment date with current time (editable)</span>
                     )}
+                    {(() => {
+                      const dateDeviation = getDateDeviation();
+                      return dateDeviation && (
+                        <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                          <i className="ri-time-line"></i> 
+                          {dateDeviation.deviationText} {dateDeviation.isLater ? 'after' : 'before'} auto-filled date
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

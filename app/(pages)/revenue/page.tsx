@@ -193,7 +193,7 @@ const RevenuePage = () => {
           category: revenue.category,
           source: revenue.source,
           total_amount: Number(revenue.total_amount),
-          collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
+          collection_date: revenue.collection_date, // Keep full ISO datetime string
           created_by: revenue.created_by,
           created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
@@ -261,8 +261,9 @@ const RevenuePage = () => {
     (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
 
     const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
-    const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
-            (!dateTo || item.collection_date <= dateTo);
+    const itemDate = new Date(item.collection_date).toISOString().split('T')[0]; // Extract date part for comparison
+    const matchesDate = (!dateFrom || itemDate >= dateFrom) && 
+            (!dateTo || itemDate <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
   });
 
@@ -271,69 +272,64 @@ const RevenuePage = () => {
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-const handleAddRevenue = async (newRevenue: {
-  category_id: string;
-  assignment_id?: string;
-  total_amount: number;
-  collection_date: string;
-  created_by: string;
-}) => {
-  try {
-    // Check for duplicates if assignment is provided
-    if (newRevenue.assignment_id) {
-      const duplicate = data.find(item => {
-        // Use both assignment_id and bus_trip_id for precise matching
-        const assignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id && a.bus_trip_id);
-        const itemAssignment = item.assignment_id && item.bus_trip_id
-          ? allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id)
-          : null;
-        if (!assignment || !itemAssignment) return false;
-        return (
-          new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
-          assignment.bus_plate_number === itemAssignment.bus_plate_number &&
-          assignment.driver_name === itemAssignment.driver_name &&
-          assignment.conductor_name === itemAssignment.conductor_name
-        );
-      });
-      if (duplicate) {
-        showError('Duplicate revenue record found for the same assignment.', 'Error');
-        return;
+  const handleAddRevenue = async (newRevenue: {
+    category_id: string;
+    assignment_id?: string;
+    total_amount: number;
+    collection_date: string;
+    created_by: string;
+  }) => {
+    try {
+      // Get the assignment to extract bus_trip_id
+      const selectedAssignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id);
+      
+      // Check for duplicates using bus_trip_id
+      if (newRevenue.assignment_id && selectedAssignment?.bus_trip_id) {
+        const duplicate = data.find(item => item.bus_trip_id === selectedAssignment.bus_trip_id);
+        if (duplicate) {
+          showError('Revenue record for this trip already exists.', 'Error');
+          return;
+        }
       }
+      
+      const response = await fetch('/api/revenues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category_id: newRevenue.category_id,
+          total_amount: newRevenue.total_amount,
+          collection_date: newRevenue.collection_date, // Send as ISO string
+          created_by: newRevenue.created_by,
+          assignment_id: newRevenue.assignment_id || null,
+        })
+      });
+      
+      if (!response.ok) throw new Error('Create failed');
+      const result: RevenueRecord = await response.json();
+      
+      // Refresh assignments data to get updated flags from Operations API BEFORE updating state
+      await fetchAssignments();
+      
+      // Update revenues state (ensure bus_trip_id is included)
+      setData(prev => [{
+        revenue_id: result.revenue_id,
+        category: result.category,
+        source: result.source,
+        total_amount: Number(result.total_amount),
+        collection_date: result.collection_date, // Keep as ISO string
+        created_by: result.created_by,
+        created_at: result.created_at,
+        assignment_id: result.assignment_id,
+        bus_trip_id: result.bus_trip_id,
+      }, ...prev]);
+      
+      showSuccess('Revenue added successfully', 'Success');
+      setShowModal(false);
+    } catch (error) {
+      console.error('Create error:', error);
+      showError('Failed to add revenue: ' + (error instanceof Error ? error.message : 'Unknown error'), 'Error');
     }
-    const response = await fetch('/api/revenues', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        category_id: newRevenue.category_id,
-        total_amount: newRevenue.total_amount,
-        collection_date: new Date(newRevenue.collection_date).toISOString(),
-        created_by: newRevenue.created_by,
-        assignment_id: newRevenue.assignment_id || null,
-      })
-    });
-    if (!response.ok) throw new Error('Create failed');
-    const result: RevenueRecord = await response.json();
-    // Refresh assignments data to get updated flags from Operations API BEFORE updating state
-    await fetchAssignments();
-    // Update revenues state (ensure bus_trip_id is included)
-    setData(prev => [{
-      revenue_id: result.revenue_id,
-      category: result.category,
-      source: result.source,
-      total_amount: Number(result.total_amount),
-      collection_date: new Date(result.collection_date).toISOString().split('T')[0],
-      created_by: result.created_by,
-      created_at: result.created_at,
-      assignment_id: result.assignment_id,
-      bus_trip_id: result.bus_trip_id,
-    }, ...prev]);
-    showSuccess('Revenue added successfully', 'Success');
-    setShowModal(false);
-  } catch (error) {
-    console.error('Create error:', error);
-    showError('Failed to add revenue: ' + (error instanceof Error ? error.message : 'Unknown error'), 'Error');
-  }
-};
+  };
 
   const handleDelete = async (revenue_id: string) => {
     const result = await Swal.fire({
@@ -650,22 +646,22 @@ const handleAddRevenue = async (newRevenue: {
                 rowData.push(item.total_amount.toFixed(2));
                 break;
               case "Bus Type":
-                rowData.push(escapeField(assignment?.bus_type));
+                rowData.push(escapeField(assignment?.bus_type || 'N/A'));
                 break;
               case "Plate Number":
-                rowData.push(escapeField(assignment?.bus_plate_number));
+                rowData.push(escapeField(assignment?.bus_plate_number || 'N/A'));
                 break;
               case "Route":
-                rowData.push(escapeField(assignment?.bus_route));
+                rowData.push(escapeField(assignment?.bus_route || 'N/A'));
                 break;
               case "Driver ID":
-                rowData.push(escapeField(assignment?.driver_name)); // Use driver_name instead of driver_id
+                rowData.push(escapeField(assignment?.driver_name || 'N/A'));
                 break;
               case "Conductor ID":
-                rowData.push(escapeField(assignment?.conductor_name)); // Use conductor_name instead of conductor_id
+                rowData.push(escapeField(assignment?.conductor_name || 'N/A'));
                 break;
               case "Assignment Date":
-                rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
+                rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : 'N/A'));
                 break;
               default:
                 rowData.push('');
@@ -798,10 +794,10 @@ const handleAddRevenue = async (newRevenue: {
                   // Calculate display amount based on category and assignment type
                   let displayAmount = assignment.trip_revenue;
                   if (item.category?.name === 'Percentage' && assignment.assignment_value) {
-                    displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                    displayAmount = assignment.trip_revenue * (assignment.assignment_value);
                   }
                   
-                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
+                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
                 };
 
                 return (
@@ -809,7 +805,14 @@ const handleAddRevenue = async (newRevenue: {
                     <td>{formatDateTime(item.collection_date)}</td>
                     <td>{item.category?.name || 'N/A'}</td>
                     <td>{formatAssignmentForTable(assignment)}</td>
-                    <td>₱{item.total_amount.toLocaleString()}</td>
+                    <td>₱{(() => {
+                      if (item.category?.name === 'Percentage' && assignment?.assignment_value) {
+                        return (item.total_amount * assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      } else if (item.category?.name === 'Boundary' && assignment?.trip_revenue) {
+                        return assignment.trip_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      }
+                      return item.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}</td>
                     <td className="styles.actionButtons">
                       <div className="actionButtonsContainer">
                         {/* view button */}
@@ -867,20 +870,31 @@ const handleAddRevenue = async (newRevenue: {
           <AddRevenue
             onClose={() => setShowModal(false)}
             onAddRevenue={handleAddRevenue}
-            assignments={assignments}
+            assignments={assignments.filter(a => {
+              // Filter out assignments that already have revenue records with the same bus_trip_id
+              const isAlreadyRecorded = data.some(r => r.bus_trip_id && r.bus_trip_id === a.bus_trip_id);
+              return !isAlreadyRecorded;
+            })}
             currentUser={"ftms_user"}
-            existingRevenues={data}
+            existingRevenues={data.map(r => ({
+              assignment_id: r.assignment_id,
+              category_id: r.category.category_id,
+              total_amount: r.total_amount,
+              collection_date: r.collection_date
+            }))}
           />
         )}
 
         {editModalOpen && recordToEdit && (
           <EditRevenueModal
             record={{
-              revenue_id: recordToEdit.revenue_id,
-              collection_date: recordToEdit.collection_date,
-              category: recordToEdit.category.name,
-              amount: recordToEdit.total_amount,
-              assignment_id: recordToEdit.assignment_id,
+              revenue_id: typeof recordToEdit.revenue_id === 'string' ? recordToEdit.revenue_id : '',
+              collection_date: typeof recordToEdit.collection_date === 'string' ? recordToEdit.collection_date : '',
+              category_id: typeof recordToEdit.category?.category_id === 'string' ? recordToEdit.category.category_id : '',
+              category: typeof recordToEdit.category?.name === 'string' ? recordToEdit.category.name : '',
+              source: typeof recordToEdit.source?.name === 'string' ? recordToEdit.source.name : '',
+              amount: typeof recordToEdit.total_amount === 'number' ? recordToEdit.total_amount : 0,
+              assignment_id: typeof recordToEdit.assignment_id === 'string' ? recordToEdit.assignment_id : undefined,
             }}
             onClose={() => {
               setEditModalOpen(false);

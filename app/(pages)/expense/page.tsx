@@ -797,7 +797,7 @@ const filteredData = data.filter((item: ExpenseData) => {
           <AddExpense
             onClose={() => setShowModal(false)}
             onAddExpense={handleAddExpense}
-            assignments={allAssignments as any}
+            assignments={allAssignments.filter(a => !data.some(r => r.bus_trip_id && a.bus_trip_id && r.bus_trip_id === a.bus_trip_id))}
             currentUser="ftms_user" // Replace with your actual user ID
           />
         )}

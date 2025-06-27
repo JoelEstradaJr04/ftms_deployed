@@ -13,7 +13,7 @@ async function main() {
     { name: 'Multiple_Categories', modules: ['expense', 'receipt'] },
     { name: 'Boundary', modules: ['revenue'] },
     { name: 'Percentage', modules: ['revenue'] },
-    { name: 'Bus_Rental', modules: ['revenue'] },
+    //{ name: 'Bus_Rental', modules: ['revenue'] },
   ];
   for (const { name, modules } of categories) {
     const category_id = await generateId('CAT');
@@ -57,7 +57,7 @@ async function main() {
     { name: 'OCR_File', modules: ['receipt'] },
     { name: 'Boundary_Assignment', modules: ['revenue'] },
     { name: 'Percentage_Assignment', modules: ['revenue'] },
-    { name: 'Bus_Rental_Assignment', modules: ['revenue'] },
+    //{ name: 'Bus_Rental_Assignment', modules: ['revenue'] },
     { name: 'Receipt', modules: ['expense'] },
     { name: 'Operations', modules: ['expense'] },
   ];

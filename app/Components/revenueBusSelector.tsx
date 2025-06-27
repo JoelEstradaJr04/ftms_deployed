@@ -88,7 +88,7 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
     const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
     let amount = assignment.trip_revenue;
     if (selectedCategory?.name === "Percentage" && assignment.assignment_value) {
-      amount = assignment.trip_revenue * (assignment.assignment_value / 100);
+      amount = assignment.trip_revenue * (assignment.assignment_value);
     }
     return `₱${amount.toLocaleString()}`;
   };

@@ -42,21 +42,34 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   // Filter and sort assignments (only those not recorded)
   const filteredAssignments = useMemo(() => {
-    let filtered = assignments.filter(a => !a.is_expense_recorded);
+    let filtered = assignments;
+    if (!selectedCategoryId) return [];
+    const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+    if (!selectedCategory) return [];
+    
+    // Filter by assignment type based on category
+    filtered = filtered.filter(a => {
+      if (selectedCategory.name === "Boundary") return a.assignment_type === "Boundary";
+      if (selectedCategory.name === "Percentage") return a.assignment_type === "Percentage";
+      return false;
+    });
+    
+    // Apply search filter
     if (search.trim()) {
       filtered = filtered.filter(a =>
-        a.bus_plate_number.toLowerCase().includes(search.toLowerCase()) ||
+        (a.bus_plate_number?.toLowerCase().includes(search.toLowerCase()) || false) ||
         a.bus_route.toLowerCase().includes(search.toLowerCase())
       );
     }
+    
     return filtered.sort(
       (a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime()
     );
-  }, [assignments, search]);
+  }, [assignments, categories, selectedCategoryId, search]);
 
   const totalPages = Math.ceil(filteredAssignments.length / PAGE_SIZE);
   const paginatedAssignments = filteredAssignments.slice(
@@ -112,8 +125,14 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  paginatedAssignments.map(assignment => (
-                    <tr key={assignment.assignment_id}  
+                  paginatedAssignments.map(assignment => {
+                    // Use bus_trip_id if available, else assignment_id + date_assigned for uniqueness
+                    const a = assignment as Assignment & { bus_trip_id?: string };
+                    const uniqueKey = a.bus_trip_id
+                      ? `${a.assignment_id}-${a.bus_trip_id}`
+                      : `${a.assignment_id}-${a.date_assigned}`;
+                    return (
+                      <tr key={uniqueKey}
                       onClick={() => {
                         onSelect(assignment);
                         onClose();
@@ -127,7 +146,8 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                       <td>{getEmployeeName(assignment.driver_id)}</td>
                       <td>{getEmployeeName(assignment.conductor_id)}</td>
                   </tr>
-                ))
+                    );
+                  })
               )}
             </tbody>
           </table>

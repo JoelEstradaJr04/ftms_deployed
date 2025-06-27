@@ -21,13 +21,25 @@ export async function GET() {
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> } // Changed to use Promise
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // Await the params promise
+    const { id } = await params;
     const data = await req.json();
     const { total_amount, collection_date } = data;
-    const revenue_id = id; // Use the awaited id
+    const revenue_id = id;
+
+    // Convert collection_date string to Date object
+    const collectionDateTime = new Date(collection_date);
+    
+    // Validate that the collection_date is not in the future
+    const now = new Date();
+    if (collectionDateTime > now) {
+      return NextResponse.json(
+        { error: 'Collection date cannot be in the future' },
+        { status: 400 }
+      );
+    }
 
     // Get the original record for comparison and validation
     const originalRecord = await prisma.revenueRecord.findUnique({
@@ -54,19 +66,19 @@ export async function PUT(
       deviationPercentage = Math.abs((total_amount - originalTripRevenue) / originalTripRevenue * 100);
     }
 
-    // Update the record
+    // Update the record with DateTime
     const updatedRevenue = await prisma.revenueRecord.update({
       where: { revenue_id },
       data: {
         total_amount,
-        collection_date: new Date(collection_date),
-        source_id: null, // Always null since source field is removed
+        collection_date: collectionDateTime, // Store as DateTime
+        source_id: null,
         updated_at: new Date()
       }
     });
 
     // Log the audit trail, including deviation information if applicable
-    let auditDetails = `Updated revenue record. Amount changed from ₱${originalRecord.total_amount} to ₱${total_amount}.`;
+    let auditDetails = `Updated revenue record. Amount changed from ₱${originalRecord.total_amount} to ₱${total_amount}. Collection date changed to ${collectionDateTime.toISOString()}.`;
     if (deviationPercentage !== null) {
       auditDetails += ` Deviation from original trip revenue: ${deviationPercentage.toFixed(2)}%`;
     }
