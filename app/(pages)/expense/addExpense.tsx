@@ -55,11 +55,12 @@ type AddExpenseProps = {
   }) => void;
   assignments: {
     assignment_id: string;
+    bus_trip_id?: string;
     bus_plate_number: string | null;
     bus_route: string;
     bus_type: string | null;
-    driver_name: string | null;
-    conductor_name: string | null;
+    driver_name?: string | null;
+    conductor_name?: string | null;
     date_assigned: string;
     trip_fuel_expense: number;
     is_expense_recorded?: boolean;

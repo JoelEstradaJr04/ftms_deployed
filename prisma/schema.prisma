@@ -15,6 +15,7 @@ model Sequence {
 model ExpenseRecord {
   expense_id        String              @id
   assignment_id     String?
+  bus_trip_id       String?
   total_amount      Decimal             @db.Decimal(20, 4)
   receipt_id        String?             @unique
   created_at        DateTime            @default(now())
@@ -32,6 +33,7 @@ model ExpenseRecord {
   reimbursements    Reimbursement[]
 
   @@unique([category_id, assignment_id, expense_date], name: "unique_expense_assignment")
+  @@unique([category_id, assignment_id, bus_trip_id, expense_date], name: "unique_expense_assignment_trip")
   @@unique([category_id, receipt_id, expense_date], name: "unique_expense_receipt")
   @@unique([category_id, source_id, total_amount, expense_date], name: "unique_expense_other")
 }

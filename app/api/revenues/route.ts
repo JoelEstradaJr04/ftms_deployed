@@ -82,32 +82,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Update Operations API if assignment is used
-    if (assignment_id && assignmentData?.bus_trip_id) {
-      try {
-        const patchPayload = [
-          {
-            bus_trip_id: assignmentData.bus_trip_id,
-            IsRevenueRecorded: true
-          }
-        ];
-        const opApiUrl = process.env.OP_API_BASE_URL;
-        if (!opApiUrl) {
-          throw new Error('OP_API_BASE_URL environment variable is not set');
-        }
-        const patchResponse = await fetch(opApiUrl, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patchPayload)
-        });
-        if (!patchResponse.ok) {
-          const errorText = await patchResponse.text();
-          console.warn(`Failed to PATCH Operations API: ${patchResponse.status} - ${errorText}`);
-        }
-      } catch (err) {
-        console.warn('Failed to PATCH Operations API for IsRevenueRecorded:', err);
-      }
-    }
+    // PATCH to Operations API to set IsRevenueRecorded is intentionally omitted. See FTMS issue: assignments are not marked as recorded to keep assignment data available for mapping.
 
     await logAudit({
       action: 'CREATE',

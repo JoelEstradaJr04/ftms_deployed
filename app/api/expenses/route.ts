@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
       source_id,   // global
       payment_method_id, // global
       assignment_id,
+      bus_trip_id, // NEW: support bus_trip_id from frontend
       receipt_id,
       total_amount,
       expense_date,
@@ -70,6 +71,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid global ID(s) provided.' }, { status: 400 });
     }
 
+    // --- ANTI-DUPLICATE LOGIC (assignment-based) ---
+    if (assignment_id) {
+      // Check for duplicate expense record for the same assignment, bus_trip_id, and expense_date
+      const duplicate = await prisma.expenseRecord.findFirst({
+        where: {
+          assignment_id,
+          bus_trip_id: bus_trip_id ?? null,
+          expense_date: new Date(expense_date),
+          category_id: final_category_id,
+        },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: 'Expense record for this assignment, trip, and date already exists.' },
+          { status: 409 }
+        );
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // Create expense
       const expense = await tx.expenseRecord.create({
@@ -79,6 +99,7 @@ export async function POST(req: NextRequest) {
           source_id: final_source_id,
           payment_method_id: final_payment_method_id,
           assignment_id,
+          bus_trip_id: bus_trip_id ?? null,
           receipt_id,
           total_amount,
           expense_date: new Date(expense_date),
@@ -269,6 +290,7 @@ export async function POST(req: NextRequest) {
       // Transform the data to match frontend expectations
       const expenseWithDetails = {
         ...completeExpense,
+        bus_trip_id: completeExpense.bus_trip_id,
         total_amount: Number(completeExpense.total_amount),
         category_name: completeExpense.category?.name || null,
         payment_method_name: completeExpense.payment_method?.name || null,

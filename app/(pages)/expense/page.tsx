@@ -45,8 +45,9 @@ interface NewExpense {
 
 // Define interface based on your Prisma ExpenseRecord schema
 interface ExpenseRecord {
-  expense_id: string;        
-  assignment_id?: string;    
+  expense_id: string;
+  assignment_id?: string;
+  bus_trip_id?: string;
   receipt_id?: string;
   category_id: string;
   source_id?: string;
@@ -63,11 +64,11 @@ interface ExpenseRecord {
     id: string;
     name: string;
   };
-  total_amount: number;      
-  expense_date: string;              
-  created_by: string;        
-  created_at: string;        
-  updated_at?: string;       
+  total_amount: number;
+  expense_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
   is_deleted: boolean;
   receipt?: Receipt;
   reimbursements?: Reimbursement[];
@@ -111,11 +112,12 @@ type ExpenseData = ExpenseRecord;
 // Update Assignment type in this file
 interface Assignment {
   assignment_id: string;
+  bus_trip_id?: string;
   bus_plate_number: string | null;
   bus_route: string;
   bus_type: string | null;
-  driver_name: string | null;
-  conductor_name: string | null;
+  driver_name?: string | null;
+  conductor_name?: string | null;
   date_assigned: string;
   trip_fuel_expense: number;
   is_expense_recorded?: boolean;
@@ -123,13 +125,6 @@ interface Assignment {
   // Legacy fields for backward compatibility
   driver_id?: string;
   conductor_id?: string;
-}
-
-// Add Employee type for local use
-interface Employee {
-  employee_id: string;
-  name: string;
-  job_title: string;
 }
 
 const ExpensePage = () => {
@@ -606,17 +601,20 @@ const filteredData = data.filter((item: ExpenseData) => {
     const headers = columns.join(",") + "\n";
   
     const rows = recordsToExport.map(item => {
+      let assignment: Assignment | undefined = undefined;
+      if (item.assignment_id && item.bus_trip_id) {
+        assignment = allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id);
+      } else if (item.assignment_id) {
+        assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+      }
       let source: string = '';
-      if (item.assignment_id) {
-        const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-        if (assignment) {
-          source = formatAssignment(assignment);
-        } else {
-          source = `Assignment ${item.assignment_id} not found`;
-        }
+      if (assignment) {
+        source = formatAssignment(assignment);
+      } else if (item.assignment_id) {
+        source = `Assignment ${item.assignment_id} not found`;
       } else if (item.receipt) {
         source = formatReceipt(item.receipt);
-      } 
+      }
    
       return (
         <tr key={item.expense_id}>
@@ -740,17 +738,20 @@ const filteredData = data.filter((item: ExpenseData) => {
               </thead>
               <tbody>
                 {currentRecords.map(item => {
+                  let assignment: Assignment | undefined = undefined;
+                  if (item.assignment_id && item.bus_trip_id) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id);
+                  } else if (item.assignment_id) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+                  }
                   let source: string = '';
-                  if (item.assignment_id) {
-                    const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-                    if (assignment) {
-                      source = formatAssignment(assignment);
-                    } else {
-                      source = `Assignment ${item.assignment_id} not found`;
-                    }
+                  if (assignment) {
+                    source = formatAssignment(assignment);
+                  } else if (item.assignment_id) {
+                    source = `Assignment ${item.assignment_id} not found`;
                   } else if (item.receipt) {
                     source = formatReceipt(item.receipt);
-                  } 
+                  }
                               
                   return (
                     <tr key={item.expense_id}>
@@ -796,7 +797,7 @@ const filteredData = data.filter((item: ExpenseData) => {
           <AddExpense
             onClose={() => setShowModal(false)}
             onAddExpense={handleAddExpense}
-            assignments={allAssignments}
+            assignments={allAssignments as any}
             currentUser="ftms_user" // Replace with your actual user ID
           />
         )}
@@ -808,23 +809,44 @@ const filteredData = data.filter((item: ExpenseData) => {
               expense_date: recordToEdit.expense_date,
               category: recordToEdit.category,
               total_amount: recordToEdit.total_amount,
-              assignment: recordToEdit.assignment_id 
+              assignment: recordToEdit.assignment_id && recordToEdit.bus_trip_id
+                ? (() => {
+                    const assignment = allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id && a.bus_trip_id === recordToEdit.bus_trip_id);
+                    if (!assignment) return undefined;
+                    return {
+                      assignment_id: assignment.assignment_id,
+                      bus_trip_id: assignment.bus_trip_id,
+                      bus_plate_number: assignment.bus_plate_number || '',
+                      bus_route: assignment.bus_route,
+                      bus_type: assignment.bus_type,
+                      driver_name: assignment.driver_name || '',
+                      conductor_name: assignment.conductor_name || '',
+                      date_assigned: assignment.date_assigned,
+                      trip_fuel_expense: assignment.trip_fuel_expense,
+                      is_expense_recorded: assignment.is_expense_recorded,
+                      payment_method: assignment.payment_method,
+                      driver_id: assignment.driver_id || '',
+                      conductor_id: assignment.conductor_id || '',
+                    };
+                  })()
+                : recordToEdit.assignment_id
                 ? (() => {
                     const assignment = allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id);
                     if (!assignment) return undefined;
                     return {
                       assignment_id: assignment.assignment_id,
-                      bus_plate_number: assignment.bus_plate_number,
+                      bus_trip_id: assignment.bus_trip_id,
+                      bus_plate_number: assignment.bus_plate_number || '',
                       bus_route: assignment.bus_route,
                       bus_type: assignment.bus_type,
-                      driver_name: assignment.driver_name,
-                      conductor_name: assignment.conductor_name,
+                      driver_name: assignment.driver_name || '',
+                      conductor_name: assignment.conductor_name || '',
                       date_assigned: assignment.date_assigned,
                       trip_fuel_expense: assignment.trip_fuel_expense,
                       is_expense_recorded: assignment.is_expense_recorded,
                       payment_method: assignment.payment_method,
-                      ...(assignment.driver_id && { driver_id: assignment.driver_id }),
-                      ...(assignment.conductor_id && { conductor_id: assignment.conductor_id }),
+                      driver_id: assignment.driver_id || '',
+                      conductor_id: assignment.conductor_id || '',
                     };
                   })()
                 : undefined,
@@ -836,7 +858,6 @@ const filteredData = data.filter((item: ExpenseData) => {
                   unit: item.item?.unit?.name || ''
                 }))
               } : undefined,
-              // Pass the entire payment_method object to match schema structure
               payment_method: recordToEdit.payment_method,
               reimbursements: recordToEdit.reimbursements,
             }}
@@ -855,23 +876,44 @@ const filteredData = data.filter((item: ExpenseData) => {
               category: recordToView.category,
               total_amount: recordToView.total_amount,
               expense_date: recordToView.expense_date,
-              assignment: recordToView.assignment_id 
+              assignment: recordToView.assignment_id && recordToView.bus_trip_id
+                ? (() => {
+                    const assignment = allAssignments.find(a => a.assignment_id === recordToView.assignment_id && a.bus_trip_id === recordToView.bus_trip_id);
+                    if (!assignment) return undefined;
+                    return {
+                      assignment_id: assignment.assignment_id,
+                      bus_trip_id: assignment.bus_trip_id,
+                      bus_plate_number: assignment.bus_plate_number || '',
+                      bus_route: assignment.bus_route,
+                      bus_type: assignment.bus_type,
+                      driver_name: assignment.driver_name || '',
+                      conductor_name: assignment.conductor_name || '',
+                      date_assigned: assignment.date_assigned,
+                      trip_fuel_expense: assignment.trip_fuel_expense,
+                      is_expense_recorded: assignment.is_expense_recorded,
+                      payment_method: assignment.payment_method,
+                      driver_id: assignment.driver_id || '',
+                      conductor_id: assignment.conductor_id || '',
+                    };
+                  })()
+                : recordToView.assignment_id
                 ? (() => {
                     const assignment = allAssignments.find(a => a.assignment_id === recordToView.assignment_id);
                     if (!assignment) return undefined;
                     return {
                       assignment_id: assignment.assignment_id,
-                      bus_plate_number: assignment.bus_plate_number,
+                      bus_trip_id: assignment.bus_trip_id,
+                      bus_plate_number: assignment.bus_plate_number || '',
                       bus_route: assignment.bus_route,
                       bus_type: assignment.bus_type,
-                      driver_name: assignment.driver_name,
-                      conductor_name: assignment.conductor_name,
+                      driver_name: assignment.driver_name || '',
+                      conductor_name: assignment.conductor_name || '',
                       date_assigned: assignment.date_assigned,
                       trip_fuel_expense: assignment.trip_fuel_expense,
                       is_expense_recorded: assignment.is_expense_recorded,
                       payment_method: assignment.payment_method,
-                      ...(assignment.driver_id && { driver_id: assignment.driver_id }),
-                      ...(assignment.conductor_id && { conductor_id: assignment.conductor_id }),
+                      driver_id: assignment.driver_id || '',
+                      conductor_id: assignment.conductor_id || '',
                     };
                   })()
                 : undefined,
