@@ -345,7 +345,7 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
     }
   };
 
-  // Add cancel handler
+  /* Add cancel handler
   const handleCancel = async (reimbursementId: string) => {
     const result = await showConfirmation(
       'Cancel Reimbursement',
@@ -369,7 +369,7 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
         showError('Failed to cancel reimbursement', 'Error');
       }
     }
-  };
+  };*/
 
   // Add reject handler
   const handleReject = async (reimbursementId: string, reason: string) => {
@@ -539,13 +539,13 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
                               >
                                 Reject
                               </button>
-                              <button
+                              {/* <button
                                 onClick={e => { e.stopPropagation(); handleCancel(item.reimbursement_id); }}
                                 className="action-btn cancel-btn"
                                 style={{ marginLeft: 8 }}
                               >
                                 Cancel
-                              </button>
+                              </button> */}
                             </>
                           );
                         case 'approved':
