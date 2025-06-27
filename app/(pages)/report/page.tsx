@@ -6,7 +6,7 @@ import LineChart from '../../Components/expenseRevenueLineChart';
 import ExpensesPieChart from '../../Components/expensesPieChart';
 import RevenuePieChart from '../../Components/revenuePieChart';
 import Pagination from '../../Components/pagination';
-import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
+import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showError } from '../../utility/Alerts';

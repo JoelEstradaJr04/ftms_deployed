@@ -55,15 +55,18 @@ type AddExpenseProps = {
   }) => void;
   assignments: {
     assignment_id: string;
-    bus_plate_number: string;
+    bus_plate_number: string | null;
     bus_route: string;
-    bus_type: string;
-    driver_id: string;
-    conductor_id: string;
+    bus_type: string | null;
+    driver_name: string | null;
+    conductor_name: string | null;
     date_assigned: string;
     trip_fuel_expense: number;
-    is_expense_recorded: boolean;
+    is_expense_recorded?: boolean;
     payment_method: string;
+    // Legacy fields for backward compatibility
+    driver_id?: string;
+    conductor_id?: string;
   }[];
   currentUser: string;
 };
@@ -510,10 +513,10 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
   // Format assignment for display
   const formatAssignment = (assignment: typeof assignments[0]) => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
-    return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_fuel_expense} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
+    const busType = assignment.bus_type ? (assignment.bus_type === 'Airconditioned' ? 'A' : 'O') : 'N/A';
+    const driverName = assignment.driver_name || 'N/A';
+    const conductorName = assignment.conductor_name || 'N/A';
+    return `${formatDate(assignment.date_assigned)} | ₱ ${assignment.trip_fuel_expense} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
 
   // Format receipt for display

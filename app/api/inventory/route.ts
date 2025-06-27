@@ -169,3 +169,87 @@ export async function PATCH(request: Request) {
     );
   }
 }
+<<<<<<< Updated upstream
+=======
+
+
+// export async function PATCH(request: Request) {
+//   try {
+//     const body = await request.json();
+//     const { transaction_ids, mode } = body;
+
+//     if (!Array.isArray(transaction_ids) || transaction_ids.length === 0) {
+//       return new Response(
+//         JSON.stringify({ success: false, error: 'transaction_ids array is required and cannot be empty' }),
+//         { status: 400, headers: { 'Content-Type': 'application/json' } }
+//       );
+//     }
+
+//     const transactions = await prisma.itemTransaction.findMany({
+//       where: {
+//         transaction_id: { in: transaction_ids },
+//         is_deleted: false,
+//         receipt: {
+//           is_deleted: false
+//         }
+//       },
+//       select: {
+//         transaction_id: true,
+//         item_id: true,
+//         receipt_id: true
+//       }
+//     });
+
+//     const foundIds = transactions.map(tx => tx.transaction_id);
+//     const missingIds = transaction_ids.filter(id => !foundIds.includes(id));
+
+//     if (missingIds.length > 0) {
+//       return new Response(
+//         JSON.stringify({ success: false, error: `Transaction IDs not found: ${missingIds.join(', ')}` }),
+//         { status: 404, headers: { 'Content-Type': 'application/json' } }
+//       );
+//     }
+
+//     const validTransactions = transactions.filter(tx => tx.receipt_id);
+
+//     if (validTransactions.length === 0) {
+//       return new Response(
+//         JSON.stringify({ success: false, error: 'No valid receipt transactions found' }),
+//         { status: 400, headers: { 'Content-Type': 'application/json' } }
+//       );
+//     }
+
+//     // Choose the flag based on the mode
+//     const flagValue = mode === 'reset' ? false : true;
+
+//     const updateOps = validTransactions.map(tx =>
+//       prisma.receiptItem.update({
+//         where: {
+//           receipt_id_item_id: {
+//             receipt_id: tx.receipt_id!,
+//             item_id: tx.item_id
+//           }
+//         },
+//         data: {
+//           is_inventory_processed: flagValue
+//         }
+//       })
+//     );
+
+//     await prisma.$transaction(updateOps);
+
+//     return Response.json({
+//       success: true,
+//       message: `Marked ${validTransactions.length} transaction(s) as inventory ${mode === 'reset' ? 'UNPROCESSED' : 'processed'}`,
+//       processed_transaction_ids: validTransactions.map(tx => tx.transaction_id)
+//     });
+
+//   } catch (error) {
+//     console.error('Error updating inventory processed status:', error);
+//     return new Response(
+//       JSON.stringify({ success: false, error: 'Failed to update inventory processed status' }),
+//       { status: 500, headers: { 'Content-Type': 'application/json' } }
+//     );
+//   }
+// }
+>>>>>>> Stashed changes

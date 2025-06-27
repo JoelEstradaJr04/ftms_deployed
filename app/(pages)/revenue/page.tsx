@@ -8,13 +8,14 @@ import PaginationComponent from "../../Components/pagination";
 import AddRevenue from "./addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "./editRevenue";
-import ViewRevenue from "./viewRevenue"; // Import the new ViewRevenue component
-import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
+import ViewRevenueModal from "./viewRevenue";
+import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
-import { showSuccess, showError} from '../../utility/Alerts';
+import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { formatDateTime } from "../../utility/dateFormatter";
 import { formatDisplayText } from '@/app/utils/formatting';
+import RevenuePieChart from '../../Components/revenuePieChart';
 
 interface GlobalCategory {
   category_id: string;
@@ -23,7 +24,6 @@ interface GlobalCategory {
   is_deleted: boolean;
 }
 
-// Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
   revenue_id: string;        
   assignment_id?: string;    
@@ -47,8 +47,6 @@ interface RevenueRecord {
   is_deleted: boolean;
 }
 
-// Updated Assignment interface to include assignment_type and is_revenue_recorded
-// Update the Assignment interface
 interface RevenueData {
   revenue_id: string;
   category: {
@@ -63,16 +61,10 @@ interface RevenueData {
   };
   total_amount: number;
   collection_date: string;
-  created_by: string;  // Add this line
-  created_at: string;  // Add this line
+  created_by: string;
+  created_at: string;
   assignment_id?: string;
 }
-
-type Employee = {
-  employee_id: string;
-  name: string;
-  job_title: string;
-};
 
 const RevenuePage = () => {
   const [data, setData] = useState<RevenueData[]>([]);
@@ -91,7 +83,6 @@ const RevenuePage = () => {
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
 
   const fetchCategories = async () => {
@@ -153,22 +144,12 @@ const RevenuePage = () => {
       setLoading(true);
       console.log('[FETCH] Starting fetchAllData');
       try {
-        // Fetch employees for assignment display
-        const employeesResponse = await fetch('/api/employees');
-        console.log('[FETCH] /api/employees status:', employeesResponse.status);
-        if (employeesResponse.ok) {
-          const employeesData = await employeesResponse.json();
-          setAllEmployees(employeesData);
-        }
-
         // Fetch categories for the filter dropdown
         await fetchCategories();
 
-        // Fetch all assignments for displaying in the table
-        const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
-        console.log('[FETCH] /api/assignments/cache status:', assignmentsResponse.status);
-        if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
-        const { data: assignmentsData } = await assignmentsResponse.json();
+        // Fetch all assignments using the new Operations service
+        const assignmentsData = await getAllAssignmentsWithRecorded();
+        console.log('[FETCH] Assignments loaded from Operations API');
 
         // Filter out recorded assignments for the AddRevenue modal
         const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
@@ -208,20 +189,18 @@ const RevenuePage = () => {
     
     fetchAllData();
 
-    // Set up periodic refresh of assignments
-    const refreshInterval = setInterval(() => {
-      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`)
-        .then(response => response.json())
-        .then(({ data }) => {
-          if (data) {
-            // Filter out recorded assignments for the AddRevenue modal
-            const unrecordedAssignments = data.filter((a: Assignment) => !a.is_revenue_recorded);
-            setAssignments(unrecordedAssignments);
-            // Store all assignments for table display
-            setAllAssignments(data);
-          }
-        })
-        .catch(error => console.error('Background refresh failed:', error));
+    // Set up periodic refresh of assignments using the new service
+    const refreshInterval = setInterval(async () => {
+      try {
+        const assignmentsData = await getAllAssignmentsWithRecorded();
+        // Filter out recorded assignments for the AddRevenue modal
+        const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
+        setAssignments(unrecordedAssignments);
+        // Store all assignments for table display
+        setAllAssignments(assignmentsData);
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(refreshInterval);
@@ -246,12 +225,12 @@ const RevenuePage = () => {
     item.total_amount.toString().includes(searchLower) ||
     (item.created_by?.toLowerCase() || '').includes(searchLower) ||
 
-    // Assignment related fields (if available)
+    // Assignment related fields (if available) - using new Operations API fields
     (assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.bus_plate_number?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.driver_id?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.conductor_id?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
 
     const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
@@ -265,20 +244,20 @@ const RevenuePage = () => {
   const currentRecords = filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  const handleAddRevenue = async (newRevenue: {
-    category_id: string;
-    assignment_id?: string;
-    total_amount: number;
-    collection_date: string;
-    created_by: string;
-  }) => {
-    try {
-      // Check for duplicates if assignment is provided
-      if (newRevenue.assignment_id) {
+const handleAddRevenue = async (newRevenue: {
+  category_id: string;
+  assignment_id?: string;
+  total_amount: number;
+  collection_date: string;
+  created_by: string;
+}) => {
+  try {
+    // Check for duplicates if assignment is provided
+    if (newRevenue.assignment_id) {
       const duplicate = data.find(item => {
-        const assignment = assignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
+        const assignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
         const itemAssignment = item.assignment_id 
-          ? assignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
+          ? allAssignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
           : null;
 
         if (!assignment || !itemAssignment) return false;
@@ -286,19 +265,17 @@ const RevenuePage = () => {
         return (
           new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
           assignment.bus_plate_number === itemAssignment.bus_plate_number &&
-          item.category.name === 'Boundary' && // This will need to be updated based on the category
-          assignment.driver_id === itemAssignment.driver_id &&
-          assignment.conductor_id === itemAssignment.conductor_id
+          assignment.driver_name === itemAssignment.driver_name &&
+          assignment.conductor_name === itemAssignment.conductor_name
         );
       });
 
-        if (duplicate) {
-          showError('Duplicate revenue record found for the same assignment.', 'Error');
-          return;
-        }
+      if (duplicate) {
+        showError('Duplicate revenue record found for the same assignment.', 'Error');
+        return;
       }
+    }
 
-      // Existing code to create revenue record
     const response = await fetch('/api/revenues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -323,26 +300,12 @@ const RevenuePage = () => {
       total_amount: Number(result.total_amount),
       collection_date: new Date(result.collection_date).toISOString().split('T')[0],
       created_by: result.created_by,
-      created_at: result.created_at, // Ensure created_at is included
+      created_at: result.created_at,
       assignment_id: result.assignment_id,
-    }, ...prev]); // Prepend new record instead of appending
+    }, ...prev]);
 
-    // Update assignments state locally instead of re-fetching
-    if (newRevenue.assignment_id) {
-      const response = await fetch(`/api/assignments/${newRevenue.assignment_id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_revenue_recorded: true })
-      });
-
-      if (response.ok) {
-        setAssignments(prev => prev.map(assignment => 
-          assignment.assignment_id === newRevenue.assignment_id 
-            ? { ...assignment, is_revenue_recorded: true }
-            : assignment
-        ));
-      }
-    }
+    // Refresh assignments data to get updated flags from Operations API
+    await fetchAssignments();
 
     showSuccess('Revenue added successfully', 'Success');
     setShowModal(false);
@@ -521,7 +484,7 @@ const RevenuePage = () => {
           action: 'EXPORT',
           table_affected: 'RevenueRecord',
           record_id: exportId,  // Export ID only appears here
-          performed_by: 'user1', // Replace with actual user ID
+          performed_by: 'ftms_user', // Replace with actual user ID
           details: details
         })
       });
@@ -643,6 +606,7 @@ const RevenuePage = () => {
           const assignment = item.assignment_id 
             ? allAssignments.find(a => a.assignment_id === item.assignment_id)
             : null;
+            
           const escapeField = (field: string | undefined) => {
             if (!field) return '';
             if (field.includes(',') || field.includes('"') || field.includes('\n')) {
@@ -651,8 +615,8 @@ const RevenuePage = () => {
             return field;
           };
 
-                const rowData: string[] = [];
-        
+          const rowData: string[] = [];
+
           columns.forEach(col => {
             switch(col) {
               case "Collection Date":
@@ -674,10 +638,10 @@ const RevenuePage = () => {
                 rowData.push(escapeField(assignment?.bus_route));
                 break;
               case "Driver ID":
-                rowData.push(escapeField(assignment?.driver_id));
+                rowData.push(escapeField(assignment?.driver_name)); // Use driver_name instead of driver_id
                 break;
               case "Conductor ID":
-                rowData.push(escapeField(assignment?.conductor_id));
+                rowData.push(escapeField(assignment?.conductor_name)); // Use conductor_name instead of conductor_id
                 break;
               case "Assignment Date":
                 rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
@@ -775,7 +739,7 @@ const RevenuePage = () => {
                 <tr>
                   <th>Collection Date</th>
                   <th>Category</th>
-                  <th>Assignment</th>
+                  <th>Source</th>
                   <th>Amount</th>
                   <th>Action</th>
                 </tr>
@@ -791,18 +755,19 @@ const RevenuePage = () => {
                   // Format assignment for display
                   const formatAssignment = (assignment: Assignment | null | undefined) => {
                     if (!assignment) return 'N/A';
-                    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+                    
+                    // Use exact field names from Operations API
+                    const busType = assignment.bus_type === 'Aircon' ? 'A' : 'O';
+                    const driverName = assignment.driver_name || 'N/A';
+                    const conductorName = assignment.conductor_name || 'N/A';
                     
                     // Calculate display amount based on category
-                    const selectedCategory = item.category;
                     let displayAmount = assignment.trip_revenue;
-                    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
-                      displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                    if (assignment.assignment_type === 'Percentage' && assignment.assignment_value) {
+                      displayAmount = assignment.trip_revenue * assignment.assignment_value;
                     }
                     
-                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
+                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
                   };
 
                   return (
@@ -869,7 +834,7 @@ const RevenuePage = () => {
             onClose={() => setShowModal(false)}
             onAddRevenue={handleAddRevenue}
             assignments={assignments}
-            currentUser  ={"user1"} // Replace with your actual user ID
+            currentUser  ={"ftms_user"} // Replace with your actual user ID
           />
         )}
 
@@ -891,7 +856,7 @@ const RevenuePage = () => {
         )}
 
         {viewModalOpen && recordToView && (
-          <ViewRevenue
+          <ViewRevenueModal
             record={{
               revenue_id: recordToView.revenue_id,
               category: recordToView.category,

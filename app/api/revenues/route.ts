@@ -2,18 +2,18 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAssignmentById } from '@/lib/supabase/assignments'
+import { getAssignmentById } from '@/lib/operations/assignments'
 import { generateId } from '@/lib/idGenerator'
 import type { NextRequest } from 'next/server'
 import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  // Updated to remove source_id
   const { assignment_id, category_id, total_amount, collection_date, created_by } = data;
 
   try {
     let finalAmount = total_amount;
+    let assignmentData = null;
 
     if (assignment_id) {
       const duplicate = await prisma.revenueRecord.findFirst({
@@ -32,18 +32,27 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const assignmentData = await getAssignmentById(assignment_id);
-      if (!assignmentData || assignmentData.trip_revenue == null) {
-        console.log(`Assignment not found or missing trip_revenue for assignment_id: ${assignment_id}`);
+      assignmentData = await getAssignmentById(assignment_id);
+      console.log(`Assignment lookup result for ${assignment_id}:`, assignmentData);
+      
+      if (!assignmentData) {
+        console.log(`Assignment not found for assignment_id: ${assignment_id}`);
         return NextResponse.json(
-          { error: 'Assignment not found or missing trip_revenue in Supabase' },
+          { error: 'Assignment not found in Operations API' },
           { status: 404 }
+        );
+      }
+      
+      if (assignmentData.trip_revenue == null || assignmentData.trip_revenue === undefined) {
+        console.log(`Assignment found but missing trip_revenue for assignment_id: ${assignment_id}`, assignmentData);
+        return NextResponse.json(
+          { error: 'Assignment found but missing trip_revenue in Operations API' },
+          { status: 400 }
         );
       }
 
       finalAmount = assignmentData.trip_revenue;
     } else {
-      // For non-assignment records, check unique constraint without source_id
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           category_id,
@@ -66,7 +75,7 @@ export async function POST(req: NextRequest) {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
         category_id,
-        source_id: null, // Always null since source field is removed
+        source_id: null,
         total_amount: finalAmount,
         collection_date: new Date(collection_date),
         created_by,
@@ -79,6 +88,33 @@ export async function POST(req: NextRequest) {
         source: true,
       }
     });
+
+    // Update Operations API if assignment is used
+    if (assignment_id && assignmentData?.bus_trip_id) {
+      try {
+        const patchPayload = [
+          {
+            bus_trip_id: assignmentData.bus_trip_id,
+            IsRevenueRecorded: true
+          }
+        ];
+        const opApiUrl = process.env.OP_API_BASE_URL;
+        if (!opApiUrl) {
+          throw new Error('OP_API_BASE_URL environment variable is not set');
+        }
+        const patchResponse = await fetch(opApiUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patchPayload)
+        });
+        if (!patchResponse.ok) {
+          const errorText = await patchResponse.text();
+          console.warn(`Failed to PATCH Operations API: ${patchResponse.status} - ${errorText}`);
+        }
+      } catch (err) {
+        console.warn('Failed to PATCH Operations API for IsRevenueRecorded:', err);
+      }
+    }
 
     await logAudit({
       action: 'CREATE',

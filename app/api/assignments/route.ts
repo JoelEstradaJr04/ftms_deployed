@@ -1,13 +1,13 @@
 // app\api\assignments\route.ts
 import { NextResponse } from 'next/server'
-import { getAllAssignments } from '../../../lib/supabase/assignments'
+import { fetchAssignmentsFromOperationsAPI } from '../../../lib/operations/assignments'
 
 export async function GET() {
   try {
-    const assignments = await getAllAssignments();
+    const assignments = await fetchAssignmentsFromOperationsAPI();
     return NextResponse.json(assignments);
   } catch (error: unknown) {
-    console.error('Failed to fetch assignments from Supabase:', error);
+    console.error('Failed to fetch assignments from Operations API:', error);
     
     const errorMessage = error instanceof Error 
       ? error.message 

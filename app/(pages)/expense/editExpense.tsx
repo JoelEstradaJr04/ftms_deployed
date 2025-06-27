@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import '../../styles/editExpense.css';
-import { getAssignmentById } from '@/lib/supabase/assignments';
+import { getAssignmentById } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
@@ -60,9 +60,9 @@ type Reimbursement = {
 
 type Assignment = {
   assignment_id: string;
-  bus_plate_number: string;
+  bus_plate_number: string | null;
   bus_route: string;
-  bus_type: string;
+  bus_type: string | null;
   driver_id: string;
   conductor_id: string;
   date_assigned: string;
@@ -562,7 +562,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     <h3>Operations Details</h3>
                     <div className="detailRow">
                       <span className="label">Bus Plate Number:</span>
-                      <span className="value">{record.assignment.bus_plate_number} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                      <span className="value">{record.assignment.bus_plate_number || 'N/A'} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
                     </div>
                     <div className="detailRow">
                       <span className="label">Bus Route:</span>
@@ -570,7 +570,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     </div>
                     <div className="detailRow">
                       <span className="label">Bus Type:</span>
-                      <span className="value">{record.assignment.bus_type} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
+                      <span className="value">{record.assignment.bus_type || 'N/A'} <span className="locked-label">Auto-filled from Operations (locked)</span></span>
                     </div>
                     <div className="detailRow">
                       <span className="label">Driver:</span>

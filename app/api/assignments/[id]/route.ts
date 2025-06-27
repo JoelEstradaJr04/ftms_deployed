@@ -1,6 +1,6 @@
 // api\assignments\[id]\route.ts
 import { NextResponse } from 'next/server'
-import { getAssignmentById, updateAssignmentIsRecorded } from '../../../../lib/supabase/assignments'
+import { getAssignmentById } from '../../../../lib/operations/assignments'
 import type { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(assignment)
   } catch (error: unknown) {
-    console.error('Failed to fetch assignment from Supabase:', error)
+    console.error('Failed to fetch assignment from Operations API:', error)
 
     const errorMessage = error instanceof Error
       ? error.message
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
   const id = req.nextUrl.pathname.split('/').pop()
 
   if (!id) {
@@ -37,18 +37,35 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const body = await req.json()
-    const { is_revenue_recorded } = body
-
-    if (typeof is_revenue_recorded !== 'boolean') {
-      return NextResponse.json({ error: 'Invalid value for is_revenue_recorded' }, { status: 400 })
+    // Get assignment to retrieve bus_trip_id
+    const assignment = await getAssignmentById(id)
+    if (!assignment || !assignment.bus_trip_id) {
+      return NextResponse.json({ error: 'Assignment or bus_trip_id not found' }, { status: 404 })
     }
 
-    const updated = await updateAssignmentIsRecorded(id, is_revenue_recorded)
-
-    return NextResponse.json({ success: true, updated })
+    const patchPayload = [
+      {
+        bus_trip_id: assignment.bus_trip_id,
+        IsRevenueRecorded: true
+      }
+    ];
+    const opApiUrl = process.env.OP_API_BASE_URL;
+    if (!opApiUrl) {
+      throw new Error('OP_API_BASE_URL environment variable is not set');
+    }
+    const patchResponse = await fetch(opApiUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patchPayload)
+    });
+    if (!patchResponse.ok) {
+      const errorText = await patchResponse.text();
+      return NextResponse.json({ error: `Failed to PATCH Operations API: ${patchResponse.status} - ${errorText}` }, { status: 500 });
+    }
+    const result = await patchResponse.json();
+    return NextResponse.json({ success: true, result });
   } catch (error: unknown) {
-    console.error('Failed to update assignment is_revenue_recorded:', error)
+    console.error('Failed to update assignment:', error)
 
     const errorMessage = error instanceof Error
       ? error.message

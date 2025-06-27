@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import "../../styles/editRevenue.css";
-import { getAssignmentById } from '@/lib/supabase/assignments';
+import { getAssignmentById } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { validateField, ValidationRule, isValidAmount } from "../../utility/validation";
 

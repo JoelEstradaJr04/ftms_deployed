@@ -1,20 +1,22 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
-import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/busSelector.css"
 import "../styles/table.css"
 
 type Assignment = {
   assignment_id: string;
-  bus_plate_number: string;
+  bus_plate_number: string | null;
   bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
+  bus_type: string | null;
+  driver_name: string | null;
+  conductor_name: string | null;
   date_assigned: string;
   trip_fuel_expense: number;
-  is_expense_recorded: boolean;
+  is_expense_recorded?: boolean;
   payment_method: string;
+  // Legacy fields for backward compatibility
+  driver_id?: string;
+  conductor_id?: string;
 };
 
 type Employee = {
@@ -42,7 +44,10 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
+<<<<<<< Updated upstream
   const [isLoading,] = useState(false);
+=======
+>>>>>>> Stashed changes
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,7 +91,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
     let filtered = assignments.filter(a => !a.is_expense_recorded);
     if (search.trim()) {
       filtered = filtered.filter(a =>
-        a.bus_plate_number.toLowerCase().includes(search.toLowerCase()) ||
+        (a.bus_plate_number?.toLowerCase().includes(search.toLowerCase()) || false) ||
         a.bus_route.toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -146,20 +151,26 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
             style={{ marginBottom: 12, width: "100%" }}
             aria-label="Search bus assignments by plate number or route"
           />
-          {isLoading ? (
-            <Loading />
-          ) : (
-            <table className="data-table" role="table" aria-label="Bus assignments">
-              <thead>
+          <table className="data-table" role="table" aria-label="Bus assignments">
+            <thead>
+              <tr>
+                <th scope="col">Date Assigned</th>
+                <th scope="col">Trip Fuel Expense</th>
+                <th scope="col">Plate Number</th>
+                <th scope="col">Bus Type</th>
+                <th scope="col">Route</th>
+                <th scope="col">Driver</th>
+                <th scope="col">Conductor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedAssignments.length === 0 ? (
                 <tr>
-                  <th scope="col">Date Assigned</th>
-                  <th scope="col">Trip Fuel Expense</th>
-                  <th scope="col">Plate Number</th>
-                  <th scope="col">Bus Type</th>
-                  <th scope="col">Route</th>
-                  <th scope="col">Driver</th>
-                  <th scope="col">Conductor</th>
+                  <td colSpan={7} style={{ textAlign: "center" }}>
+                    No assignments found.
+                  </td>
                 </tr>
+<<<<<<< Updated upstream
               </thead>
               <tbody>
                 {paginatedAssignments.length === 0 ? (
@@ -176,32 +187,41 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
                       tabIndex={0}
                       aria-label={`Select bus assignment ${assignment.bus_plate_number} on route ${assignment.bus_route}`}
                       onClick={() => {
+=======
+              ) : (
+                paginatedAssignments.map((assignment, index) => (
+                  <tr
+                    key={`${assignment.assignment_id}-${assignment.date_assigned}-${index}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Select bus assignment ${assignment.bus_plate_number || 'N/A'} on route ${assignment.bus_route}`}
+                    onClick={() => {
+                      onSelect(assignment);
+                      onClose();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+>>>>>>> Stashed changes
                         onSelect(assignment);
                         onClose();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onSelect(assignment);
-                          onClose();
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
-                      className="selectable-row"
-                    >
-                      <td>{assignment.date_assigned.split("T")[0]}</td>
-                      <td>₱ {assignment.trip_fuel_expense}</td>
-                      <td>{assignment.bus_plate_number}</td>
-                      <td>{assignment.bus_type === "Airconditioned" ? "A" : "O"}</td>
-                      <td>{assignment.bus_route}</td>
-                      <td>{getEmployeeName(assignment.driver_id)}</td>
-                      <td>{getEmployeeName(assignment.conductor_id)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    className="selectable-row"
+                  >
+                    <td>{assignment.date_assigned.split("T")[0]}</td>
+                    <td>₱ {assignment.trip_fuel_expense}</td>
+                    <td>{assignment.bus_plate_number || 'N/A'}</td>
+                    <td>{assignment.bus_type ? (assignment.bus_type === "Airconditioned" ? "A" : "O") : 'N/A'}</td>
+                    <td>{assignment.bus_route}</td>
+                    <td>{assignment.driver_name || (assignment.driver_id ? getEmployeeName(assignment.driver_id) : 'N/A')}</td>
+                    <td>{assignment.conductor_name || (assignment.conductor_id ? getEmployeeName(assignment.conductor_id) : 'N/A')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
           <PaginationComponent
             currentPage={currentPage}
             totalPages={totalPages}
