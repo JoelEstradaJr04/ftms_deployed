@@ -8,7 +8,7 @@ import AddExpense from "./addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "./editExpense";
 import ViewExpenseModal from "./viewExpense";
-import { getAllAssignmentsWithRecorded } from '@/lib/supabase/assignments';
+import { getAllAssignmentsWithRecorded } from '@/lib/operations/assignments';
 import { formatDateTime, formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
@@ -111,15 +111,18 @@ type ExpenseData = ExpenseRecord;
 // Update Assignment type in this file
 interface Assignment {
   assignment_id: string;
-  bus_plate_number: string;
+  bus_plate_number: string | null;
   bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
+  bus_type: string | null;
+  driver_name: string | null;
+  conductor_name: string | null;
   date_assigned: string;
   trip_fuel_expense: number;
-  is_expense_recorded: boolean;
+  is_expense_recorded?: boolean;
   payment_method: string;
+  // Legacy fields for backward compatibility
+  driver_id?: string;
+  conductor_id?: string;
 }
 
 // Add Employee type for local use
@@ -148,7 +151,6 @@ const ExpensePage = () => {
   const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
   
 
@@ -170,10 +172,10 @@ const ExpensePage = () => {
 
   // Format assignment for display
   const formatAssignment = (assignment: Assignment): string => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    const driverEmp = allEmployees.find(e => e.employee_id === assignment.driver_id) as Employee | undefined;
-    const conductorEmp = allEmployees.find(e => e.employee_id === assignment.conductor_id) as Employee | undefined;
-    return `${busType} | ${assignment.bus_plate_number} - ${assignment.bus_route} | ${driverEmp?.name} & ${conductorEmp?.name}`;
+    const busType = assignment.bus_type ? (assignment.bus_type === 'Airconditioned' ? 'A' : 'O') : 'N/A';
+    const driverName = assignment.driver_name || 'N/A';
+    const conductorName = assignment.conductor_name || 'N/A';
+    return `${busType} | ${assignment.bus_plate_number || 'N/A'} - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
 
   // Format receipt for display
@@ -207,27 +209,13 @@ const ExpensePage = () => {
     }
   };
 
-  // Fetch employees data
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch('/api/employees');
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      const employeesData = await response.json();
-      setAllEmployees(employeesData);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      showError('Failed to load employees', 'Error');
-    }
-  };
-
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
         fetchExpenses(), 
-        fetchAssignments(), 
-        fetchEmployees(),
+        fetchAssignments(),
         fetchCategories() // Add this
       ]);
       setLoading(false);
@@ -621,7 +609,7 @@ const filteredData = data.filter((item: ExpenseData) => {
       let source: string = '';
       if (item.assignment_id) {
         const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-        if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
+        if (assignment) {
           source = formatAssignment(assignment);
         } else {
           source = `Assignment ${item.assignment_id} not found`;
@@ -762,7 +750,7 @@ const filteredData = data.filter((item: ExpenseData) => {
                   let source: string = '';
                   if (item.assignment_id) {
                     const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-                    if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
+                    if (assignment) {
                       source = formatAssignment(assignment);
                     } else {
                       source = `Assignment ${item.assignment_id} not found`;
@@ -831,12 +819,19 @@ const filteredData = data.filter((item: ExpenseData) => {
                 ? (() => {
                     const assignment = allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id);
                     if (!assignment) return undefined;
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
                     return {
-                      ...assignment,
-                      driver_name: driver ? driver.name : assignment.driver_id,
-                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
+                      assignment_id: assignment.assignment_id,
+                      bus_plate_number: assignment.bus_plate_number,
+                      bus_route: assignment.bus_route,
+                      bus_type: assignment.bus_type,
+                      driver_name: assignment.driver_name,
+                      conductor_name: assignment.conductor_name,
+                      date_assigned: assignment.date_assigned,
+                      trip_fuel_expense: assignment.trip_fuel_expense,
+                      is_expense_recorded: assignment.is_expense_recorded,
+                      payment_method: assignment.payment_method,
+                      ...(assignment.driver_id && { driver_id: assignment.driver_id }),
+                      ...(assignment.conductor_id && { conductor_id: assignment.conductor_id }),
                     };
                   })()
                 : undefined,
@@ -871,12 +866,19 @@ const filteredData = data.filter((item: ExpenseData) => {
                 ? (() => {
                     const assignment = allAssignments.find(a => a.assignment_id === recordToView.assignment_id);
                     if (!assignment) return undefined;
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
                     return {
-                      ...assignment,
-                      driver_name: driver ? driver.name : assignment.driver_id,
-                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
+                      assignment_id: assignment.assignment_id,
+                      bus_plate_number: assignment.bus_plate_number,
+                      bus_route: assignment.bus_route,
+                      bus_type: assignment.bus_type,
+                      driver_name: assignment.driver_name,
+                      conductor_name: assignment.conductor_name,
+                      date_assigned: assignment.date_assigned,
+                      trip_fuel_expense: assignment.trip_fuel_expense,
+                      is_expense_recorded: assignment.is_expense_recorded,
+                      payment_method: assignment.payment_method,
+                      ...(assignment.driver_id && { driver_id: assignment.driver_id }),
+                      ...(assignment.conductor_id && { conductor_id: assignment.conductor_id }),
                     };
                   })()
                 : undefined,

@@ -14,19 +14,13 @@ import {
 import { isValidAmount } from '../../utility/validation';
 import { formatDate } from '../../utility/dateFormatter';
 import { formatDisplayText } from '../../utils/formatting';
-import { Assignment } from '@/lib/supabase/assignments';
+import { Assignment } from '@/lib/operations/assignments';
 import RevenueSourceSelector from '../../Components/revenueBusSelector';
 
 type GlobalCategory = {
   category_id: string;
   name: string;
   applicable_modules: string[];
-};
-
-type Employee = {
-  employee_id: string;
-  name: string;
-  job_title: string;
 };
 
 type AddRevenueProps = {
@@ -54,7 +48,6 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
   const today = new Date().toISOString().split('T')[0];
   const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [categories, setCategories] = useState<GlobalCategory[]>([]);
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   
   const [formData, setFormData] = useState({
     category_id: '',
@@ -64,15 +57,12 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     created_by: currentUser,
   });
 
-  // Fetch categories and employees on component mount
+  // Fetch categories on component mount
   useEffect(() => {
-    console.log('[EFFECT] Fetching categories and employees');
+    console.log('[EFFECT] Fetching categories');
     const fetchGlobals = async () => {
       try {
-        const [categoriesResponse, employeesResponse] = await Promise.all([
-          fetch('/api/globals/categories'),
-          fetch('/api/employees')
-        ]);
+        const categoriesResponse = await fetch('/api/globals/categories');
 
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json();
@@ -88,15 +78,9 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
           }
           console.log('[DATA] Categories loaded:', categoriesData.length);
         }
-
-        if (employeesResponse.ok) {
-          const employeesData = await employeesResponse.json();
-          setAllEmployees(employeesData);
-          console.log('[DATA] Employees loaded:', employeesData.length);
-        }
       } catch (error) {
-        console.error('Error fetching globals:', error);
-        showError('Error', 'Failed to load categories or employees');
+        console.error('Error fetching categories:', error);
+        showError('Error', 'Failed to load categories');
       }
     };
 
@@ -114,20 +98,15 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Filter assignments based on selected category and is_revenue_recorded status
+  // Filter assignments based on selected category
   const filteredAssignments = assignments
     .filter(a => {
-      if (a.is_revenue_recorded) return false; // Filter out already recorded assignments
-      
       if (!formData.category_id) return false;
-      
       const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
       if (!selectedCategory) return false;
-      
-      // Map category names to assignment types (only Boundary and Percentage)
       if (selectedCategory.name === 'Boundary') return a.assignment_type === 'Boundary';
       if (selectedCategory.name === 'Percentage') return a.assignment_type === 'Percentage';
-      return false; // No other categories supported
+      return false;
     })
     .sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
 
@@ -204,7 +183,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
         // Update is_revenue_recorded in Supabase if assignment is used
         if (assignment_id) {
-          await axios.put(`/api/assignments/${assignment_id}`, {
+          await axios.patch(`/api/assignments/${assignment_id}`, {
             is_revenue_recorded: true
           });
         }
@@ -221,9 +200,11 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
   // Format assignment for display - similar to expense module
   const formatAssignment = (assignment: Assignment) => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+    const busType = assignment.bus_type ? (assignment.bus_type === 'Airconditioned' ? 'A' : 'O') : 'N/A';
+    
+    // Use driver_name and conductor_name directly from assignment
+    const driverName = assignment.driver_name || 'N/A';
+    const conductorName = assignment.conductor_name || 'N/A';
     
     // Calculate display amount based on selected category
     const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
@@ -232,7 +213,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
       displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
     }
     
-    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
+    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
 
   return (
@@ -316,7 +297,7 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
                     {showSourceSelector && (
                       <RevenueSourceSelector
                         assignments={assignments}
-                        employees={allEmployees}
+                        employees={[]}
                         categories={categories}
                         selectedCategoryId={formData.category_id}
                         onSelect={assignment => {

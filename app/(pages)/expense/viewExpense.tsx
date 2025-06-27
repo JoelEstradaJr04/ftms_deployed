@@ -9,9 +9,9 @@ import type { Receipt } from '../../types/receipt';
 
 type Assignment = {
   assignment_id: string;
-  bus_plate_number: string;
+  bus_plate_number: string | null;
   bus_route: string;
-  bus_type: string;
+  bus_type: string | null;
   driver_id: string;
   conductor_id: string;
   date_assigned: string;
