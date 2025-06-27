@@ -569,6 +569,7 @@ const RevenuePage = () => {
       showCancelButton: true,
       confirmButtonText: 'Export CSV',
       cancelButtonText: 'Cancel',
+      reverseButtons: true,
       customClass: {
         popup: 'export-confirmation-dialog'
       }

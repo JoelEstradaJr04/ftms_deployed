@@ -211,8 +211,6 @@ useEffect(() => {
       text: 'Are you sure you want to release this payroll?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#FEB71F',
       confirmButtonText: 'Yes, Release',
       cancelButtonText: 'Cancel',
       reverseButtons: true,
