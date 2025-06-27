@@ -15,43 +15,39 @@ export async function POST(req: NextRequest) {
     let finalAmount = total_amount;
     let assignmentData = null;
 
+    // --- ANTI-DUPLICATE LOGIC ---
     if (assignment_id) {
+      // Check for duplicate revenue record for the same assignment and collection_date
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
-          category_id,
           collection_date: new Date(collection_date),
+          // Optionally, also check category_id if needed
+          category_id,
         },
       });
-
       if (duplicate) {
-        console.log(`Duplicate record found for assignment_id: ${assignment_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
           { error: 'Revenue record for this assignment and collection_date already exists.' },
           { status: 409 }
         );
       }
-
       assignmentData = await getAssignmentById(assignment_id);
-      
       if (!assignmentData) {
-        console.log(`Assignment not found for assignment_id: ${assignment_id}`);
         return NextResponse.json(
           { error: 'Assignment not found in Operations API' },
           { status: 404 }
         );
       }
-      
       if (assignmentData.trip_revenue == null || assignmentData.trip_revenue === undefined) {
-        console.log(`Assignment found but missing trip_revenue for assignment_id: ${assignment_id}`, assignmentData);
         return NextResponse.json(
           { error: 'Assignment found but missing trip_revenue in Operations API' },
           { status: 400 }
         );
       }
-
       finalAmount = assignmentData.trip_revenue;
     } else {
+      // For non-assignment revenues, check for duplicate by category, amount, and date
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           category_id,
@@ -59,9 +55,7 @@ export async function POST(req: NextRequest) {
           collection_date: new Date(collection_date),
         },
       });
-
       if (duplicate) {
-        console.log(`Duplicate record found for category_id: ${category_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
           { error: 'Revenue record for this category, amount and collection_date already exists.' },
           { status: 409 }
@@ -73,7 +67,6 @@ export async function POST(req: NextRequest) {
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
-        bus_trip_id: assignmentData?.bus_trip_id ?? null,
         category_id,
         source_id: null,
         total_amount: finalAmount,

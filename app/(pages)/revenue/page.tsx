@@ -868,7 +868,8 @@ const handleAddRevenue = async (newRevenue: {
             onClose={() => setShowModal(false)}
             onAddRevenue={handleAddRevenue}
             assignments={assignments}
-            currentUser  ={"ftms_user"} // Replace with your actual user ID
+            currentUser={"ftms_user"}
+            existingRevenues={data}
           />
         )}
 

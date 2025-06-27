@@ -35,11 +35,19 @@ type AddRevenueProps = {
   currentUser: string;
 };
 
-const AddRevenue: React.FC<AddRevenueProps> = ({ 
+type ExistingRevenue = {
+  assignment_id?: string;
+  category_id: string;
+  total_amount: number;
+  collection_date: string;
+};
+
+const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue[] }> = ({ 
   onClose, 
   onAddRevenue,
   assignments,
-  currentUser 
+  currentUser,
+  existingRevenues
 }) => {
   console.log('[RENDER] AddRevenue component rendering');
   const [currentTime, setCurrentTime] = useState('');
@@ -165,6 +173,18 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
     if (!isValidAmount(total_amount)) {
       await showInvalidAmountAlert();
+      return;
+    }
+
+    // --- ANTI-DUPLICATE CHECK (frontend) ---
+    let duplicate = false;
+    if (assignment_id) {
+      duplicate = existingRevenues.some(r => r.assignment_id === assignment_id && r.collection_date === collection_date && r.category_id === category_id);
+    } else {
+      duplicate = existingRevenues.some(r => !r.assignment_id && r.category_id === category_id && r.total_amount === total_amount && r.collection_date === collection_date);
+    }
+    if (duplicate) {
+      showError('Duplicate revenue record for this assignment/category and date already exists.', 'Error');
       return;
     }
 
