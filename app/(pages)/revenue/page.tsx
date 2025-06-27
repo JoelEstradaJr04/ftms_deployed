@@ -9,13 +9,12 @@ import AddRevenue from "./addRevenue";
 import Swal from 'sweetalert2';
 import EditRevenueModal from "./editRevenue";
 import ViewRevenueModal from "./viewRevenue";
-import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/operations/assignments';
+import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
-import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
+import { showSuccess, showError } from '../../utility/Alerts';
 import { formatDateTime } from "../../utility/dateFormatter";
 import { formatDisplayText } from '@/app/utils/formatting';
-import RevenuePieChart from '../../Components/revenuePieChart';
 
 interface GlobalCategory {
   category_id: string;
@@ -25,8 +24,9 @@ interface GlobalCategory {
 }
 
 interface RevenueRecord {
-  revenue_id: string;        
-  assignment_id?: string;    
+  revenue_id: string;
+  assignment_id?: string;
+  bus_trip_id?: string | null;
   category_id: string;
   source_id?: string;
   category: {
@@ -39,11 +39,11 @@ interface RevenueRecord {
     name: string;
     applicable_modules: string[];
   };
-  total_amount: number;      
-  collection_date: string;              
-  created_by: string;        
-  created_at: string;        
-  updated_at?: string;       
+  total_amount: number;
+  collection_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
   is_deleted: boolean;
 }
 
@@ -64,6 +64,29 @@ interface RevenueData {
   created_by: string;
   created_at: string;
   assignment_id?: string;
+  bus_trip_id?: string | null;
+}
+
+// Update Assignment type in this file to match backend
+interface Assignment {
+  assignment_id: string;
+  bus_trip_id: string;
+  bus_route: string;
+  is_revenue_recorded: boolean;
+  is_expense_recorded: boolean;
+  date_assigned: string;
+  trip_fuel_expense: number;
+  trip_revenue: number;
+  assignment_type: string;
+  assignment_value: number;
+  payment_method: string;
+  driver_name: string | null;
+  conductor_name: string | null;
+  bus_plate_number: string | null;
+  bus_type: string | null;
+  body_number: string | null;
+  driver_id?: string;
+  conductor_id?: string;
 }
 
 const RevenuePage = () => {
@@ -174,6 +197,7 @@ const RevenuePage = () => {
           created_by: revenue.created_by,
           created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
+          bus_trip_id: revenue.bus_trip_id,
         }));
 
         setData(transformedData);
@@ -212,9 +236,12 @@ const RevenuePage = () => {
     const searchLower = search.toLowerCase();
 
     // Lookup the related assignment
-    const assignment = item.assignment_id 
-    ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-    : null;
+    let assignment: Assignment | undefined = undefined;
+    if (item.assignment_id) {
+      const busTripId = item.bus_trip_id === null ? undefined : item.bus_trip_id;
+      assignment = allAssignments.find(a => (a.assignment_id ?? undefined) === (item.assignment_id ?? undefined) && ((a.bus_trip_id === null ? undefined : a.bus_trip_id) === busTripId)) ??
+                   allAssignments.find(a => (a.assignment_id ?? undefined) === (item.assignment_id ?? undefined));
+    }
 
     // Check if search term exists in any field
     const matchesSearch = search === '' || 
@@ -255,13 +282,12 @@ const handleAddRevenue = async (newRevenue: {
     // Check for duplicates if assignment is provided
     if (newRevenue.assignment_id) {
       const duplicate = data.find(item => {
-        const assignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
-        const itemAssignment = item.assignment_id 
-          ? allAssignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
+        // Use both assignment_id and bus_trip_id for precise matching
+        const assignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id && a.bus_trip_id);
+        const itemAssignment = item.assignment_id && item.bus_trip_id
+          ? allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id)
           : null;
-
         if (!assignment || !itemAssignment) return false;
-
         return (
           new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
           assignment.bus_plate_number === itemAssignment.bus_plate_number &&
@@ -269,13 +295,11 @@ const handleAddRevenue = async (newRevenue: {
           assignment.conductor_name === itemAssignment.conductor_name
         );
       });
-
       if (duplicate) {
         showError('Duplicate revenue record found for the same assignment.', 'Error');
         return;
       }
     }
-
     const response = await fetch('/api/revenues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -287,12 +311,11 @@ const handleAddRevenue = async (newRevenue: {
         assignment_id: newRevenue.assignment_id || null,
       })
     });
-
     if (!response.ok) throw new Error('Create failed');
-
     const result: RevenueRecord = await response.json();
-    
-    // Update revenues state
+    // Refresh assignments data to get updated flags from Operations API BEFORE updating state
+    await fetchAssignments();
+    // Update revenues state (ensure bus_trip_id is included)
     setData(prev => [{
       revenue_id: result.revenue_id,
       category: result.category,
@@ -302,11 +325,8 @@ const handleAddRevenue = async (newRevenue: {
       created_by: result.created_by,
       created_at: result.created_at,
       assignment_id: result.assignment_id,
+      bus_trip_id: result.bus_trip_id,
     }, ...prev]);
-
-    // Refresh assignments data to get updated flags from Operations API
-    await fetchAssignments();
-
     showSuccess('Revenue added successfully', 'Success');
     setShowModal(false);
   } catch (error) {
@@ -375,6 +395,7 @@ const handleAddRevenue = async (newRevenue: {
           created_by: result.created_by,
           created_at: result.created_at,
           assignment_id: result.assignment_id,
+          bus_trip_id: result.bus_trip_id,
         };
         // Add the updated record at the beginning of the array
         return [updated, ...filtered];
@@ -746,75 +767,88 @@ const handleAddRevenue = async (newRevenue: {
               </thead>
               <tbody>
                 {currentRecords.map(item => {
-                const assignment = item.assignment_id 
-                  ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-                  : null;
+                // Fix: Improved assignment matching using both assignment_id and bus_trip_id
+                let assignment: Assignment | undefined = undefined;
+                if (item.assignment_id) {
+                  // First try to match using both assignment_id and bus_trip_id for precision
+                  if (item.bus_trip_id) {
+                    assignment = allAssignments.find(a => 
+                      a.assignment_id === item.assignment_id && 
+                      a.bus_trip_id === item.bus_trip_id
+                    );
+                  }
+                  
+                  // Fallback to assignment_id only if bus_trip_id match fails
+                  if (!assignment) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+                  }
+                }
 
-                  console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
+                // Format assignment for display
+                const formatAssignmentForTable = (assignment: Assignment | undefined): string => {
+                  if (!assignment) {
+                    return item.assignment_id ? `Assignment ${item.assignment_id} not found` : 'N/A';
+                  }
+                  
+                  // Use exact field names from Operations API
+                  const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+                  const driverName = assignment.driver_name || 'N/A';
+                  const conductorName = assignment.conductor_name || 'N/A';
+                  
+                  // Calculate display amount based on category and assignment type
+                  let displayAmount = assignment.trip_revenue;
+                  if (item.category?.name === 'Percentage' && assignment.assignment_value) {
+                    displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
+                  }
+                  
+                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
+                };
 
-                  // Format assignment for display
-                  const formatAssignment = (assignment: Assignment | null | undefined) => {
-                    if (!assignment) return 'N/A';
-                    
-                    // Use exact field names from Operations API
-                    const busType = assignment.bus_type === 'Aircon' ? 'A' : 'O';
-                    const driverName = assignment.driver_name || 'N/A';
-                    const conductorName = assignment.conductor_name || 'N/A';
-                    
-                    // Calculate display amount based on category
-                    let displayAmount = assignment.trip_revenue;
-                    if (assignment.assignment_type === 'Percentage' && assignment.assignment_value) {
-                      displayAmount = assignment.trip_revenue * assignment.assignment_value;
-                    }
-                    
-                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
-                  };
-
-                  return (
-                    <tr key={item.revenue_id}>
-                      <td>{formatDateTime(item.collection_date)}</td>
-                      <td>{item.category?.name || 'N/A'}</td>
-                      <td>{formatAssignment(assignment)}</td>
-                      <td>₱{item.total_amount.toLocaleString()}</td>
-                      <td className="styles.actionButtons">
-                        <div className="actionButtonsContainer">
-                          {/* view button */}
-                          <button 
-                            className="viewBtn" 
-                            onClick={() => {
-                              setRecordToView(item);
-                              setViewModalOpen(true);
-                            }} 
-                            title="View Record"
-                          >
-                            <i className="ri-eye-line" />
-                          </button>
-                          
-                          {/* edit button */}
-                          <button 
-                            className="editBtn" 
-                            onClick={() => {
-                              setRecordToEdit(item);
-                              setEditModalOpen(true);
-                            }} 
-                            title="Edit Record"
-                          >
-                            <i className="ri-edit-2-line" />
-                          </button>
-                          
-                          {/* delete button */}
-                          <button 
-                            className="deleteBtn" 
-                            onClick={() => handleDelete(item.revenue_id)} 
-                            title="Delete Record"
-                          >
-                            <i className="ri-delete-bin-line" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                return (
+                  <tr key={item.revenue_id}>
+                    <td>{formatDateTime(item.collection_date)}</td>
+                    <td>{item.category?.name || 'N/A'}</td>
+                    <td>{formatAssignmentForTable(assignment)}</td>
+                    <td>₱{item.total_amount.toLocaleString()}</td>
+                    <td className="styles.actionButtons">
+                      <div className="actionButtonsContainer">
+                        {/* view button */}
+                        <button 
+                          className="viewBtn" 
+                          onClick={() => {
+                            setRecordToView(item);
+                            setViewModalOpen(true);
+                          }} 
+                          title="View Record"
+                        >
+                          <i className="ri-eye-line" />
+                        </button>
+                        
+                        {/* edit button */}
+                        <button 
+                          className="editBtn" 
+                          onClick={() => {
+                            setRecordToEdit(item);
+                            setEditModalOpen(true);
+                          }} 
+                          title="Edit Record"
+                        >
+                          <i className="ri-edit-2-line" />
+                        </button>
+                        
+                        {/* delete button */}
+                        <button 
+                          className="deleteBtn" 
+                          onClick={() => handleDelete(item.revenue_id)} 
+                          title="Delete Record"
+                        >
+                          <i className="ri-delete-bin-line" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               </tbody>
             </table>
             {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
@@ -863,9 +897,11 @@ const handleAddRevenue = async (newRevenue: {
               total_amount: recordToView.total_amount,
               collection_date: recordToView.collection_date,
               created_at: recordToView.created_at,
-              assignment: recordToView.assignment_id 
-                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
-                : undefined,
+              assignment: recordToView.assignment_id && (((recordToView as { bus_trip_id?: string | null }).bus_trip_id ?? undefined) !== undefined)
+                ? allAssignments.find(a => (a.assignment_id ?? undefined) === (recordToView.assignment_id ?? undefined) && (a.bus_trip_id === null ? undefined : a.bus_trip_id) === (recordToView.bus_trip_id === null ? undefined : recordToView.bus_trip_id))
+                : recordToView.assignment_id
+                  ? allAssignments.find(a => (a.assignment_id ?? undefined) === (recordToView.assignment_id ?? undefined))
+                  : undefined,
             }}
             onClose={() => {
               setViewModalOpen(false);

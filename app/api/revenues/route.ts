@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
       }
 
       assignmentData = await getAssignmentById(assignment_id);
-      console.log(`Assignment lookup result for ${assignment_id}:`, assignmentData);
       
       if (!assignmentData) {
         console.log(`Assignment not found for assignment_id: ${assignment_id}`);
@@ -74,6 +73,7 @@ export async function POST(req: NextRequest) {
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
+        bus_trip_id: assignmentData?.bus_trip_id ?? null,
         category_id,
         source_id: null,
         total_amount: finalAmount,

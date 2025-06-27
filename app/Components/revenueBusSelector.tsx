@@ -17,7 +17,7 @@ type Assignment = {
   // Legacy fields for backward compatibility
   driver_id?: string;
   conductor_id?: string;
-  is_revenue_recorded: boolean;
+  is_revenue_recorded?: boolean;
 };
 
 type Employee = {

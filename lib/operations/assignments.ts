@@ -5,6 +5,8 @@ export type Assignment = {
   assignment_id: string;
   bus_trip_id: string;
   bus_route: string;
+  is_revenue_recorded: boolean;
+  is_expense_recorded: boolean;
   date_assigned: string;
   trip_fuel_expense: number;
   trip_revenue: number;
@@ -17,8 +19,6 @@ export type Assignment = {
   bus_type: string | null;
   body_number: string | null;
   // Legacy fields for backward compatibility
-  is_expense_recorded?: boolean;
-  is_revenue_recorded?: boolean;
   driver_id?: string;
   conductor_id?: string;
 };
@@ -28,19 +28,19 @@ type RawAssignment = {
   assignment_id: string;
   bus_trip_id: string;
   bus_route: string;
+  is_revenue_recorded: boolean;
+  is_expense_recorded: boolean;
   date_assigned: string;
   trip_fuel_expense: number;
   trip_revenue: number;
   assignment_type: string;
   assignment_value: number;
-  payment_method: string;
+  payment_method: string | null;
   driver_name: string | null;
   conductor_name: string | null;
   bus_plate_number: string | null;
   bus_type: string | null;
   body_number: string | null;
-  IsRevenueRecorded?: boolean;
-  is_expense_recorded?: boolean;
 };
 
 // Operations API base URL - must be set in environment variables
@@ -97,19 +97,19 @@ export async function fetchAssignmentsFromOperationsAPI(): Promise<Assignment[]>
         assignment_id: assignment.assignment_id,
         bus_trip_id: assignment.bus_trip_id,
         bus_route: assignment.bus_route,
+        is_revenue_recorded: assignment.is_revenue_recorded ?? false,
+        is_expense_recorded: assignment.is_expense_recorded ?? false,
         date_assigned: assignment.date_assigned,
         trip_fuel_expense: Number(assignment.trip_fuel_expense) || 0,
         trip_revenue: Number(assignment.trip_revenue) || 0,
         assignment_type: assignment.assignment_type,
         assignment_value: Number(assignment.assignment_value) || 0,
-        payment_method: assignment.payment_method,
+        payment_method: assignment.payment_method ?? '',
         driver_name: assignment.driver_name,
         conductor_name: assignment.conductor_name,
         bus_plate_number: assignment.bus_plate_number,
         bus_type: normalizedBusType,
         body_number: assignment.body_number,
-        is_revenue_recorded: assignment.IsRevenueRecorded ?? false,
-        is_expense_recorded: assignment.is_expense_recorded ?? false,
         driver_id: assignment.driver_name || '',
         conductor_id: assignment.conductor_name || '',
       };

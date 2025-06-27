@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import '../../styles/addRevenue.css';
-import axios from 'axios'; // ✅ Required for PUT request
 import {
   showEmptyFieldWarning,
   showAddConfirmation,
@@ -181,13 +180,6 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
           created_by: currentUser,
         });
 
-        // Update is_revenue_recorded in Supabase if assignment is used
-        if (assignment_id) {
-          await axios.patch(`/api/assignments/${assignment_id}`, {
-            is_revenue_recorded: true
-          });
-        }
-
         await showAddSuccess();
         onClose();
       } catch (error: unknown) {
@@ -200,19 +192,23 @@ const AddRevenue: React.FC<AddRevenueProps> = ({
 
   // Format assignment for display - similar to expense module
   const formatAssignment = (assignment: Assignment) => {
-    const busType = assignment.bus_type ? (assignment.bus_type === 'Airconditioned' ? 'A' : 'O') : 'N/A';
-    
+    // Defensive: handle undefined assignment
+    if (!assignment) return '';
+    let busType = 'N/A';
+    if (assignment.bus_type) {
+      if (assignment.bus_type === 'Aircon' || assignment.bus_type === 'Airconditioned') busType = 'A';
+      else if (assignment.bus_type === 'Ordinary') busType = 'O';
+      else busType = assignment.bus_type;
+    }
     // Use driver_name and conductor_name directly from assignment
     const driverName = assignment.driver_name || 'N/A';
     const conductorName = assignment.conductor_name || 'N/A';
-    
     // Calculate display amount based on selected category
     const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
     let displayAmount = assignment.trip_revenue;
     if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
       displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
     }
-    
     return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
 

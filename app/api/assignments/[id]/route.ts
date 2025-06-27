@@ -31,18 +31,20 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const id = req.nextUrl.pathname.split('/').pop()
+  console.log('PATCH /api/assignments/[id] called with id:', id);
 
   if (!id) {
     return NextResponse.json({ error: 'Assignment ID is required' }, { status: 400 })
   }
 
-  try {
-    // Get assignment to retrieve bus_trip_id
-    const assignment = await getAssignmentById(id)
-    if (!assignment || !assignment.bus_trip_id) {
-      return NextResponse.json({ error: 'Assignment or bus_trip_id not found' }, { status: 404 })
-    }
+  const assignment = await getAssignmentById(id)
+  console.log('Assignment found:', assignment);
 
+  if (!assignment || !assignment.bus_trip_id) {
+    return NextResponse.json({ error: 'Assignment or bus_trip_id not found' }, { status: 404 })
+  }
+
+  try {
     const patchPayload = [
       {
         bus_trip_id: assignment.bus_trip_id,

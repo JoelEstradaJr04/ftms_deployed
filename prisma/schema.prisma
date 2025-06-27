@@ -39,6 +39,7 @@ model ExpenseRecord {
 model RevenueRecord {
   revenue_id      String         @id
   assignment_id   String?
+  bus_trip_id     String?
   total_amount    Decimal        @db.Decimal(20, 4)
   created_by      String
   created_at      DateTime       @default(now())
