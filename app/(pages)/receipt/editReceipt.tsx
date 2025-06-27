@@ -306,12 +306,13 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   return (
     <div className="editReceiptModalOverlay">
       <div className="editReceiptModalContent">
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
+        
         
         <div className="modalHeader">
           <h2>Edit Receipt</h2>
+          <button type="button" className="closeButton" onClick={onClose}>
+            <i className="ri-close-line"></i>
+          </button>
         </div>
 
         <div className="formGroup">
@@ -560,7 +561,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
         </div>
 
         <div className="editReceiptModalButtons">
-          <button onClick={onClose} className="cancelBtn">Cancel</button>
+          <button onClick={onClose} className="editReceipt_cancelBtn">Cancel</button>
           <button onClick={handleSave} className="saveBtn">Save</button>
         </div>
       </div>

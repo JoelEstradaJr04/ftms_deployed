@@ -497,7 +497,7 @@ const ReceiptPage = () => {
                 ))}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !tableLoading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !tableLoading && <p className="noRecords">No records found.</p>}
           </div>
         </div>
 

@@ -674,7 +674,7 @@ const filteredData = data.filter((item: ExpenseData) => {
   if (loading) {
         return (
             <div className="card">
-                <h1 className="title">Stock Management</h1>
+                <h1 className="title">Expense Management</h1>
                 <Loading />
             </div>
         );
@@ -701,13 +701,6 @@ const filteredData = data.filter((item: ExpenseData) => {
           </div>
           
           <div className="filters">
-            <div className="filter">
-                {/* <Filter
-                    sections={filterSections}
-                    onApply={handleApplyFilters}
-                /> */}
-            </div>
-
             <input
               type="date"
               className="dateFilter"

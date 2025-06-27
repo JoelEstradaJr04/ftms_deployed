@@ -725,7 +725,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
 
 
-                <div className="itemsSection">
+                <div className="add_itemsSection">
                   <h3>Items</h3>
                   <table className="itemTable">
                     <thead className='itemTable'>

@@ -33,7 +33,7 @@ export default function RootLayout({children,}: Readonly<{children: React.ReactN
           <SideBar />
 
           <div className="layout-right">
-              <TopBar />
+              <TopBar /> 
 
               <div className="content">
                   {children}

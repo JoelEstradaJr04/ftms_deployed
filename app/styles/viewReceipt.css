@@ -138,7 +138,7 @@
   justify-content: flex-end;
 }
 
-.viewReceipt__modalContent .closeBtn {
+.viewReceipt__modalContent .viewReceipt_closeBtn {
   padding: 0.5rem 1.5rem;
   background-color: #f8f9fa;
   border: 1px solid #ddd;
@@ -148,7 +148,7 @@
   font-weight: 500;
 }
 
-.viewReceipt__modalContent .closeBtn:hover {
+.viewReceipt__modalContent .viewReceipt_closeBtn:hover {
   background-color: #e9ecef;
   color: #4b4b4b;
 }

@@ -206,13 +206,19 @@
   transition: background-color 0.2s;
 }
 
-.editReceiptModalButtons .cancelBtn {
-  background-color: #f5f5f5;
-  color: #333;
+.editReceiptModalButtons .editReceipt_cancelBtn {
+  padding: 0.5rem 1.5rem;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  font-weight: 500;
 }
 
-.editReceiptModalButtons .cancelBtn:hover {
-  background-color: #e0e0e0;
+.editReceiptModalButtons .editReceipt_cancelBtn:hover {
+  background-color: #e9ecef;
+  color: #4b4b4b;
 }
 
 .editReceiptModalButtons .saveBtn {

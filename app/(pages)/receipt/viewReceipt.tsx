@@ -233,7 +233,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
         )}
 
         <div className="modalFooter">
-          <button className="closeBtn" onClick={onClose}>Close</button>
+          <button className="viewReceipt_closeBtn" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

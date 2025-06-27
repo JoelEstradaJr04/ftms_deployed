@@ -33,6 +33,13 @@ textarea.input-error {
   margin-top: 2px;
 }
 
+.noRecords {
+  text-align: center !important;
+  color: var(--secondary-text-color) !important;
+  padding: 2rem 0 !important;
+  font-size: 1.1rem !important;
+}
+
 .viewField {
   display: flex;
   gap: 0.5rem;
@@ -42,26 +49,26 @@ textarea.input-error {
 }
 
 .closeButton {
-	width: 30px;
-	height: 30px;
-	border: none;
-	cursor: pointer;
+	width: 30px !important;
+	height: 30px !important;
+	border: none !important;
+	cursor: pointer !important;
   padding: 0 0 !important;
-	border-radius: 50%;
-	position: absolute;
-	top: 12px;
-  outline:none;
-	right: 16px;
-	font-size: 20px;
-	color: var(--primary-text-color);
-	transition: all 0.3s ease-in-out;
-  justify-content: center;
-  align-items: center;
-  display: flex;
+	border-radius: 50% !important;
+	position: absolute !important;
+	top: 12px !important;
+  outline:none !important;
+	right: 16px !important;
+	font-size: 20px !important;
+	color: var(--primary-text-color) !important;
+	transition: all 0.3s ease-in-out !important;
+  justify-content: center !important;
+  align-items: center !important;
+  display: flex !important;
 }
 
 .closeButton:hover {
-	background-color: var(--table-header-color);
+	background-color: var(--table-header-color) !important;
 }
 
 :root {

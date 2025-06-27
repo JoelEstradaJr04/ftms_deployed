@@ -420,7 +420,7 @@ useEffect(() => {
               </tbody>
             </table>
             {!loading && filteredData.length === 0 && (
-              <p>No payroll records found.</p>
+              <p className="noRecords">No payroll records found.</p>
             )}
           </div>
         </div>

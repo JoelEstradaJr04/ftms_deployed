@@ -60,6 +60,7 @@
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
+  margin-top: var(--modal-header-margin-top) !important;
   margin-bottom: var(--modal-header-margin-bottom) !important;
   padding-bottom: 10px !important;
   border-bottom: 1px solid var(--border-color) !important;
@@ -234,20 +235,21 @@
 }
 
 /* Close button */
-.closeButton {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--secondary-text-color);
-  z-index: 1;
+.addRevenue_closeButton {
+  all: unset;
+  position: absolute !important;
+  top: 0.5rem !important;
+  right: 1rem !important;
+  background: none !important;
+  border: none !important;
+  font-size: 1.5rem !important;
+  cursor: pointer !important;
+  color: var(--secondary-text-color) !important;
+  z-index: 1 !important;
 }
 
-.closeButton:hover {
-  color: var(--primary-text-color);
+.addRevenue_closeButton:hover {
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Utility Rows ---------- */

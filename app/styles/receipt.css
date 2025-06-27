@@ -689,12 +689,14 @@
 
 /*------    Add Receipt - Table     ----*/
 /* Table container and scroll */
-.itemsSection {
+.itemsSection,
+.add_itemsSection {
   width: 100%;
   margin-top: 1.5rem;
 }
 
-.itemsSection table {
+.itemsSection table,
+.add_itemsSection table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
@@ -704,7 +706,9 @@
 }
 
 .itemsSection th,
-.itemsSection td {
+.itemsSection td,
+.add_itemsSection th,
+.add_itemsSection td {
   text-align: center !important;
   vertical-align: middle !important;
   font-size: 14px;
@@ -716,34 +720,42 @@
 }
 
 .itemsSection td input,
-.itemsSection td select {
+.itemsSection td select,
+.add_itemsSection td input,
+.add_itemsSection td select {
   text-align: center !important;
   font-size: 14px !important;
 }
 
-.itemsSection thead {
+.itemsSection thead,
+.add_itemsSection thead {
   background: var(--table-header-color) !important;
   text-align: center;
   align-content: center;
 }
 
-.itemsSection thead th {
+.itemsSection thead th,
+.add_itemsSection thead th {
   background-color: transparent;
   font-weight: 600;
   color: var(--primary-text-color, #222);
   border-bottom: 2px solid #eee;
 }
 
-.itemsSection tbody tr {
+.itemsSection tbody tr,
+.add_itemsSection tbody tr {
   transition: background 0.2s;
 }
 
-.itemsSection tbody tr:hover {
+.itemsSection tbody tr:hover,
+.add_itemsSection tbody tr:hover {
   background-color: #f9fafb;
 }
 
 .itemsSection td input,
-.itemsSection td select {
+.itemsSection td select,
+.add_itemsSection td input,
+.add_itemsSection td select {
   width: 100%;
   box-sizing: border-box;
   padding: 0.5rem;
@@ -753,14 +765,17 @@
   background: #fff;
 }
 
-.itemsSection .customInputWrapper {
+.itemsSection .customInputWrapper,
+.add_itemsSection .customInputWrapper {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .itemsSection .clearCustomBtn,
-.itemsSection .removeItemBtn {
+.itemsSection .removeItemBtn,
+.add_itemsSection .clearCustomBtn,
+.add_itemsSection .removeItemBtn {
   background: none;
   border: none;
   color: #e74c3c;
@@ -774,32 +789,40 @@
 }
 
 .itemsSection .clearCustomBtn:hover,
-.itemsSection .removeItemBtn:hover {
+.itemsSection .removeItemBtn:hover,
+.add_itemsSection .clearCustomBtn:hover,
+.add_itemsSection .removeItemBtn:hover {
   background: #ffeaea;
   color: #c0392b;
 }
 
-.itemsSection td {
+.itemsSection td,
+.add_itemsSection td {
   vertical-align: middle;
 }
 
 .itemsSection td:last-child,
-.itemsSection th:last-child {
+.itemsSection th:last-child,
+.add_itemsSection td:last-child,
+.add_itemsSection th:last-child {
   text-align: center;
   width: 48px;
 }
 
-.itemsSection tbody tr:last-child {
+.add_itemsSection tbody tr:last-child {
   opacity: 0.5;
 }
 
 .itemsSection .itemTable th:nth-child(2),
-.itemsSection .itemTable td:nth-child(2) {
+.itemsSection .itemTable td:nth-child(2),
+.add_itemsSection .itemTable th:nth-child(2),
+.add_itemsSection .itemTable td:nth-child(2) {
   max-width: 120px;
   width: 15ch !important; 
 }
 
-.itemsSection td:nth-child(2) select {
+.itemsSection td:nth-child(2) select,
+.add_itemsSection td:nth-child(2) select {
   max-width: 100%;
 }
 
@@ -904,10 +927,6 @@
 .view_itemsSection th:last-child {
   text-align: center;
   width: 48px;
-}
-
-.view_itemsSection tbody tr:last-child {
-  opacity: 0.5;
 }
 
 .view_itemsSection .itemTable th:nth-child(2),

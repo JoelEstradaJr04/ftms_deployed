@@ -150,13 +150,6 @@
   border-bottom: none !important;
 }
 
-.noRecords {
-  text-align: center !important;
-  color: var(--secondary-text-color) !important;
-  padding: 2rem 0 !important;
-  font-size: 1.1rem !important;
-}
-
 /* ---------- Status Badges ---------- */
 .status {
   display: inline-block !important;
