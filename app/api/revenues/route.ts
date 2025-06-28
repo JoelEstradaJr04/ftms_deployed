@@ -1,61 +1,65 @@
-// api\revenues\route.ts
-
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAssignmentById } from '@/lib/supabase/assignments'
+import { getAssignmentById } from '@/lib/operations/assignments'
 import { generateId } from '@/lib/idGenerator'
 import type { NextRequest } from 'next/server'
 import { logAudit } from '@/lib/auditLogger'
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  // Updated to remove source_id
   const { assignment_id, category_id, total_amount, collection_date, created_by } = data;
 
   try {
-    let finalAmount = total_amount;
+    const finalAmount = total_amount;
+    let assignmentData = null;
 
+    // Convert collection_date string to Date object for comparison and storage
+    const collectionDateTime = new Date(collection_date);
+    
+    // Validate that the collection_date is not in the future
+    const now = new Date();
+    if (collectionDateTime > now) {
+      return NextResponse.json(
+        { error: 'Collection date cannot be in the future' },
+        { status: 400 }
+      );
+    }
+
+    // --- ANTI-DUPLICATE LOGIC ---
     if (assignment_id) {
+      // Check for duplicate revenue record for the same assignment and collection_date (with time precision)
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           assignment_id,
+          collection_date: collectionDateTime,
           category_id,
-          collection_date: new Date(collection_date),
         },
       });
-
       if (duplicate) {
-        console.log(`Duplicate record found for assignment_id: ${assignment_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
-          { error: 'Revenue record for this assignment and collection_date already exists.' },
+          { error: 'Revenue record for this assignment and collection date/time already exists.' },
           { status: 409 }
         );
       }
-
-      const assignmentData = await getAssignmentById(assignment_id);
-      if (!assignmentData || assignmentData.trip_revenue == null) {
-        console.log(`Assignment not found or missing trip_revenue for assignment_id: ${assignment_id}`);
+      assignmentData = await getAssignmentById(assignment_id);
+      if (!assignmentData) {
         return NextResponse.json(
-          { error: 'Assignment not found or missing trip_revenue in Supabase' },
+          { error: 'Assignment not found in Operations API' },
           { status: 404 }
         );
       }
-
-      finalAmount = assignmentData.trip_revenue;
     } else {
-      // For non-assignment records, check unique constraint without source_id
+      // For non-assignment revenues, check for duplicate by category, amount, and exact datetime
       const duplicate = await prisma.revenueRecord.findFirst({
         where: {
           category_id,
           total_amount: finalAmount,
-          collection_date: new Date(collection_date),
+          collection_date: collectionDateTime,
         },
       });
-
       if (duplicate) {
-        console.log(`Duplicate record found for category_id: ${category_id} on collection_date: ${collection_date}`);
         return NextResponse.json(
-          { error: 'Revenue record for this category, amount and collection_date already exists.' },
+          { error: 'Revenue record for this category, amount and collection date/time already exists.' },
           { status: 409 }
         );
       }
@@ -65,10 +69,11 @@ export async function POST(req: NextRequest) {
       data: {
         revenue_id: await generateId('REV'),
         assignment_id: assignment_id ?? null,
+        bus_trip_id: assignmentData?.bus_trip_id ?? null,
         category_id,
-        source_id: null, // Always null since source field is removed
+        source_id: null,
         total_amount: finalAmount,
-        collection_date: new Date(collection_date),
+        collection_date: collectionDateTime,
         created_by,
         created_at: new Date(),
         updated_at: null,
@@ -85,7 +90,7 @@ export async function POST(req: NextRequest) {
       table_affected: 'RevenueRecord',
       record_id: newRevenue.revenue_id,
       performed_by: created_by,
-      details: `Created revenue record with amount ₱${finalAmount}`,
+      details: `Created revenue record with amount ₱${finalAmount} for ${collectionDateTime.toISOString()}`,
     });
 
     return NextResponse.json(newRevenue);
@@ -122,7 +127,7 @@ export async function GET(req: NextRequest) {
         break;
       case 'Month':
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         dateCondition = {
           collection_date: {
             gte: startOfMonth,
@@ -132,7 +137,7 @@ export async function GET(req: NextRequest) {
         break;
       case 'Year':
         const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         dateCondition = {
           collection_date: {
             gte: startOfYear,
@@ -142,10 +147,17 @@ export async function GET(req: NextRequest) {
         break;
     }
   } else if (dateFrom && dateTo) {
+    // Convert date strings to full datetime range
+    const fromDateTime = new Date(dateFrom);
+    fromDateTime.setHours(0, 0, 0, 0);
+    
+    const toDateTime = new Date(dateTo);
+    toDateTime.setHours(23, 59, 59, 999);
+    
     dateCondition = {
       collection_date: {
-        gte: new Date(dateFrom),
-        lte: new Date(dateTo)
+        gte: fromDateTime,
+        lte: toDateTime
       }
     };
   }

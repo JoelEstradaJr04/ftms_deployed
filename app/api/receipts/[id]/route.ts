@@ -14,6 +14,7 @@ interface ReceiptItemPayload {
   unit_price: number;
   total_price: number;
   other_unit?: string;
+  receipt_item_id?: string; // Optional for new items
 }
 
 // GET /api/receipts/[id]
@@ -27,7 +28,12 @@ export async function GET(req: NextRequest) {
         is_deleted: false,
       },
       include: {
-        items: { include: { item: true } },
+        items: { 
+          where: {
+            is_deleted: false
+          },
+          include: { item: true } 
+        },
         ocr_fields: true,
         keywords: true,
       },
@@ -62,6 +68,7 @@ export async function PATCH(req: NextRequest) {
       category_id,
       remarks,
       items,
+      deleted_items,
       updated_by
     } = body;
 
@@ -126,26 +133,110 @@ export async function PATCH(req: NextRequest) {
       });
 
     if (items && items.length > 0) {
-      await tx.receiptItem.deleteMany({ where: { receipt_id: id } });
-
-        await Promise.all(items.map(async (item: ReceiptItemPayload) => {
-          const masterItem = await tx.item.upsert({
-            where: { item_name: item.item_name },
-            create: {
-              item_id: await generateId('ITM'),
-              item_name: item.item_name,
-              unit_id: item.unit_id,
-              category_id: item.category_id,
-              created_at: new Date(),
-              is_deleted: false
+      // Soft delete items that are marked for deletion
+      if (deleted_items && deleted_items.length > 0) {
+        console.log('Backend received deleted_items:', deleted_items);
+        console.log('Backend received items:', items);
+        
+        // Filter out any temporary IDs that might have slipped through
+        const validDeletedItems = deleted_items.filter((id: string) => !id.startsWith('temp-'));
+        
+        if (validDeletedItems.length > 0) {
+          const updateResult = await tx.receiptItem.updateMany({
+            where: {
+              receipt_item_id: { in: validDeletedItems },
+              receipt_id: id
             },
-            update: {
-              unit_id: item.unit_id,
-              category_id: item.category_id,
-              updated_at: new Date()
+            data: {
+              is_deleted: true,
+              updated_at: new Date(),
+              updated_by: updated_by || 'ftms_user'
             }
           });
+          
+          console.log('Updated receipt items for soft delete:', updateResult);
 
+          // Also soft delete associated item transactions
+          const deletedReceiptItems = await tx.receiptItem.findMany({
+            where: { receipt_item_id: { in: validDeletedItems } },
+            select: { item_id: true }
+          });
+          
+          if (deletedReceiptItems.length > 0) {
+            const itemIds = deletedReceiptItems.map(item => item.item_id);
+            const transactionUpdateResult = await tx.itemTransaction.updateMany({
+              where: {
+                receipt_id: id,
+                item_id: { in: itemIds }
+              },
+              data: {
+                is_deleted: true,
+                updated_at: new Date()
+              }
+            });
+            
+            console.log('Updated item transactions for soft delete:', transactionUpdateResult);
+          }
+        } else {
+          console.log('No valid deleted_items after filtering out temporary IDs');
+        }
+      } else {
+        console.log('No deleted_items received or empty array');
+      }
+
+      // Process items (create new ones or update existing ones)
+      await Promise.all(items.map(async (item: ReceiptItemPayload) => {
+        console.log('Processing item:', item);
+        console.log('Item receipt_item_id:', item.receipt_item_id);
+        console.log('Is existing item?', item.receipt_item_id && !item.receipt_item_id.startsWith('temp-'));
+        
+        // Validate unit and category exist
+        const [unitExists, catExists] = await Promise.all([
+          tx.globalItemUnit.findUnique({ where: { id: item.unit_id } }),
+          tx.globalCategory.findUnique({ where: { category_id: item.category_id } }),
+        ]);
+        if (!unitExists || !catExists) {
+          throw new Error('Invalid unit/category ID');
+        }
+
+        // Create or update master item
+        const masterItem = await tx.item.upsert({
+          where: { item_name: item.item_name },
+          create: {
+            item_id: await generateId('ITM'),
+            item_name: item.item_name,
+            unit_id: item.unit_id,
+            category_id: item.category_id,
+            created_at: new Date(),
+            is_deleted: false
+          },
+          update: {
+            unit_id: item.unit_id,
+            category_id: item.category_id,
+            updated_at: new Date(),
+            is_deleted: false
+          }
+        });
+
+        // Check if this is an existing item (has receipt_item_id) or a new item
+        if (item.receipt_item_id && !item.receipt_item_id.startsWith('temp-')) {
+          console.log('Updating existing item with receipt_item_id:', item.receipt_item_id);
+          // Update existing item
+          await tx.receiptItem.update({
+            where: { receipt_item_id: item.receipt_item_id },
+            data: {
+              item_id: masterItem.item_id,
+              quantity: new Prisma.Decimal(item.quantity),
+              unit_price: new Prisma.Decimal(item.unit_price),
+              total_price: new Prisma.Decimal(item.total_price),
+              updated_at: new Date(),
+              updated_by: updated_by || 'ftms_user',
+              is_deleted: false
+            }
+          });
+        } else {
+          console.log('Creating new item');
+          // Create new receipt item
           await tx.receiptItem.create({
             data: {
               receipt_item_id: await generateId('RCI'),
@@ -160,55 +251,58 @@ export async function PATCH(req: NextRequest) {
             }
           });
 
+          // Create new item transaction for new items only
           await tx.itemTransaction.create({
             data: {
               transaction_id: await generateId('ITX'),
               item_id: masterItem.item_id,
               receipt_id: id,
-              quantity: new Prisma.Decimal(item.quantity.toString()),
-              unit_price: new Prisma.Decimal(item.unit_price.toString()),
-              transaction_date: updatedTransactionDate, // Use the preserved date-time
+              quantity: new Prisma.Decimal(item.quantity),
+              unit_price: new Prisma.Decimal(item.unit_price),
+              transaction_date: updatedTransactionDate,
               created_by: updated_by || 'ftms_user',
               created_at: new Date(),
+              is_deleted: false
             }
           });
-        }));
-      }
-
-      const newItems = await tx.receiptItem.findMany({
-        where: { receipt_id: id },
-        include: { item: true }
-      });
-
-      const auditDetails = {
-        previous_values: {
-          ...existingReceipt,
-          items: existingReceipt.items.map(i => ({...i, ...i.item}))
-        },
-        new_values: {
-          ...updatedReceipt,
-          items: newItems.map(i => ({...i, ...i.item}))
         }
-      }
+      }));
+    }
 
-      await tx.auditLog.create({
-        data: {
-          log_id: await generateId('LOG'),
-          action: 'UPDATE',
-          table_affected: 'Receipt',
-          record_id: id,
-          performed_by: updated_by || 'ftms_user',
-          ip_address: clientIp,
-          details: JSON.parse(JSON.stringify(auditDetails, (key, value) =>
-            typeof value === 'bigint' ? value.toString() :
-            value instanceof Prisma.Decimal ? value.toNumber() :
-            value
-          )),
-        },
-      });
-
-      return updatedReceipt;
+    const newItems = await tx.receiptItem.findMany({
+      where: { receipt_id: id },
+      include: { item: true }
     });
+
+    const auditDetails = {
+      previous_values: {
+        ...existingReceipt,
+        items: existingReceipt.items.map(i => ({...i, ...i.item}))
+      },
+      new_values: {
+        ...updatedReceipt,
+        items: newItems.map(i => ({...i, ...i.item}))
+      }
+    }
+
+    await tx.auditLog.create({
+      data: {
+        log_id: await generateId('LOG'),
+        action: 'UPDATE',
+        table_affected: 'Receipt',
+        record_id: id,
+        performed_by: updated_by || 'ftms_user',
+        ip_address: clientIp,
+        details: JSON.parse(JSON.stringify(auditDetails, (key, value) =>
+          typeof value === 'bigint' ? value.toString() :
+          value instanceof Prisma.Decimal ? value.toNumber() :
+          value
+        )),
+      },
+    });
+
+    return updatedReceipt;
+  });
 
     return NextResponse.json(result);
   } catch (error) {

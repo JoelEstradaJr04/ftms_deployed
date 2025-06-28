@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { logAudit } from '@/lib/auditLogger';
+import { fetchEmployeesForReimbursement } from '@/lib/supabase/employees';
 
 export async function GET(
   request: NextRequest,
@@ -88,41 +89,32 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const data = await request.json();
-    const { payment_method, reimbursable_amount, employee_id } = data;
+    const body = await request.json();
+    const { payment_method, reimbursable_amount, employee_id } = body;
 
-    // Get the original record for comparison
+    // Validate the expense record exists
     const originalRecord = await prisma.expenseRecord.findUnique({
       where: { expense_id: id },
-      include: {
-        receipt: {
-          include: {
-            items: {
-              include: {
-                item: true
-              }
-            }
-          }
-        },
-        reimbursements: true,
-      }
+      include: { reimbursements: true }
     });
 
     if (!originalRecord) {
-      return NextResponse.json(
-        { error: 'Record not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Expense record not found' }, { status: 404 });
     }
 
-    // Fetch required global IDs
-    const cashMethod = await prisma.globalPaymentMethod.findFirst({ where: { name: 'CASH' } });
-    const reimbMethod = await prisma.globalPaymentMethod.findFirst({ where: { name: 'REIMBURSEMENT' } });
-    const pendingStatus = await prisma.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } });
+    // Get payment methods
+    const [cashMethod, reimbMethod, pendingStatus] = await Promise.all([
+      prisma.globalPaymentMethod.findFirst({ where: { name: 'CASH' } }),
+      prisma.globalPaymentMethod.findFirst({ where: { name: 'REIMBURSEMENT' } }),
+      prisma.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } })
+    ]);
 
     if (!cashMethod || !reimbMethod || !pendingStatus) {
-      return NextResponse.json({ error: 'Required global values not found' }, { status: 500 });
+      return NextResponse.json({ error: 'Required payment methods or status not found' }, { status: 500 });
     }
+
+    // Fetch all employees from HR API for validation
+    const allEmployees = await fetchEmployeesForReimbursement();
 
     // Operations-sourced: assignment_id present
     if (originalRecord.assignment_id) {
@@ -130,8 +122,8 @@ export async function PUT(
         if (!reimbursable_amount || !employee_id) {
           return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
         }
-        // Fetch employee_name
-        const employee = await prisma.employeeCache.findUnique({ where: { employee_id } });
+        // Find employee from HR API data
+        const employee = allEmployees.find(emp => emp.employee_id === employee_id);
         if (!employee) {
           return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
         }
@@ -227,8 +219,8 @@ export async function PUT(
         if (!reimbursable_amount || !employee_id) {
           return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
         }
-        // Fetch employee_name
-        const employee = await prisma.employeeCache.findUnique({ where: { employee_id } });
+        // Find employee from HR API data
+        const employee = allEmployees.find(emp => emp.employee_id === employee_id);
         if (!employee) {
           return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
         }
@@ -317,14 +309,15 @@ export async function PUT(
         return NextResponse.json(updatedExpense);
       }
     }
-    // ...existing logic for other sources...
-    return NextResponse.json(originalRecord);
-  } catch (error) {
-    console.error('Update failed:', error);
+    
+    // If no valid update was performed
     return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
+      { error: 'No valid update data provided' },
+      { status: 400 }
     );
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    return NextResponse.json({ error: 'Failed to update expense' }, { status: 500 });
   }
 }
 
@@ -359,16 +352,34 @@ export async function DELETE(
           body: JSON.stringify({ is_expense_recorded: false })
         });
 
-        // Update AssignmentCache
-        await prisma.assignmentCache.update({
+        // Update AssignmentCache - use upsert to handle cases where record might not exist
+        await prisma.assignmentCache.upsert({
           where: { assignment_id: expenseToDelete.assignment_id },
-          data: { 
+          update: { 
             is_expense_recorded: false,
+            last_updated: new Date()
+          },
+          create: {
+            assignment_id: expenseToDelete.assignment_id,
+            bus_route: 'Unknown', // Default values for required fields
+            bus_type: 'Unknown',
+            date_assigned: new Date(),
+            trip_fuel_expense: 0,
+            trip_revenue: 0,
+            assignment_type: 'Unknown',
+            assignment_value: 0,
+            bus_plate_number: 'Unknown',
+            payment_method: 'Unknown',
+            conductor_id: 'Unknown',
+            driver_id: 'Unknown',
+            is_expense_recorded: false,
+            is_revenue_recorded: false,
             last_updated: new Date()
           }
         });
       } catch (error) {
         console.error('Failed to update assignment status:', error);
+        // Continue with deletion even if assignment status update fails
       }
     }
 

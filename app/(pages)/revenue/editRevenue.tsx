@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import "../../styles/editRevenue.css";
-import { getAssignmentById } from '@/lib/supabase/assignments';
+import { getAssignmentById } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { validateField, ValidationRule, isValidAmount } from "../../utility/validation";
 
@@ -13,20 +13,48 @@ type EditProps = {
     category: string;
     amount: number;
     assignment_id?: string;
+    category_id: string;
+    source?: string;
   };
   onClose: () => void;
   onSave: (updatedRecord: {
     revenue_id: string;
     collection_date: string;
     total_amount: number;
+    category_id: string;
+    source?: string;
   }) => void;
 };
+
+// Define a minimal Assignment type
+interface AssignmentDisplay {
+  assignment_id: string;
+  bus_type?: string;
+  date_assigned?: string;
+  trip_revenue?: number;
+  assignment_value?: number;
+  bus_plate_number?: string;
+  bus_route?: string;
+  driver_name?: string;
+  conductor_name?: string;
+}
 
 const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [collection_date, setDate] = useState(record.collection_date);
-  const today = new Date().toISOString().split('T')[0];
+  
+  // Convert collection_date to datetime-local format for input
+  const formatDateTimeLocal = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const [collection_date, setDate] = useState(formatDateTimeLocal(record.collection_date));
   const [amount, setAmount] = useState(record.amount);
   const [originalTripRevenue, setOriginalTripRevenue] = useState<number | null>(null);
   const [deviationPercentage, setDeviationPercentage] = useState<number>(0);
@@ -36,24 +64,89 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     collection_date: []
   });
 
+  // Add state for categories and selectedCategoryId
+  const [categories, setCategories] = useState<{category_id: string; name: string;}[]>([]);
+  const selectedCategoryId = record.category_id;
+
+  // Add state for assignment details
+  const [assignment, setAssignment] = useState<AssignmentDisplay | null>(null);
+
+  // 1. Store original initial amount and date for deviation calculation
+  const [originalAutoFilledAmount, setOriginalAutoFilledAmount] = useState<number | null>(null);
+  const [originalAutoFilledDate, setOriginalAutoFilledDate] = useState<string>('');
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/globals/categories?module=revenue');
+        if (!response.ok) throw new Error('Failed to fetch categories');
+        const categoriesData = await response.json();
+        setCategories(categoriesData);
+      } catch {
+        // handle error
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // 2. On mount, fetch assignment and set original initial values
+  useEffect(() => {
+    const fetchAssignment = async () => {
+      if (record.assignment_id) {
+        try {
+          const res = await fetch(`/api/assignments/${record.assignment_id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setAssignment(data);
+            
+            // Calculate the correct default amount based on category type
+            let calculatedAmount = data.trip_revenue || 0;
+            const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+            if (selectedCategory?.name === 'Percentage' && data.assignment_value) {
+              calculatedAmount = (data.trip_revenue || 0) * (data.assignment_value);
+            }
+            setOriginalAutoFilledAmount(calculatedAmount);
+            
+            // Set original date to assignment date with current time (like AddRevenue)
+            if (data.date_assigned) {
+              const assignmentDate = new Date(data.date_assigned);
+              const now = new Date();
+              assignmentDate.setHours(now.getHours(), now.getMinutes());
+              const year = assignmentDate.getFullYear();
+              const month = String(assignmentDate.getMonth() + 1).padStart(2, '0');
+              const day = String(assignmentDate.getDate()).padStart(2, '0');
+              const hours = String(assignmentDate.getHours()).padStart(2, '0');
+              const minutes = String(assignmentDate.getMinutes()).padStart(2, '0');
+              setOriginalAutoFilledDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+            }
+          } else {
+            setAssignment(null);
+          }
+        } catch {
+          setAssignment(null);
+        }
+      } else {
+        setAssignment(null);
+      }
+    };
+    fetchAssignment();
+  }, [record.assignment_id, selectedCategoryId, categories]);
+
   // Fix: Update validation rules to match ValidationRule type signature and schema
   const validationRules: Record<string, ValidationRule> = {
     amount: { 
       required: true, 
       min: 0.01, 
       label: "Amount",
-      // Fix: Change parameter type from 'number' to 'unknown' to match ValidationRule
-      // Also align with schema.prisma where total_amount is Decimal @db.Decimal(20, 4)
       custom: (value: unknown) => {
         const numValue = Number(value);
-        // Check for NaN and ensure it's a valid positive number
         if (isNaN(numValue)) {
           return "Amount must be a valid number";
         }
         if (!isValidAmount(numValue)) {
           return "Amount must be greater than 0";
         }
-        // Check for schema constraints - max 20 digits with 4 decimal places
         if (numValue > 9999999999999999.9999) {
           return "Amount exceeds maximum allowed value";
         }
@@ -62,15 +155,13 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     },
     collection_date: { 
       required: true, 
-      label: "Collection Date",
-      // Add date validation to ensure it's not in the future
+      label: "Collection Date & Time",
       custom: (value: unknown) => {
         if (typeof value === 'string' && value) {
-          const selectedDate = new Date(value);
-          const today = new Date();
-          today.setHours(23, 59, 59, 999); // Set to end of today
-          if (selectedDate > today) {
-            return "Collection date cannot be in the future";
+          const selectedDateTime = new Date(value);
+          const now = new Date();
+          if (selectedDateTime > now) {
+            return "Collection date and time cannot be in the future";
           }
         }
         return null;
@@ -101,8 +192,8 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
             setDeviationPercentage(deviation);
             setShowDeviationWarning(deviation > 10);
           }
-        } catch (error) {
-          console.error('Error fetching assignment data:', error);
+        } catch {
+          // handle error
         }
       }
     };
@@ -139,7 +230,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
-    // Validate the date using the validation utility
     setErrors(prev => ({
       ...prev,
       collection_date: validateField(newDate, validationRules.collection_date)
@@ -190,10 +280,86 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
     if (result.isConfirmed) {
       onSave({
         revenue_id: record.revenue_id,
-        collection_date,
-        total_amount: amount, // This aligns with schema.prisma RevenueRecord.total_amount
+        collection_date, // This will be in datetime-local format
+        total_amount: amount,
+        category_id: selectedCategoryId,
+        source: record.source,
       });
     }
+  };
+
+  // Add a formatAssignment function (copy from AddRevenue or similar)
+  const formatAssignment = (assignment: AssignmentDisplay | null) => {
+    if (!assignment) return 'N/A';
+    let busType = 'N/A';
+    if (assignment.bus_type) {
+      if (assignment.bus_type === 'Aircon' || assignment.bus_type === 'Airconditioned') busType = 'A';
+      else if (assignment.bus_type === 'Ordinary') busType = 'O';
+      else busType = assignment.bus_type;
+    }
+    const driverName = assignment.driver_name || 'N/A';
+    const conductorName = assignment.conductor_name || 'N/A';
+    
+    // Calculate display amount based on category type (matching page.tsx logic)
+    let displayAmount = assignment.trip_revenue || 0;
+    const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
+      displayAmount = (assignment.trip_revenue || 0) * (assignment.assignment_value);
+    }
+    
+    return `${assignment.date_assigned ? assignment.date_assigned.split('T')[0] : 'N/A'} | ₱ ${displayAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 'N/A'} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
+  };
+
+  // 3. Amount deviation calculation (same as AddRevenue)
+  const getAmountDeviation = () => {
+    if (originalAutoFilledAmount === null || originalAutoFilledAmount === 0) return null;
+    if (Number(amount) === originalAutoFilledAmount) return null;
+    const difference = Number(amount) - originalAutoFilledAmount;
+    const percentageChange = Math.abs((difference / originalAutoFilledAmount) * 100);
+    const isIncrease = difference > 0;
+    return {
+      difference: Math.abs(difference),
+      percentage: percentageChange,
+      isIncrease,
+      formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
+      formattedPercentage: `${percentageChange.toFixed(1)}%`
+    };
+  };
+
+  // 4. Date deviation calculation (same as AddRevenue)
+  const getDateDeviation = () => {
+    if (!originalAutoFilledDate || !collection_date) return null;
+    const originalDate = new Date(originalAutoFilledDate);
+    const currentDate = new Date(collection_date);
+    if (originalDate.getTime() === currentDate.getTime()) return null;
+    const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
+    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+    const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+    let deviationText = '';
+    if (daysDifference > 0) {
+      deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
+      if (hoursDifference > 0) {
+        deviationText += `, ${hoursDifference}h`;
+      }
+    } else if (hoursDifference > 0) {
+      deviationText = `${hoursDifference}h`;
+      if (minutesDifference > 0) {
+        deviationText += ` ${minutesDifference}m`;
+      }
+    } else if (minutesDifference > 0) {
+      deviationText = `${minutesDifference}m`;
+    } else {
+      deviationText = 'few seconds';
+    }
+    const isLater = currentDate.getTime() > originalDate.getTime();
+    return {
+      deviationText,
+      isLater,
+      daysDifference,
+      hoursDifference,
+      minutesDifference
+    };
   };
 
   return (
@@ -225,7 +391,19 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                       type="text"
                       id="category"
                       name="category"
-                      value={record.category}
+                      value={categories.find(cat => cat.category_id === selectedCategoryId)?.name || record.category || ''}
+                      readOnly
+                      className="formInput"
+                    />
+                  </div>
+                  {/* ASSIGNMENT (read-only) */}
+                  <div className="formField">
+                    <label htmlFor="assignment_id">Assignment</label>
+                    <input
+                      type="text"
+                      id="assignment_id"
+                      name="assignment_id"
+                      value={formatAssignment(assignment)}
                       readOnly
                       className="formInput"
                     />
@@ -233,27 +411,36 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                 </div>
 
                 <div className="formRow">
-                  {/* COLLECTION DATE */}
+                  {/* COLLECTION DATE & TIME */}
                   <div className="formField">
-                    <label htmlFor="collection_date">Collection Date <span className='requiredTags'> *</span></label>
+                    <label htmlFor="collection_date">Collection Date & Time <span className='requiredTags'> *</span></label>
                     <input
-                      type="date"
+                      type="datetime-local"
                       id="collection_date"
                       name="collection_date"
                       value={collection_date}
                       onChange={(e) => handleDateChange(e.target.value)}
                       required
                       className={`formInput${errors.collection_date?.length ? ' input-error' : ''}`}
-                      max={today}
+                      max={new Date().toISOString().slice(0, 16)} // Current datetime limit
                     />
                     {errors.collection_date?.map((msg, i) => (
                       <div key={i} className="error-message">{msg}</div>
                     ))}
+                    {(() => {
+                      const dateDeviation = getDateDeviation();
+                      return dateDeviation ? (
+                        <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                          <i className="ri-time-line"></i>
+                          {dateDeviation.deviationText} {dateDeviation.isLater ? 'after' : 'before'} initial date
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
                   {/* AMOUNT */}
                   <div className="formField">
-                    <label htmlFor="amount">Amount<span className='requiredTags'> *</span></label>
+                    <label htmlFor="amount">Remitted Amount<span className='requiredTags'> *</span></label>
                     <input
                       type="number"
                       id="amount"
@@ -268,23 +455,26 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
                     {errors.amount?.map((msg, i) => (
                       <div key={i} className="error-message">{msg}</div>
                     ))}
+                    {(() => {
+                      const amountDeviation = getAmountDeviation();
+                      return amountDeviation ? (
+                        <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
+                          <i className="ri-error-warning-line"></i>
+                          {amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedDifference}
+                          ({amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedPercentage})
+                          from initial amount
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
 
-                {/* Original Trip Revenue Section */}
-                {originalTripRevenue !== null && (
-                  <div className="originalRevenueSection">
-                    <div className="originalRevenueBox">
-                      <span className="originalRevenueLabel">Original Trip Revenue:</span>
-                      <span className="originalRevenueAmount">₱{originalTripRevenue.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 4
-                      })}</span>
-                      {showDeviationWarning && (
-                        <div className="deviationWarning">
-                          Deviation: {deviationPercentage.toFixed(2)}%
-                        </div>
-                      )}
+                {/* Source */}
+                {record.source && (
+                  <div className="sourceSection">
+                    <div className="sourceBox">
+                      <span className="sourceLabel">Source:</span>
+                      <span className="sourceValue">{record.source}</span>
                     </div>
                   </div>
                 )}

@@ -6,7 +6,7 @@ import LineChart from '../../Components/expenseRevenueLineChart';
 import ExpensesPieChart from '../../Components/expensesPieChart';
 import RevenuePieChart from '../../Components/revenuePieChart';
 import Pagination from '../../Components/pagination';
-import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
+import { getUnrecordedExpenseAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showError } from '../../utility/Alerts';
@@ -629,21 +629,21 @@ const ReportPage = () => {
                     </thead>
                     <tbody>
                       {currentRecords.map(item => {
-                        let source: string;
+                        let source: string = '';
+                        
                         if (item.assignment_id) {
-                          const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-                          source = assignment ? formatAssignment(assignment) : `Assignment ${item.assignment_id} not found`;
-                        } else if (item.receipt) {
-                          source = formatReceipt(item.receipt);
+                          source = 'Assignment';
+                        } else if (item.receipt_id) {
+                          source = 'Receipt';
                         } else {
-                          source = item.other_source || 'N/A';
+                          source = 'Manual';
                         }
-
+                        
                         return (
                           <tr key={item.expense_id}>
                             <td>{formatDate(item.expense_date)}</td>
                             <td>{source}</td>
-                            <td>{item.category === 'Other' ? item.other_category || 'Other' : item.category.replace('_', ' ')}</td>
+                            <td>{item.category.replace('_', ' ')}</td>
                             <td>₱{item.total_amount.toLocaleString()}</td>
                           </tr>
                         );

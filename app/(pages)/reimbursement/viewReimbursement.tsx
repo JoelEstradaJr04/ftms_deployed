@@ -2,68 +2,6 @@
 import React, { useState } from "react";
 import ViewExpenseModal from '../expense/viewExpense';
 import '../../styles/viewReimbursement.css';
-// Import the Receipt type from the shared types
-import type { Receipt } from '../../types/receipt';
-
-type Assignment = {
-  assignment_id: string;
-  bus_route: string;
-  date_assigned: string;
-  bus_plate_number: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  trip_fuel_expense: number;
-  // Add other assignment properties as needed
-};
-
-// Create a compatible Reimbursement type that matches what ViewExpenseModal expects
-type ReimbursementForExpense = {
-  reimbursement_id: string;
-  expense_id: string;
-  employee_id: string;
-  employee_name: string;
-  job_title?: string;
-  amount: number;
-  status: {
-    id: string;
-    name: string;
-  };
-  requested_date: string;
-  approved_by?: string;
-  approved_date?: string;
-  rejection_reason?: string;
-  paid_by?: string;
-  paid_date?: string;
-  payment_reference?: string;
-  payment_method?: string;
-  created_by: string;
-  created_at: string;
-  updated_by?: string;
-  updated_at?: string;
-  is_deleted: boolean;
-  cancelled_by?: string;
-  cancelled_date?: string;
-};
-
-type ExpenseRecord = {
-  expense_id: string;
-  category: {
-    category_id: string;
-    name: string;
-  };
-  other_category?: string;
-  total_amount: number;
-  expense_date: string;
-  assignment?: Assignment;
-  receipt?: Receipt; // Now uses the imported Receipt type
-  other_source?: string;
-  payment_method: {
-    id: string;
-    name: string;
-  };
-  reimbursements?: ReimbursementForExpense[]; // Use the compatible type
-};
 
 type Reimbursement = {
   reimbursement_id: string;
@@ -71,24 +9,40 @@ type Reimbursement = {
   employee_id: string;
   employee_name: string;
   job_title?: string;
-  // Use the actual schema field name
-  requested_date: string;
-  // Keep submitted_date for backward compatibility if needed
-  submitted_date?: string;
-  approved_by: string | null;
-  approved_date: string | null;
-  // Match the mapped status from API
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'CANCELLED';
-  // Amount should match schema (not nullable in DB)
   amount: number;
-  rejection_reason: string | null;
-  paid_date: string | null;
-  payment_reference: string | null;
-  notes: string;
-  remarks?: string | null;
+  status: string;
+  requested_date: string;
+  submitted_date?: string;
+  approved_by?: string | null;
+  approved_date?: string | null;
+  rejection_reason?: string | null;
+  paid_by?: string | null;
+  paid_date?: string | null;
+  payment_reference?: string | null;
+  payment_method?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_by?: string | null;
+  updated_at?: string | null;
+  is_deleted: boolean;
   cancelled_by?: string | null;
   cancelled_date?: string | null;
-  expense?: ExpenseRecord;
+  remarks?: string | null;
+  expense?: {
+    expense_id: string;
+    category: {
+      category_id: string;
+      name: string;
+    };
+    total_amount: number;
+    expense_date: string;
+    assignment_id?: string;
+    receipt_id?: string;
+    payment_method: {
+      id: string;
+      name: string;
+    };
+  };
 };
 
 interface ViewReimbursementProps {

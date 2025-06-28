@@ -3,20 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import '../../styles/viewRevenue.css';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDateTime } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
-
-type Assignment = {
-  assignment_id: string;
-  bus_plate_number: string;
-  bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  date_assigned: string;
-  trip_revenue: number;
-  assignment_type: string;
-};
+import type { Assignment } from '@/lib/operations/assignments';
 
 type GlobalCategory = {
   category_id: string;
@@ -44,7 +33,7 @@ type ViewRevenueProps = {
 };
 
 const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [, setAllEmployees] = useState<Employee[]>([]);
   const [categoryName, setCategoryName] = useState<string>('Loading...');
 
   // Fetch employees and category data on component mount
@@ -92,9 +81,6 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
   const renderAssignmentDetails = () => {
     if (!record.assignment) return null;
 
-    const driver = allEmployees.find(e => e.employee_id === record.assignment!.driver_id);
-    const conductor = allEmployees.find(e => e.employee_id === record.assignment!.conductor_id);
-
     return (
       <div className="assignmentDetails">
         <h3>Assignment Details</h3>
@@ -104,7 +90,11 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
         <div className="detailRow">
           <span className="label">Bus Number:</span>
-          <span className="value">{record.assignment.bus_plate_number}</span>
+          <span className="value">{record.assignment.bus_plate_number || 'N/A'}</span>
+        </div>
+        <div className="detailRow">
+          <span className="label">Body Number:</span>
+          <span className="value">{record.assignment.body_number || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Route:</span>
@@ -112,27 +102,37 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
         </div>
         <div className="detailRow">
           <span className="label">Bus Type:</span>
-          <span className="value">{record.assignment.bus_type}</span>
+          <span className="value">{record.assignment.bus_type || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Driver:</span>
-          <span className="value">{driver?.name || record.assignment.driver_id || 'N/A'}</span>
+          <span className="value">{record.assignment.driver_name || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Conductor:</span>
-          <span className="value">{conductor?.name || record.assignment.conductor_id || 'N/A'}</span>
+          <span className="value">{record.assignment.conductor_name || 'N/A'}</span>
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
-          <span className="value">{formatDate(record.assignment.date_assigned)}</span>
+          <span className="value">{formatDateTime(record.assignment.date_assigned)}</span>
         </div>
         <div className="detailRow">
           <span className="label">Trip Revenue:</span>
-          <span className="value">₱{record.assignment.trip_revenue.toLocaleString()}</span>
+          <span className="value">₱{record.assignment.trip_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div className="detailRow">
+          <span className="label">Assignment Value:</span>
+          <span className="value">
+            {record.assignment.assignment_type === 'Percentage' 
+              ? `${(record.assignment.assignment_value * 100).toFixed(2)}%`
+              : `₱${record.assignment.assignment_value.toLocaleString()}`
+            }
+          </span>
         </div>
       </div>
     );
   };
+
 
   return (
     <div className="modalOverlay">
@@ -148,16 +148,17 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
             <span className="value">{categoryName}</span>
           </div>
           <div className="detailRow">
-            <span className="label">Amount:</span>
-            <span className="value">₱{Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="label">Remitted Amount:</span>
+            <span className="value">₱{(() => {
+              if (categoryName === 'Percentage' && record.assignment?.assignment_value) {
+                return (record.total_amount * record.assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              }
+              return Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            })()}</span>
           </div>
           <div className="detailRow">
             <span className="label">Collection Date:</span>
-            <span className="value">{formatDate(record.collection_date)}</span>
-          </div>
-          <div className="detailRow">
-            <span className="label">Record Date:</span>
-            <span className="value">{formatDate(record.created_at)}</span>
+            <span className="value">{formatDateTime(record.collection_date)}</span>
           </div>
         </div>
 

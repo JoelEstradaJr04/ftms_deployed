@@ -8,7 +8,7 @@ import AddExpense from "./addExpense";
 import Swal from 'sweetalert2';
 import EditExpenseModal from "./editExpense";
 import ViewExpenseModal from "./viewExpense";
-import { getAllAssignmentsWithRecorded } from '@/lib/supabase/assignments';
+import { getAllAssignmentsWithRecorded } from '@/lib/operations/assignments';
 import { formatDateTime, formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
@@ -16,6 +16,7 @@ import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
 // Import shared types
 import { Receipt } from '@/app/types/receipt';
+import type { Assignment } from '@/lib/operations/assignments';
 
 
 // Add interface for new expense creation
@@ -39,14 +40,13 @@ interface NewExpense {
   employee_id?: string;
   driver_reimbursement?: number;
   conductor_reimbursement?: number;
-  other_source?: string;
-  other_category?: string;
 }
 
 // Define interface based on your Prisma ExpenseRecord schema
 interface ExpenseRecord {
-  expense_id: string;        
-  assignment_id?: string;    
+  expense_id: string;
+  assignment_id?: string;
+  bus_trip_id?: string;
   receipt_id?: string;
   category_id: string;
   source_id?: string;
@@ -63,11 +63,11 @@ interface ExpenseRecord {
     id: string;
     name: string;
   };
-  total_amount: number;      
-  expense_date: string;              
-  created_by: string;        
-  created_at: string;        
-  updated_at?: string;       
+  total_amount: number;
+  expense_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
   is_deleted: boolean;
   receipt?: Receipt;
   reimbursements?: Reimbursement[];
@@ -108,27 +108,6 @@ type Reimbursement = {
 // UI data type that matches your schema exactly
 type ExpenseData = ExpenseRecord;
 
-// Update Assignment type in this file
-interface Assignment {
-  assignment_id: string;
-  bus_plate_number: string;
-  bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  is_expense_recorded: boolean;
-  payment_method: string;
-}
-
-// Add Employee type for local use
-interface Employee {
-  employee_id: string;
-  name: string;
-  job_title: string;
-}
-
 const ExpensePage = () => {
   const [data, setData] = useState<ExpenseData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +127,6 @@ const ExpensePage = () => {
   const [receiptToView, setReceiptToView] = useState<Receipt | null>(null);
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
   
 
@@ -170,10 +148,26 @@ const ExpensePage = () => {
 
   // Format assignment for display
   const formatAssignment = (assignment: Assignment): string => {
-    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-    const driverEmp = allEmployees.find(e => e.employee_id === assignment.driver_id) as Employee | undefined;
-    const conductorEmp = allEmployees.find(e => e.employee_id === assignment.conductor_id) as Employee | undefined;
-    return `${busType} | ${assignment.bus_plate_number} - ${assignment.bus_route} | ${driverEmp?.name} & ${conductorEmp?.name}`;
+    // Helper to format bus type correctly
+    const formatBusType = (busType: string | null): string => {
+      if (!busType) return 'N/A';
+      
+      // Normalize bus type values to display format
+      const normalizedType = busType.toLowerCase();
+      if (normalizedType === 'aircon' || normalizedType === 'airconditioned') {
+        return 'A';
+      } else if (normalizedType === 'ordinary' || normalizedType === 'non-aircon') {
+        return 'O';
+      } else {
+        // For any other values, return the first letter capitalized
+        return busType.charAt(0).toUpperCase();
+      }
+    };
+
+    const busType = formatBusType(assignment.bus_type);
+    const driverName = assignment.driver_name || 'N/A';
+    const conductorName = assignment.conductor_name || 'N/A';
+    return `${busType} | ${assignment.bus_plate_number || 'N/A'} - ${assignment.bus_route} | ${driverName} & ${conductorName}`;
   };
 
   // Format receipt for display
@@ -207,27 +201,13 @@ const ExpensePage = () => {
     }
   };
 
-  // Fetch employees data
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch('/api/employees');
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      const employeesData = await response.json();
-      setAllEmployees(employeesData);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      showError('Failed to load employees', 'Error');
-    }
-  };
-
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
         fetchExpenses(), 
-        fetchAssignments(), 
-        fetchEmployees(),
+        fetchAssignments(),
         fetchCategories() // Add this
       ]);
       setLoading(false);
@@ -279,6 +259,18 @@ const filteredData = data.filter((item: ExpenseData) => {
   const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
                     (!dateTo || item.expense_date <= dateTo);
   return matchesSearch && matchesCategory && matchesDate;
+}).sort((a, b) => {
+  // Sort by latest action (updated_at if available, otherwise created_at)
+  // This ensures that the most recently added or edited records appear at the top
+  const aLatestAction = a.updated_at || a.created_at;
+  const bLatestAction = b.updated_at || b.created_at;
+  
+  // Convert to timestamps for comparison
+  const aTimestamp = new Date(aLatestAction).getTime();
+  const bTimestamp = new Date(bLatestAction).getTime();
+  
+  // Sort in descending order (latest first)
+  return bTimestamp - aTimestamp;
 });
 
   const indexOfLastRecord = currentPage * pageSize;
@@ -302,10 +294,11 @@ const filteredData = data.filter((item: ExpenseData) => {
 
       const result: ExpenseRecord = await response.json();
       
-      // Update expenses state and trigger a refresh
+      // Update expenses state with proper timestamps
       setData(prev => [{
         ...result,
         created_at: result.created_at || new Date().toISOString(),
+        updated_at: result.updated_at || undefined, // Ensure updated_at is set if available
         is_deleted: result.is_deleted ?? false,
       }, ...prev]);
       
@@ -348,7 +341,6 @@ const filteredData = data.filter((item: ExpenseData) => {
     expense_id: string;
     expense_date: string;
     total_amount: number;
-    other_source?: string;
   }) => {
     try {
       const response = await fetch(`/api/expenses/${updatedRecord.expense_id}`, {
@@ -361,14 +353,15 @@ const filteredData = data.filter((item: ExpenseData) => {
 
       const result = await response.json();
       
-      // Update local state by moving the edited record to the top
+      // Update local state by moving the edited record to the top with proper timestamps
       setData(prev => {
         // Remove the old version of the record
         const filtered = prev.filter(rec => rec.expense_id !== updatedRecord.expense_id);
-        // Create the updated record
+        // Create the updated record with proper timestamps
         const updated = {
           ...result,
           created_at: result.created_at || new Date().toISOString(),
+          updated_at: result.updated_at || new Date().toISOString(), // Set updated_at to current time
           is_deleted: result.is_deleted ?? false,
         };
         // Add the updated record at the beginning of the array
@@ -572,8 +565,6 @@ const filteredData = data.filter((item: ExpenseData) => {
       html: generateConfirmationMessage(),
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#FEB71F',
       confirmButtonText: 'Export',
       background: 'white',
       reverseButtons:true,
@@ -620,17 +611,20 @@ const filteredData = data.filter((item: ExpenseData) => {
     const headers = columns.join(",") + "\n";
   
     const rows = recordsToExport.map(item => {
+      let assignment: Assignment | undefined = undefined;
+      if (item.assignment_id && item.bus_trip_id) {
+        assignment = allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id);
+      } else if (item.assignment_id) {
+        assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+      }
       let source: string = '';
-      if (item.assignment_id) {
-        const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-        if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
-          source = formatAssignment(assignment);
-        } else {
-          source = `Assignment ${item.assignment_id} not found`;
-        }
+      if (assignment) {
+        source = formatAssignment(assignment);
+      } else if (item.assignment_id) {
+        source = `Assignment ${item.assignment_id} not found`;
       } else if (item.receipt) {
         source = formatReceipt(item.receipt);
-      } 
+      }
    
       return (
         <tr key={item.expense_id}>
@@ -676,7 +670,7 @@ const filteredData = data.filter((item: ExpenseData) => {
   if (loading) {
         return (
             <div className="card">
-                <h1 className="title">Stock Management</h1>
+                <h1 className="title">Expense Management</h1>
                 <Loading />
             </div>
         );
@@ -703,13 +697,6 @@ const filteredData = data.filter((item: ExpenseData) => {
           </div>
           
           <div className="filters">
-            <div className="filter">
-                {/* <Filter
-                    sections={filterSections}
-                    onApply={handleApplyFilters}
-                /> */}
-            </div>
-
             <input
               type="date"
               className="dateFilter"
@@ -754,31 +741,34 @@ const filteredData = data.filter((item: ExpenseData) => {
                   <th>Expense Date</th>
                   <th>Source</th>
                   <th>Category</th>
-                  <th>Amount</th>
+                  <th>Submitted Amount</th>
                   <th>Payment Method</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {currentRecords.map(item => {
+                  let assignment: Assignment | undefined = undefined;
+                  if (item.assignment_id && item.bus_trip_id) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id && a.bus_trip_id === item.bus_trip_id);
+                  } else if (item.assignment_id) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+                  }
                   let source: string = '';
-                  if (item.assignment_id) {
-                    const assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
-                    if (assignment && 'driver_id' in assignment && 'conductor_id' in assignment) {
-                      source = formatAssignment(assignment);
-                    } else {
-                      source = `Assignment ${item.assignment_id} not found`;
-                    }
+                  if (assignment) {
+                    source = formatAssignment(assignment);
+                  } else if (item.assignment_id) {
+                    source = `Assignment ${item.assignment_id} not found`;
                   } else if (item.receipt) {
                     source = formatReceipt(item.receipt);
-                  } 
+                  }
                               
                   return (
                     <tr key={item.expense_id}>
                       <td>{formatDateTime(item.expense_date)}</td>
                       <td>{source}</td>
                       <td>{formatDisplayText(item.category_name || item.category?.name || '')}</td>
-                      <td>₱{Number(item.total_amount).toLocaleString()}</td>
+                      <td>₱{Number(item.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td>{item.payment_method_name ? (item.payment_method_name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash') : (item.payment_method?.name === 'REIMBURSEMENT' ? 'Reimbursement' : 'Cash')}</td>
                       <td className="styles.actionButtons">
                         <div className="actionButtonsContainer">
@@ -801,7 +791,7 @@ const filteredData = data.filter((item: ExpenseData) => {
                 })}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
           </div>
         </div>
 
@@ -817,7 +807,7 @@ const filteredData = data.filter((item: ExpenseData) => {
           <AddExpense
             onClose={() => setShowModal(false)}
             onAddExpense={handleAddExpense}
-            assignments={allAssignments}
+            assignments={allAssignments.filter(a => !data.some(r => r.bus_trip_id && a.bus_trip_id && r.bus_trip_id === a.bus_trip_id))}
             currentUser="ftms_user" // Replace with your actual user ID
           />
         )}
@@ -829,18 +819,10 @@ const filteredData = data.filter((item: ExpenseData) => {
               expense_date: recordToEdit.expense_date,
               category: recordToEdit.category,
               total_amount: recordToEdit.total_amount,
-              assignment: recordToEdit.assignment_id 
-                ? (() => {
-                    const assignment = allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id);
-                    if (!assignment) return undefined;
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
-                    return {
-                      ...assignment,
-                      driver_name: driver ? driver.name : assignment.driver_id,
-                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
-                    };
-                  })()
+              assignment: recordToEdit.assignment_id && recordToEdit.bus_trip_id
+                ? allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id && a.bus_trip_id === recordToEdit.bus_trip_id)
+                : recordToEdit.assignment_id
+                ? allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id)
                 : undefined,
               receipt: recordToEdit.receipt ? {
                 ...recordToEdit.receipt,
@@ -850,7 +832,6 @@ const filteredData = data.filter((item: ExpenseData) => {
                   unit: item.item?.unit?.name || ''
                 }))
               } : undefined,
-              // Pass the entire payment_method object to match schema structure
               payment_method: recordToEdit.payment_method,
               reimbursements: recordToEdit.reimbursements,
             }}
@@ -869,18 +850,10 @@ const filteredData = data.filter((item: ExpenseData) => {
               category: recordToView.category,
               total_amount: recordToView.total_amount,
               expense_date: recordToView.expense_date,
-              assignment: recordToView.assignment_id 
-                ? (() => {
-                    const assignment = allAssignments.find(a => a.assignment_id === recordToView.assignment_id);
-                    if (!assignment) return undefined;
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
-                    return {
-                      ...assignment,
-                      driver_name: driver ? driver.name : assignment.driver_id,
-                      conductor_name: conductor ? conductor.name : assignment.conductor_id,
-                    };
-                  })()
+              assignment: recordToView.assignment_id && recordToView.bus_trip_id
+                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id && a.bus_trip_id === recordToView.bus_trip_id)
+                : recordToView.assignment_id
+                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
                 : undefined,
               receipt: recordToView.receipt,
               payment_method: recordToView.payment_method,

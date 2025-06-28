@@ -2,19 +2,7 @@ import React, { useState, useMemo } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/revenueBusSelector.css";
-
-type Assignment = {
-  assignment_id: string;
-  date_assigned: string;
-  trip_revenue: number;
-  bus_plate_number: string;
-  bus_type: string;
-  bus_route: string;
-  driver_id: string;
-  conductor_id: string;
-  assignment_type: string;
-  assignment_value?: number;
-};
+import type { Assignment } from '@/lib/operations/assignments';
 
 type Employee = {
   employee_id: string;
@@ -54,17 +42,18 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
 
   // Filter assignments based on selected category (Boundary/Percentage) and search
   const filteredAssignments = useMemo(() => {
-    let filtered = assignments.filter(a => {
-      if (!selectedCategoryId) return false;
-      const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
-      if (!selectedCategory) return false;
+    let filtered = assignments;
+    if (!selectedCategoryId) return [];
+    const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
+    if (!selectedCategory) return [];
+    filtered = filtered.filter(a => {
       if (selectedCategory.name === "Boundary") return a.assignment_type === "Boundary";
       if (selectedCategory.name === "Percentage") return a.assignment_type === "Percentage";
       return false;
     });
     if (search.trim()) {
       filtered = filtered.filter(a =>
-        a.bus_plate_number.toLowerCase().includes(search.toLowerCase()) ||
+        (a.bus_plate_number?.toLowerCase().includes(search.toLowerCase()) || false) ||
         a.bus_route.toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -83,7 +72,7 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
     const selectedCategory = categories.find(cat => cat.category_id === selectedCategoryId);
     let amount = assignment.trip_revenue;
     if (selectedCategory?.name === "Percentage" && assignment.assignment_value) {
-      amount = assignment.trip_revenue * (assignment.assignment_value / 100);
+      amount = assignment.trip_revenue * (assignment.assignment_value);
     }
     return `₱${amount.toLocaleString()}`;
   };
@@ -134,9 +123,9 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  paginatedAssignments.map(assignment => (
+                  paginatedAssignments.map((assignment, index) => (
                     <tr
-                      key={assignment.assignment_id}
+                      key={`${assignment.assignment_id}-${assignment.date_assigned}-${index}`}
                       onClick={() => {
                         onSelect(assignment);
                         onClose();
@@ -145,11 +134,11 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
                     >
                       <td>{assignment.date_assigned.split("T")[0]}</td>
                       <td>{formatAmount(assignment)}</td>
-                      <td>{assignment.bus_plate_number}</td>
-                      <td>{assignment.bus_type}</td>
+                      <td>{assignment.bus_plate_number || 'N/A'}</td>
+                      <td>{assignment.bus_type || 'N/A'}</td>
                       <td>{assignment.bus_route}</td>
-                      <td>{getEmployeeName(assignment.driver_id)}</td>
-                      <td>{getEmployeeName(assignment.conductor_id)}</td>
+                      <td>{assignment.driver_name || (assignment.driver_id ? getEmployeeName(assignment.driver_id) : 'N/A')}</td>
+                      <td>{assignment.conductor_name || (assignment.conductor_id ? getEmployeeName(assignment.conductor_id) : 'N/A')}</td>
                     </tr>
                   ))
                 )}

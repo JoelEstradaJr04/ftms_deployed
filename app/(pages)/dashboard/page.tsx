@@ -205,7 +205,7 @@ const DashboardPage = () => {
       <div className="accounting">
         <div className="dashboard_settings">
           <div className="filterDate">
-            <div className="filter">
+            <div className="dashboard_filter">
               <label htmlFor="dateFilter">Filter By:</label>
               <select
                 value={dateFilter}

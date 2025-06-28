@@ -70,6 +70,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
       {/* ========Previous Button======= */}
       <div className="pagination-button-container">
       <button
+        type='button'
         className="pagination-button-prevnext"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
@@ -79,6 +80,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
 
       {/* ========First Page========= */}
       <button
+        type='button'
         className={`pagination-button ${currentPage === 1 ? 'active' : ''}`}
         onClick={() => onPageChange(1)}
       >
@@ -92,6 +94,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
       {pageNumbers.map((page) =>
         page !== 1 && page !== totalPages ? (
           <button
+            type='button'
             key={page}
             className={`pagination-button ${currentPage === page ? 'active' : ''}`}
             onClick={() => onPageChange(page)}
@@ -109,6 +112,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
       {/* Last Page */}
       {totalPages > 1 && (
         <button
+          type='button'
           className={`pagination-button ${currentPage === totalPages ? 'active' : ''}`}
           onClick={() => onPageChange(totalPages)}
         >
@@ -118,6 +122,7 @@ const PaginationComponent: React.FC<PaginationProps> = ({
 
       {/* =========Next Button========== */}
       <button
+        type='button'
         className="pagination-button-prevnext"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}

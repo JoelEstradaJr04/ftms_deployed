@@ -35,12 +35,12 @@ const ExpensesPieChart: React.FC<ExpensesPieChartProps> = ({
 
   // Memoize expenseColors so it doesn't change on every render
   const expenseColors = useMemo(() => ({
-    Fuel: "#d00000",
-    Vehicle_Parts: "#dc2f02",
-    Tools: "#e85d04",
-    Equipment: "#f48c06",
-    Supplies: "#faa307",
-    Other: "#ffba08"
+    Fuel: "#ff6b6b",
+    Vehicle_Parts: "#4ecdc4",
+    Tools: "#45b7d1",
+    Equipment: "#96ceb4",
+    Supplies: "#feca57",
+    Multiple_Categories: "#ff9ff3",
   }), []);
 
   useEffect(() => {

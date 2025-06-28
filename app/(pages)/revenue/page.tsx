@@ -8,13 +8,14 @@ import PaginationComponent from "../../Components/pagination";
 import AddRevenue from "./addRevenue"; 
 import Swal from 'sweetalert2';
 import EditRevenueModal from "./editRevenue";
-import ViewRevenue from "./viewRevenue"; // Import the new ViewRevenue component
-import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded, type Assignment } from '@/lib/supabase/assignments';
+import ViewRevenueModal from "./viewRevenue";
+import { getUnrecordedRevenueAssignments, getAllAssignmentsWithRecorded } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import Loading from '../../Components/loading';
-import { showSuccess, showError} from '../../utility/Alerts';
+import { showSuccess, showError } from '../../utility/Alerts';
 import { formatDateTime } from "../../utility/dateFormatter";
 import { formatDisplayText } from '@/app/utils/formatting';
+import type { Assignment } from '@/lib/operations/assignments';
 
 interface GlobalCategory {
   category_id: string;
@@ -23,10 +24,10 @@ interface GlobalCategory {
   is_deleted: boolean;
 }
 
-// Define interface based on your Prisma RevenueRecord schema
 interface RevenueRecord {
-  revenue_id: string;        
-  assignment_id?: string;    
+  revenue_id: string;
+  assignment_id?: string;
+  bus_trip_id?: string | null;
   category_id: string;
   source_id?: string;
   category: {
@@ -39,16 +40,14 @@ interface RevenueRecord {
     name: string;
     applicable_modules: string[];
   };
-  total_amount: number;      
-  collection_date: string;              
-  created_by: string;        
-  created_at: string;        
-  updated_at?: string;       
+  total_amount: number;
+  collection_date: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
   is_deleted: boolean;
 }
 
-// Updated Assignment interface to include assignment_type and is_revenue_recorded
-// Update the Assignment interface
 interface RevenueData {
   revenue_id: string;
   category: {
@@ -63,16 +62,11 @@ interface RevenueData {
   };
   total_amount: number;
   collection_date: string;
-  created_by: string;  // Add this line
-  created_at: string;  // Add this line
+  created_by: string;
+  created_at: string;
   assignment_id?: string;
+  bus_trip_id?: string | null;
 }
-
-type Employee = {
-  employee_id: string;
-  name: string;
-  job_title: string;
-};
 
 const RevenuePage = () => {
   const [data, setData] = useState<RevenueData[]>([]);
@@ -91,7 +85,6 @@ const RevenuePage = () => {
   const [allAssignments, setAllAssignments] = useState<Assignment[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
 
   const fetchCategories = async () => {
@@ -153,22 +146,12 @@ const RevenuePage = () => {
       setLoading(true);
       console.log('[FETCH] Starting fetchAllData');
       try {
-        // Fetch employees for assignment display
-        const employeesResponse = await fetch('/api/employees');
-        console.log('[FETCH] /api/employees status:', employeesResponse.status);
-        if (employeesResponse.ok) {
-          const employeesData = await employeesResponse.json();
-          setAllEmployees(employeesData);
-        }
-
         // Fetch categories for the filter dropdown
         await fetchCategories();
 
-        // Fetch all assignments for displaying in the table
-        const assignmentsResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`);
-        console.log('[FETCH] /api/assignments/cache status:', assignmentsResponse.status);
-        if (!assignmentsResponse.ok) throw new Error('Failed to fetch assignments');
-        const { data: assignmentsData } = await assignmentsResponse.json();
+        // Fetch all assignments using the new Operations service
+        const assignmentsData = await getAllAssignmentsWithRecorded();
+        console.log('[FETCH] Assignments loaded from Operations API');
 
         // Filter out recorded assignments for the AddRevenue modal
         const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
@@ -189,10 +172,11 @@ const RevenuePage = () => {
           category: revenue.category,
           source: revenue.source,
           total_amount: Number(revenue.total_amount),
-          collection_date: new Date(revenue.collection_date).toISOString().split('T')[0],
+          collection_date: revenue.collection_date, // Keep full ISO datetime string
           created_by: revenue.created_by,
           created_at: revenue.created_at,
           assignment_id: revenue.assignment_id,
+          bus_trip_id: revenue.bus_trip_id,
         }));
 
         setData(transformedData);
@@ -208,20 +192,18 @@ const RevenuePage = () => {
     
     fetchAllData();
 
-    // Set up periodic refresh of assignments
-    const refreshInterval = setInterval(() => {
-      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/assignments/cache`)
-        .then(response => response.json())
-        .then(({ data }) => {
-          if (data) {
-            // Filter out recorded assignments for the AddRevenue modal
-            const unrecordedAssignments = data.filter((a: Assignment) => !a.is_revenue_recorded);
-            setAssignments(unrecordedAssignments);
-            // Store all assignments for table display
-            setAllAssignments(data);
-          }
-        })
-        .catch(error => console.error('Background refresh failed:', error));
+    // Set up periodic refresh of assignments using the new service
+    const refreshInterval = setInterval(async () => {
+      try {
+        const assignmentsData = await getAllAssignmentsWithRecorded();
+        // Filter out recorded assignments for the AddRevenue modal
+        const unrecordedAssignments = assignmentsData.filter((a: Assignment) => !a.is_revenue_recorded);
+        setAssignments(unrecordedAssignments);
+        // Store all assignments for table display
+        setAllAssignments(assignmentsData);
+      } catch (error) {
+        console.error('Background refresh failed:', error);
+      }
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(refreshInterval);
@@ -233,9 +215,12 @@ const RevenuePage = () => {
     const searchLower = search.toLowerCase();
 
     // Lookup the related assignment
-    const assignment = item.assignment_id 
-    ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-    : null;
+    let assignment: Assignment | undefined = undefined;
+    if (item.assignment_id) {
+      const busTripId = item.bus_trip_id === null ? undefined : item.bus_trip_id;
+      assignment = allAssignments.find(a => (a.assignment_id ?? undefined) === (item.assignment_id ?? undefined) && ((a.bus_trip_id === null ? undefined : a.bus_trip_id) === busTripId)) ??
+                   allAssignments.find(a => (a.assignment_id ?? undefined) === (item.assignment_id ?? undefined));
+    }
 
     // Check if search term exists in any field
     const matchesSearch = search === '' || 
@@ -246,17 +231,18 @@ const RevenuePage = () => {
     item.total_amount.toString().includes(searchLower) ||
     (item.created_by?.toLowerCase() || '').includes(searchLower) ||
 
-    // Assignment related fields (if available)
+    // Assignment related fields (if available) - using new Operations API fields
     (assignment?.bus_type?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.bus_plate_number?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.bus_route?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.driver_id?.toLowerCase() || '').includes(searchLower) ||
-    (assignment?.conductor_id?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.driver_name?.toLowerCase() || '').includes(searchLower) ||
+    (assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
 
     const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
-    const matchesDate = (!dateFrom || item.collection_date >= dateFrom) && 
-            (!dateTo || item.collection_date <= dateTo);
+    const itemDate = new Date(item.collection_date).toISOString().split('T')[0]; // Extract date part for comparison
+    const matchesDate = (!dateFrom || itemDate >= dateFrom) && 
+            (!dateTo || itemDate <= dateTo);
     return matchesSearch && matchesCategory && matchesDate;
   });
 
@@ -273,84 +259,56 @@ const RevenuePage = () => {
     created_by: string;
   }) => {
     try {
-      // Check for duplicates if assignment is provided
-      if (newRevenue.assignment_id) {
-      const duplicate = data.find(item => {
-        const assignment = assignments.find(a => a.assignment_id === newRevenue.assignment_id) as Assignment | undefined;
-        const itemAssignment = item.assignment_id 
-          ? assignments.find(a => a.assignment_id === item.assignment_id) as Assignment | undefined
-          : null;
-
-        if (!assignment || !itemAssignment) return false;
-
-        return (
-          new Date(assignment.date_assigned).toISOString().split('T')[0] === newRevenue.collection_date &&
-          assignment.bus_plate_number === itemAssignment.bus_plate_number &&
-          item.category.name === 'Boundary' && // This will need to be updated based on the category
-          assignment.driver_id === itemAssignment.driver_id &&
-          assignment.conductor_id === itemAssignment.conductor_id
-        );
-      });
-
+      // Get the assignment to extract bus_trip_id
+      const selectedAssignment = allAssignments.find(a => a.assignment_id === newRevenue.assignment_id);
+      
+      // Check for duplicates using bus_trip_id
+      if (newRevenue.assignment_id && selectedAssignment?.bus_trip_id) {
+        const duplicate = data.find(item => item.bus_trip_id === selectedAssignment.bus_trip_id);
         if (duplicate) {
-          showError('Duplicate revenue record found for the same assignment.', 'Error');
+          showError('Revenue record for this trip already exists.', 'Error');
           return;
         }
       }
-
-      // Existing code to create revenue record
-    const response = await fetch('/api/revenues', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        category_id: newRevenue.category_id,
-        total_amount: newRevenue.total_amount,
-        collection_date: new Date(newRevenue.collection_date).toISOString(),
-        created_by: newRevenue.created_by,
-        assignment_id: newRevenue.assignment_id || null,
-      })
-    });
-
-    if (!response.ok) throw new Error('Create failed');
-
-    const result: RevenueRecord = await response.json();
-    
-    // Update revenues state
-    setData(prev => [{
-      revenue_id: result.revenue_id,
-      category: result.category,
-      source: result.source,
-      total_amount: Number(result.total_amount),
-      collection_date: new Date(result.collection_date).toISOString().split('T')[0],
-      created_by: result.created_by,
-      created_at: result.created_at, // Ensure created_at is included
-      assignment_id: result.assignment_id,
-    }, ...prev]); // Prepend new record instead of appending
-
-    // Update assignments state locally instead of re-fetching
-    if (newRevenue.assignment_id) {
-      const response = await fetch(`/api/assignments/${newRevenue.assignment_id}`, {
-        method: 'PUT',
+      
+      const response = await fetch('/api/revenues', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_revenue_recorded: true })
+        body: JSON.stringify({
+          category_id: newRevenue.category_id,
+          total_amount: newRevenue.total_amount,
+          collection_date: newRevenue.collection_date, // Send as ISO string
+          created_by: newRevenue.created_by,
+          assignment_id: newRevenue.assignment_id || null,
+        })
       });
-
-      if (response.ok) {
-        setAssignments(prev => prev.map(assignment => 
-          assignment.assignment_id === newRevenue.assignment_id 
-            ? { ...assignment, is_revenue_recorded: true }
-            : assignment
-        ));
-      }
+      
+      if (!response.ok) throw new Error('Create failed');
+      const result: RevenueRecord = await response.json();
+      
+      // Refresh assignments data to get updated flags from Operations API BEFORE updating state
+      await fetchAssignments();
+      
+      // Update revenues state (ensure bus_trip_id is included)
+      setData(prev => [{
+        revenue_id: result.revenue_id,
+        category: result.category,
+        source: result.source,
+        total_amount: Number(result.total_amount),
+        collection_date: result.collection_date, // Keep as ISO string
+        created_by: result.created_by,
+        created_at: result.created_at,
+        assignment_id: result.assignment_id,
+        bus_trip_id: result.bus_trip_id,
+      }, ...prev]);
+      
+      showSuccess('Revenue added successfully', 'Success');
+      setShowModal(false);
+    } catch (error) {
+      console.error('Create error:', error);
+      showError('Failed to add revenue: ' + (error instanceof Error ? error.message : 'Unknown error'), 'Error');
     }
-
-    showSuccess('Revenue added successfully', 'Success');
-    setShowModal(false);
-  } catch (error) {
-    console.error('Create error:', error);
-    showError('Failed to add revenue: ' + (error instanceof Error ? error.message : 'Unknown error'), 'Error');
-  }
-};
+  };
 
   const handleDelete = async (revenue_id: string) => {
     const result = await Swal.fire({
@@ -358,8 +316,9 @@ const RevenuePage = () => {
       text: 'This will delete the record permanently.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#FEB71F',
+      reverseButtons: true,
       confirmButtonText: 'Yes, delete it!',
       background: 'white',
     });
@@ -411,6 +370,7 @@ const RevenuePage = () => {
           created_by: result.created_by,
           created_at: result.created_at,
           assignment_id: result.assignment_id,
+          bus_trip_id: result.bus_trip_id,
         };
         // Add the updated record at the beginning of the array
         return [updated, ...filtered];
@@ -520,7 +480,7 @@ const RevenuePage = () => {
           action: 'EXPORT',
           table_affected: 'RevenueRecord',
           record_id: exportId,  // Export ID only appears here
-          performed_by: 'user1', // Replace with actual user ID
+          performed_by: 'ftms_user', // Replace with actual user ID
           details: details
         })
       });
@@ -568,6 +528,7 @@ const RevenuePage = () => {
       showCancelButton: true,
       confirmButtonText: 'Export CSV',
       cancelButtonText: 'Cancel',
+      reverseButtons: true,
       customClass: {
         popup: 'export-confirmation-dialog'
       }
@@ -641,6 +602,7 @@ const RevenuePage = () => {
           const assignment = item.assignment_id 
             ? allAssignments.find(a => a.assignment_id === item.assignment_id)
             : null;
+            
           const escapeField = (field: string | undefined) => {
             if (!field) return '';
             if (field.includes(',') || field.includes('"') || field.includes('\n')) {
@@ -649,8 +611,8 @@ const RevenuePage = () => {
             return field;
           };
 
-                const rowData: string[] = [];
-        
+          const rowData: string[] = [];
+
           columns.forEach(col => {
             switch(col) {
               case "Collection Date":
@@ -663,22 +625,22 @@ const RevenuePage = () => {
                 rowData.push(item.total_amount.toFixed(2));
                 break;
               case "Bus Type":
-                rowData.push(escapeField(assignment?.bus_type));
+                rowData.push(escapeField(assignment?.bus_type || 'N/A'));
                 break;
               case "Plate Number":
-                rowData.push(escapeField(assignment?.bus_plate_number));
+                rowData.push(escapeField(assignment?.bus_plate_number || 'N/A'));
                 break;
               case "Route":
-                rowData.push(escapeField(assignment?.bus_route));
+                rowData.push(escapeField(assignment?.bus_route || 'N/A'));
                 break;
               case "Driver ID":
-                rowData.push(escapeField(assignment?.driver_id));
+                rowData.push(escapeField(assignment?.driver_name || 'N/A'));
                 break;
               case "Conductor ID":
-                rowData.push(escapeField(assignment?.conductor_id));
+                rowData.push(escapeField(assignment?.conductor_name || 'N/A'));
                 break;
               case "Assignment Date":
-                rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : ''));
+                rowData.push(escapeField(assignment?.date_assigned ? formatDate(assignment.date_assigned) : 'N/A'));
                 break;
               default:
                 rowData.push('');
@@ -773,84 +735,105 @@ const RevenuePage = () => {
                 <tr>
                   <th>Collection Date</th>
                   <th>Category</th>
-                  <th>Assignment</th>
-                  <th>Amount</th>
+                  <th>Source</th>
+                  <th>Remitted Amount</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {currentRecords.map(item => {
-                const assignment = item.assignment_id 
-                  ? allAssignments.find(a => a.assignment_id === item.assignment_id)
-                  : null;
+                // Fix: Improved assignment matching using both assignment_id and bus_trip_id
+                let assignment: Assignment | undefined = undefined;
+                if (item.assignment_id) {
+                  // First try to match using both assignment_id and bus_trip_id for precision
+                  if (item.bus_trip_id) {
+                    assignment = allAssignments.find(a => 
+                      a.assignment_id === item.assignment_id && 
+                      a.bus_trip_id === item.bus_trip_id
+                    );
+                  }
+                  
+                  // Fallback to assignment_id only if bus_trip_id match fails
+                  if (!assignment) {
+                    assignment = allAssignments.find(a => a.assignment_id === item.assignment_id);
+                  }
+                }
 
-                  console.log('Assignment for revenue:', item.revenue_id, assignment); // Debug log
+                // Format assignment for display
+                const formatAssignmentForTable = (assignment: Assignment | undefined): string => {
+                  if (!assignment) {
+                    return item.assignment_id ? `Assignment ${item.assignment_id} not found` : 'N/A';
+                  }
+                  
+                  // Use exact field names from Operations API
+                  const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+                  const driverName = assignment.driver_name || 'N/A';
+                  const conductorName = assignment.conductor_name || 'N/A';
+                  
+                  // Calculate display amount based on category and assignment type
+                  let displayAmount = assignment.trip_revenue;
+                  if (item.category?.name === 'Percentage' && assignment.assignment_value) {
+                    displayAmount = assignment.trip_revenue * (assignment.assignment_value);
+                  }
+                  
+                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
+                };
 
-                  // Format assignment for display
-                  const formatAssignment = (assignment: Assignment | null | undefined) => {
-                    if (!assignment) return 'N/A';
-                    const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
-                    const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
-                    const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
-                    
-                    // Calculate display amount based on category
-                    const selectedCategory = item.category;
-                    let displayAmount = assignment.trip_revenue;
-                    if (selectedCategory?.name === 'Percentage' && assignment.assignment_value) {
-                      displayAmount = assignment.trip_revenue * (assignment.assignment_value / 100);
-                    }
-                    
-                    return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString()} | ${assignment.bus_plate_number} (${busType}) - ${assignment.bus_route} | ${driver?.name || 'N/A'} & ${conductor?.name || 'N/A'}`;
-                  };
-
-                  return (
-                    <tr key={item.revenue_id}>
-                      <td>{formatDateTime(item.collection_date)}</td>
-                      <td>{item.category?.name || 'N/A'}</td>
-                      <td>{formatAssignment(assignment)}</td>
-                      <td>₱{item.total_amount.toLocaleString()}</td>
-                      <td className="styles.actionButtons">
-                        <div className="actionButtonsContainer">
-                          {/* view button */}
-                          <button 
-                            className="viewBtn" 
-                            onClick={() => {
-                              setRecordToView(item);
-                              setViewModalOpen(true);
-                            }} 
-                            title="View Record"
-                          >
-                            <i className="ri-eye-line" />
-                          </button>
-                          
-                          {/* edit button */}
-                          <button 
-                            className="editBtn" 
-                            onClick={() => {
-                              setRecordToEdit(item);
-                              setEditModalOpen(true);
-                            }} 
-                            title="Edit Record"
-                          >
-                            <i className="ri-edit-2-line" />
-                          </button>
-                          
-                          {/* delete button */}
-                          <button 
-                            className="deleteBtn" 
-                            onClick={() => handleDelete(item.revenue_id)} 
-                            title="Delete Record"
-                          >
-                            <i className="ri-delete-bin-line" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                return (
+                  <tr key={item.revenue_id}>
+                    <td>{formatDateTime(item.collection_date)}</td>
+                    <td>{item.category?.name || 'N/A'}</td>
+                    <td>{formatAssignmentForTable(assignment)}</td>
+                    <td>₱{(() => {
+                      if (item.category?.name === 'Percentage' && assignment?.assignment_value) {
+                        return (item.total_amount * assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      } else if (item.category?.name === 'Boundary' && assignment?.trip_revenue) {
+                        return assignment.trip_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      }
+                      return item.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}</td>
+                    <td className="styles.actionButtons">
+                      <div className="actionButtonsContainer">
+                        {/* view button */}
+                        <button 
+                          className="viewBtn" 
+                          onClick={() => {
+                            setRecordToView(item);
+                            setViewModalOpen(true);
+                          }} 
+                          title="View Record"
+                        >
+                          <i className="ri-eye-line" />
+                        </button>
+                        
+                        {/* edit button */}
+                        <button 
+                          className="editBtn" 
+                          onClick={() => {
+                            setRecordToEdit(item);
+                            setEditModalOpen(true);
+                          }} 
+                          title="Edit Record"
+                        >
+                          <i className="ri-edit-2-line" />
+                        </button>
+                        
+                        {/* delete button */}
+                        <button 
+                          className="deleteBtn" 
+                          onClick={() => handleDelete(item.revenue_id)} 
+                          title="Delete Record"
+                        >
+                          <i className="ri-delete-bin-line" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
           </div>
         </div>
 
@@ -866,19 +849,31 @@ const RevenuePage = () => {
           <AddRevenue
             onClose={() => setShowModal(false)}
             onAddRevenue={handleAddRevenue}
-            assignments={assignments}
-            currentUser  ={"user1"} // Replace with your actual user ID
+            assignments={assignments.filter(a => {
+              // Filter out assignments that already have revenue records with the same bus_trip_id
+              const isAlreadyRecorded = data.some(r => r.bus_trip_id && r.bus_trip_id === a.bus_trip_id);
+              return !isAlreadyRecorded;
+            })}
+            currentUser={"ftms_user"}
+            existingRevenues={data.map(r => ({
+              assignment_id: r.assignment_id,
+              category_id: r.category.category_id,
+              total_amount: r.total_amount,
+              collection_date: r.collection_date
+            }))}
           />
         )}
 
         {editModalOpen && recordToEdit && (
           <EditRevenueModal
             record={{
-              revenue_id: recordToEdit.revenue_id,
-              collection_date: recordToEdit.collection_date,
-              category: recordToEdit.category.name,
-              amount: recordToEdit.total_amount,
-              assignment_id: recordToEdit.assignment_id,
+              revenue_id: typeof recordToEdit.revenue_id === 'string' ? recordToEdit.revenue_id : '',
+              collection_date: typeof recordToEdit.collection_date === 'string' ? recordToEdit.collection_date : '',
+              category_id: typeof recordToEdit.category?.category_id === 'string' ? recordToEdit.category.category_id : '',
+              category: typeof recordToEdit.category?.name === 'string' ? recordToEdit.category.name : '',
+              source: typeof recordToEdit.source?.name === 'string' ? recordToEdit.source.name : '',
+              amount: typeof recordToEdit.total_amount === 'number' ? recordToEdit.total_amount : 0,
+              assignment_id: typeof recordToEdit.assignment_id === 'string' ? recordToEdit.assignment_id : undefined,
             }}
             onClose={() => {
               setEditModalOpen(false);
@@ -889,16 +884,18 @@ const RevenuePage = () => {
         )}
 
         {viewModalOpen && recordToView && (
-          <ViewRevenue
+          <ViewRevenueModal
             record={{
               revenue_id: recordToView.revenue_id,
               category: recordToView.category,
               total_amount: recordToView.total_amount,
               collection_date: recordToView.collection_date,
               created_at: recordToView.created_at,
-              assignment: recordToView.assignment_id 
-                ? allAssignments.find(a => a.assignment_id === recordToView.assignment_id)
-                : undefined,
+              assignment: recordToView.assignment_id && (((recordToView as { bus_trip_id?: string | null }).bus_trip_id ?? undefined) !== undefined)
+                ? allAssignments.find(a => (a.assignment_id ?? undefined) === (recordToView.assignment_id ?? undefined) && (a.bus_trip_id === null ? undefined : a.bus_trip_id) === (recordToView.bus_trip_id === null ? undefined : recordToView.bus_trip_id))
+                : recordToView.assignment_id
+                  ? allAssignments.find(a => (a.assignment_id ?? undefined) === (recordToView.assignment_id ?? undefined))
+                  : undefined,
             }}
             onClose={() => {
               setViewModalOpen(false);

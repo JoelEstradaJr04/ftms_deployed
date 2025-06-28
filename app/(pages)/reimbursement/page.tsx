@@ -65,28 +65,46 @@ type ExpenseRecord = {
 };
 
 // REIMBURSEMENT TYPE - Replace any with proper type
-type Reimbursement = {
+type ReimbursementData = {
   reimbursement_id: string;
   expense_id: string;
   employee_id: string;
   employee_name: string;
   job_title?: string;
+  amount: number;
+  status: string; // Change to string to match usage in the component
+  requested_date: string;
+  submitted_date: string; // Add missing property
+  approved_by?: string | null; // Allow null values
+  approved_date?: string | null; // Allow null values
+  rejection_reason?: string | null; // Allow null values
+  paid_by?: string | null; // Allow null values
+  paid_date?: string | null; // Allow null values
+  payment_reference?: string | null; // Allow null values
+  payment_method?: string | null; // Allow null values
+  created_by: string; // Add missing property
   created_at: string;
-  submitted_date: string;
-  requested_date: string; // Add this field to match ViewReimbursement
-  approved_by: string | null;
-  approved_date: string | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'CANCELLED'; // Match ViewReimbursement status type
-  amount: number; // Change from number | null to number to match ViewReimbursement
-  rejection_reason: string | null;
-  paid_date: string | null;
-  payment_reference: string | null;
-  notes: string;
-  remarks?: string | null;
-  cancelled_by?: string | null;
-  cancelled_date?: string | null;
-  updated_at?: string | null;
-  expense?: ExpenseRecord; // Use proper type instead of any
+  updated_by?: string | null; // Allow null values
+  updated_at?: string | null; // Allow null values
+  is_deleted: boolean; // Add missing property
+  cancelled_by?: string | null; // Allow null values
+  cancelled_date?: string | null; // Allow null values
+  remarks?: string | null; // Add missing property
+  expense?: {
+    expense_id: string;
+    category: {
+      category_id: string;
+      name: string;
+    };
+    total_amount: number;
+    expense_date: string;
+    assignment_id?: string;
+    receipt_id?: string;
+    payment_method: {
+      id: string;
+      name: string;
+    };
+  };
 };
 
 // Update ApiReimbursement to match your Prisma schema structure
@@ -115,15 +133,6 @@ type ApiReimbursement = {
   expense?: ExpenseRecord; // Add proper expense type if included in API response
 };
 
-// Fix status type for Reimbursement - ADD CANCELLED mapping
-const statusMap = {
-  PENDING: 'Pending',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-  PAID: 'Paid',
-  CANCELLED: 'Cancelled',
-};
-
 const ReimbursementPage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const today = new Date().toISOString().split('T')[0];
@@ -135,8 +144,8 @@ const ReimbursementPage = () => {
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedReimbursement, setSelectedReimbursement] = useState<Reimbursement | null>(null);
-  const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
+  const [selectedReimbursement, setSelectedReimbursement] = useState<ReimbursementData | null>(null);
+  const [reimbursements, setReimbursements] = useState<ReimbursementData[]>([]);
   
   // Add state for reject modal
   const [rejectModal, setRejectModal] = useState<{ open: boolean, id: string | null }>({ open: false, id: null });
@@ -149,7 +158,7 @@ const ReimbursementPage = () => {
   // Fetch reimbursements (replace with your actual fetch logic)
   const fetchReimbursements = async (
     setLoading: (b: boolean) => void,
-    setReimbursements: (r: Reimbursement[]) => void
+    setReimbursements: (r: ReimbursementData[]) => void
   ) => {
     setLoading(true);
     try {
@@ -159,12 +168,12 @@ const ReimbursementPage = () => {
       console.log('API response text:', text);
       if (!res.ok) throw new Error('Failed to fetch reimbursements');
       const data: ApiReimbursement[] = JSON.parse(text);
+      console.log('Parsed API data:', data);
       setReimbursements(
         data.map((item) => {
-          // Fix: Access status.name instead of status_name
-          const statusKey = (item.status?.name || '').toUpperCase() as keyof typeof statusMap;
-          const mappedStatus = statusMap[statusKey] ||
-            (item.status?.name ? item.status.name.charAt(0).toUpperCase() + item.status.name.slice(1).toLowerCase() : 'Unknown');
+          // Use the status name directly from the API response
+          const statusName = item.status?.name || 'PENDING';
+          console.log('Processing item:', item.reimbursement_id, 'Status:', statusName);
           
           // Map to uppercase status to match ViewReimbursement expectations
           const getUppercaseStatus = (status: string): 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'CANCELLED' => {
@@ -186,7 +195,7 @@ const ReimbursementPage = () => {
             requested_date: item.requested_date ? item.requested_date : '', // Add requested_date
             approved_by: item.approved_by,
             approved_date: item.approved_date ? item.approved_date : null,
-            status: getUppercaseStatus(mappedStatus), // Use uppercase status
+            status: getUppercaseStatus(statusName), // Use the status name directly
             amount: Number(item.amount) || 0, // Ensure it's never null
             rejection_reason: item.rejection_reason,
             paid_date: item.paid_date ? item.paid_date : null,
@@ -196,7 +205,16 @@ const ReimbursementPage = () => {
             cancelled_by: item.cancelled_by ?? null,
             cancelled_date: item.cancelled_date ? item.cancelled_date : null,
             updated_at: item.updated_at ? item.updated_at : null,
-            expense: item.expense || undefined, // Use proper type instead of undefined
+            expense: item.expense ? {
+              ...item.expense,
+              payment_method: {
+                id: 'default',
+                name: 'CASH'
+              }
+            } : undefined, // Use proper type instead of undefined
+            // Add missing required properties
+            created_by: 'ftms_user', // Default value since not in API response
+            is_deleted: false, // Default value since not in API response
           };
         })
         // Sort by updated_at (or created_at if updated_at is null) descending (latest first)
@@ -345,7 +363,7 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
     }
   };
 
-  // Add cancel handler
+  /* Add cancel handler
   const handleCancel = async (reimbursementId: string) => {
     const result = await showConfirmation(
       'Cancel Reimbursement',
@@ -369,7 +387,7 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
         showError('Failed to cancel reimbursement', 'Error');
       }
     }
-  };
+  };*/
 
   // Add reject handler
   const handleReject = async (reimbursementId: string, reason: string) => {
@@ -539,13 +557,13 @@ const filteredReimbursements = reimbursements.filter(reimbursement => {
                               >
                                 Reject
                               </button>
-                              <button
+                              {/* <button
                                 onClick={e => { e.stopPropagation(); handleCancel(item.reimbursement_id); }}
                                 className="action-btn cancel-btn"
                                 style={{ marginLeft: 8 }}
                               >
                                 Cancel
-                              </button>
+                              </button> */}
                             </>
                           );
                         case 'approved':

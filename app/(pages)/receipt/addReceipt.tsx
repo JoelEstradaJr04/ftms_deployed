@@ -141,7 +141,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       item_id: '',
       item_name: '',
       unit: '',
-      category: 'Fuel',
+      category: '',
     },
     quantity: 0,
     unit_price: 0,
@@ -178,7 +178,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   };
 
   const computeSummaryCategory = useCallback((items: ReceiptItem[]): string => {
-    if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (items.length === 0) return '';
     
     const categoryTotals: Record<string, number> = {};
     
@@ -187,14 +187,14 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         ? item.item.other_category 
         : item.item.category;
       
-      if (resolvedCategory) {
+      if (resolvedCategory && resolvedCategory.trim() !== '') {
         categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + item.total_price;
       }
     });
 
     const uniqueCategories = Object.keys(categoryTotals);
     
-    if (uniqueCategories.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (uniqueCategories.length === 0) return '';
     if (uniqueCategories.length === 1) {
       const singleCategoryName = uniqueCategories[0];
       const category = categories.find(c => c.name === singleCategoryName);
@@ -294,7 +294,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: '',
           unit: '',
-          category: 'Fuel' as string,
+          category: '',
         },
         quantity: 0,
         unit_price: 0,
@@ -374,8 +374,9 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       text: 'Are you sure you want to add this receipt?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#13CE66',
-      cancelButtonColor: '#961C1E',
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#FEB71F',
+      reverseButtons: true,
       confirmButtonText: 'Yes, add it!',
       background: 'white',
     });
@@ -431,7 +432,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     if (!categoryOverride) {
       setFormData(prev => ({
         ...prev,
-        category_id: prev.category_id || (categories.find(c => c.name === 'Fuel')?.category_id || ''),
+        category_id: prev.category_id || '', // Remove the default to Fuel
         other_category: categories.find(c => c.category_id === prev.category_id)?.name === 'Other' ? otherCategory : undefined
       }));
     } else {
@@ -463,7 +464,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: item.item_name,
           unit: item.unit,
-          category: 'Fuel' as string,
+          category: '',
         },
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -476,9 +477,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   return (
     <div className="modalOverlay">
       <div className="receiptModal">
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
+        
 
         <div className="modalHeader">
           <h1>Add Receipt</h1>
@@ -486,10 +485,13 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
             <div className="currTime">{currentTime}</div>
             <div className="currDate">{currentDate}</div>
           </div>
+          <button type="button" className="closeButton" onClick={onClose}>
+            <i className="ri-close-line"></i>
+          </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modalContent">
+          <div className="addReceipt_modalContent">
             <div className="source-selection">
               <div 
                 className={`source-option ${sourceOption === 'Manual_Entry' ? 'active' : ''}`}
@@ -499,18 +501,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 <p>Manual Entry</p>
               </div>
               <div 
-                className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
-                onClick={() => setSourceOption('OCR_Camera')}
+                // className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
+                // onClick={() => setSourceOption('OCR_Camera')}
               >
-                <i className="ri-camera-line"></i>
-                <p>Camera Scan</p>
+                {/* <i className="ri-camera-line"></i>
+                <p>Camera Scan</p> */}
               </div>
               <div 
-                className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
-                onClick={() => setSourceOption('OCR_File')}
+                // className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
+                // onClick={() => setSourceOption('OCR_File')}
               >
-                <i className="ri-upload-line"></i>
-                <p>File Upload</p>
+                {/* <i className="ri-upload-line"></i>
+                <p>File Upload</p> */}
               </div>
             </div>
 
@@ -585,7 +587,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 setOtherCategory('');
                                 setFormData(prev => ({ 
                                   ...prev, 
-                                  category_id: categories.find(c => c.name === 'Fuel')?.category_id || ''
+                                  category_id: ''
                                 }));
                               }}
                               className="clearCustomBtn"
@@ -724,7 +726,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
 
 
-                <div className="itemsSection">
+                <div className="add_itemsSection">
                   <h3>Items</h3>
                   <table className="itemTable">
                     <thead className='itemTable'>
@@ -859,33 +861,33 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                               ) : (
                                 <select
                                   value={item.item.category}
-              onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
-              className="formSelect"
-              {...(!isLast && { required: true })}
-              disabled={disabled}
-            >
-              <option value="">Select Category</option>
-              {EXPENSE_CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
-              ))}
-            </select>
-          )}
-        </td>
-        <td>
-          <button
-            type="button"
-            onClick={() => removeItem(idx)}
-            className="removeItemBtn"
-            title="Remove item"
-            disabled={disabled}
-          >
-            <i className="ri-delete-bin-line" />
-          </button>
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
+                                  onChange={(e) => handleItemChange(idx, 'category', e.target.value)}
+                                  className="formSelect"
+                                  {...(!isLast && { required: true })}
+                                  disabled={disabled}
+                                >
+                                  <option value="">Select Category</option>
+                                  {EXPENSE_CATEGORIES.map(cat => (
+                                    <option key={cat} value={cat}>{cat.replace('_', ' ')}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => removeItem(idx)}
+                                className="removeItemBtn"
+                                title="Remove item"
+                                disabled={disabled}
+                              >
+                                <i className="ri-delete-bin-line" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
                   </table>
                 </div>
 

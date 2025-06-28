@@ -4,7 +4,7 @@ import "../../styles/receipt.css";
 import "../../styles/table.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from 'sweetalert2';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDateTime } from '../../utility/dateFormatter';
 import ViewReceiptModal from './viewReceipt';
 import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
@@ -263,40 +263,11 @@ const ReceiptPage = () => {
 
   const handleUpdateReceiptAsync = async (receiptId: string, updatedData: UpdatedReceiptData) => {
     try {
-      // Convert UpdatedReceiptData to AddReceiptSubmitData format for API compatibility
-      const apiData: AddReceiptSubmitData = {
-        supplier: updatedData.supplier,
-        transaction_date: updatedData.transaction_date,
-        vat_reg_tin: updatedData.vat_reg_tin || undefined,
-        terms_id: updatedData.terms_id,
-        date_paid: updatedData.date_paid || undefined,
-        payment_status_id: updatedData.payment_status_id,
-        total_amount: updatedData.total_amount,
-        vat_amount: updatedData.vat_amount,
-        total_amount_due: updatedData.total_amount_due,
-        category_id: updatedData.category_id,
-        remarks: updatedData.remarks || undefined,
-        source_id: updatedData.source_id,
-        created_by: updatedData.created_by,
-        // Transform items to match AddReceiptSubmitData format
-        items: updatedData.items.map(item => ({
-          item_name: item.item_name,
-          unit_id: item.unit_id,
-          unit: '', // API might expect this field
-          other_unit: item.other_unit,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          category_id: item.category_id,
-          category: undefined, // Let API handle this
-          other_category: undefined, // Let API handle this
-        }))
-      };
-
+      // Send the data directly as UpdatedReceiptData format since the PATCH API expects this format
       const response = await fetch(`/api/receipts/${receiptId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiData),
+        body: JSON.stringify(updatedData),
       });
 
       if (!response.ok) {
@@ -344,11 +315,11 @@ const ReceiptPage = () => {
     }
   };
 
-  const getDisplayCategory = (receipt: Receipt) => {
-    if (receipt.category_name === 'Other' && receipt.other_category) {
-      return formatDisplayText(receipt.other_category);
+  const getCategoryDisplayName = (receipt: Receipt) => {
+    if (receipt.category_name && receipt.category_name !== 'Other') {
+      return formatDisplayText(receipt.category_name);
     }
-    return formatDisplayText(receipt.category_name);
+    return formatDisplayText('Unknown');
   };
 
   const currentUser = 'ftms_user';
@@ -423,12 +394,12 @@ const ReceiptPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="filter-select"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               {paymentStatuses.map(status => (
                 <option key={status.id} value={status.name}>{formatDisplayText(status.name)}</option>
               ))}
             </select>
-            <button onClick={() => setShowModal(true)} id='addButton'><i className="ri-add-line" /> Add Receipt</button>
+            <button onClick={() => setShowModal(true)} id='receipt_addButton'><i className="ri-add-line" /> Add Receipt</button>
           </div>
         </div>
 
@@ -456,9 +427,9 @@ const ReceiptPage = () => {
                 {currentRecords.map((item, index) => (
                   <tr key={item.receipt_id}>
                     <td>{indexOfFirstRecord + index + 1}</td>
-                    <td>{formatDate(item.transaction_date)}</td>
+                    <td>{formatDateTime(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
-                    <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
+                    <td>{getCategoryDisplayName(item)}</td>
                     <td>
                       {(() => {
                         if (item.terms_name) {
@@ -497,7 +468,7 @@ const ReceiptPage = () => {
                 ))}
               </tbody>
             </table>
-            {currentRecords.length === 0 && !tableLoading && <p>No records found.</p>}
+            {currentRecords.length === 0 && !tableLoading && <p className="noRecords">No records found.</p>}
           </div>
         </div>
 

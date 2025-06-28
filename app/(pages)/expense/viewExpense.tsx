@@ -1,24 +1,12 @@
 // app/(pages)/expense/viewExpense.tsx
 'use client';
 import React from 'react';
-import { formatDate } from '../../utility/dateFormatter';
+import { formatDateTime } from '../../utility/dateFormatter';
 import '../../styles/viewExpense.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
 import type { Receipt } from '../../types/receipt';
-
-type Assignment = {
-  assignment_id: string;
-  bus_plate_number: string;
-  bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  driver_name?: string;
-  conductor_name?: string;
-};
+import type { Assignment } from '@/lib/operations/assignments';
 
 type Reimbursement = {
   reimbursement_id: string;
@@ -48,25 +36,25 @@ type Reimbursement = {
   cancelled_date?: string;
 };
 
-type ViewExpenseModalProps = {
-  record: {
-    expense_id: string;
-    category: {
-      category_id: string;
-      name: string;
-    };
-    other_category?: string;
-    total_amount: number;
-    expense_date: string;
-    assignment?: Assignment;
-    receipt?: Receipt;
-    other_source?: string;
-    payment_method: {
-      id: string;
-      name: string;
-    };
-    reimbursements?: Reimbursement[];
+type ExpenseRecord = {
+  expense_id: string;
+  category: {
+    category_id: string;
+    name: string;
   };
+  total_amount: number;
+  expense_date: string;
+  assignment?: Assignment;
+  receipt?: Receipt;
+  payment_method: {
+    id: string;
+    name: string;
+  };
+  reimbursements?: Reimbursement[];
+};
+
+type ViewExpenseModalProps = {
+  record: ExpenseRecord;
   onClose: () => void;
 };
 
@@ -131,11 +119,11 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         </div>
         <div className="detailRow">
           <span className="label">Date Assigned:</span>
-          <span className="value">{formatDate(record.assignment.date_assigned)}</span>
+          <span className="value">{formatDateTime(record.assignment.date_assigned)}</span>
         </div>
         <div className="detailRow">
           <span className="label">Trip Fuel Expense:</span>
-          <span className="value">₱{record.assignment.trip_fuel_expense.toLocaleString()}</span>
+          <span className="value">₱{record.assignment.trip_fuel_expense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
     );
@@ -152,17 +140,15 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Category:</span>
-            <span className="value">
-              {record.category.name === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category.name)}
-            </span>
+            <span className="value">{record.category.name === 'Other' ? 'Other' : formatDisplayText(record.category.name)}</span>
           </div>
           <div className="detailRow">
-            <span className="label">Amount:</span>
+            <span className="label">Submitted Amount:</span>
             <span className="value">₱{Number(record.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="detailRow">
-            <span className="label">Date:</span>
-            <span className="value">{formatDate(record.expense_date)}</span>
+            <span className="label">Entry Date:</span>
+            <span className="value">{formatDateTime(record.expense_date)}</span>
           </div>
           <div className="detailRow">
             <span className="label">Payment Method:</span>
@@ -187,7 +173,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           <div className="otherDetails">
             <h3>Expense Source Details</h3>
             <div className="detailRow">
-              <span className="value">{record.other_source || 'N/A'}</span>
+              <span className="value">N/A</span>
             </div>
           </div>
         )}

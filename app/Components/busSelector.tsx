@@ -1,21 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/busSelector.css"
 import "../styles/table.css"
-
-type Assignment = {
-  assignment_id: string;
-  bus_plate_number: string;
-  bus_route: string;
-  bus_type: string;
-  driver_id: string;
-  conductor_id: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  is_expense_recorded: boolean;
-  payment_method: string;
-};
+import type { Assignment } from '@/lib/operations/assignments';
+import { formatDateTime } from '../utility/dateFormatter';
 
 type Employee = {
   employee_id: string;
@@ -42,54 +31,20 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isLoading,] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Focus the search input when modal opens
-      searchInputRef.current?.focus();
-
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
-
-      return () => {
-        document.body.style.overflow = 'unset';
-      };
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-      return () => {
-        document.removeEventListener('keydown', handleEscapeKey);
-      };
-    }
-  }, [isOpen, onClose]);
-
-  const handleOverlayClick = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
+  const [isLoading] = useState(false);
 
   // Filter and sort assignments (only those not recorded)
   const filteredAssignments = useMemo(() => {
     let filtered = assignments.filter(a => !a.is_expense_recorded);
+    
+    // Apply search filter
     if (search.trim()) {
       filtered = filtered.filter(a =>
-        a.bus_plate_number.toLowerCase().includes(search.toLowerCase()) ||
+        (a.bus_plate_number?.toLowerCase().includes(search.toLowerCase()) || false) ||
         a.bus_route.toLowerCase().includes(search.toLowerCase())
       );
     }
+    
     return filtered.sort(
       (a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime()
     );
@@ -102,105 +57,103 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
   );
 
   // Helper to get employee name
-  const getEmployeeName = (id: string) =>
-    allEmployees.find(e => e.employee_id === id)?.name || "N/A";
+  const getEmployeeName = (assignment: Assignment, field: 'driver' | 'conductor') => {
+    if (field === 'driver' && assignment.driver_name) {
+      return assignment.driver_name;
+    }
+    if (field === 'conductor' && assignment.conductor_name) {
+      return assignment.conductor_name;
+    }
+    const id = field === 'driver' ? assignment.driver_id : assignment.conductor_id;
+    return allEmployees.find(e => e.employee_id === id)?.name || "N/A";
+  };
+
+  // Helper to format bus type correctly
+  const formatBusType = (busType: string | null): string => {
+    if (!busType) return 'N/A';
+    
+    // Normalize bus type values to display format
+    const normalizedType = busType.toLowerCase();
+    if (normalizedType === 'aircon' || normalizedType === 'airconditioned') {
+      return 'Airconditioned';
+    } else if (normalizedType === 'ordinary' || normalizedType === 'non-aircon') {
+      return 'Ordinary';
+    } else {
+      // For any other values, return the first letter capitalized
+      return busType.charAt(0).toUpperCase();
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="modalOverlay"
-      onClick={handleOverlayClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="bus-selector-title"
-      aria-describedby="bus-selector-description"
-    >
-      <div
-        className="addExpenseModal"
-        ref={modalRef}
-        role="document"
-      >
-        <button
-          type="button"
-          className="closeButton"
-          onClick={onClose}
-          aria-label="Close bus selector modal"
-        >
+    <div className="modalOverlay">
+      <div className="addExpenseModal">
+        <button type="button" className="closeButton" onClick={onClose}>
           <i className="ri-close-line"></i>
         </button>
         <div className="modalHeader">
-          <h1 id="bus-selector-title">Select Bus Assignment</h1>
+          <h1>Select Bus Assignment</h1>
         </div>
         <div className="modalContent">
-          <div id="bus-selector-description" className="sr-only">
-            Search and select a bus assignment from the list below. Use the search field to filter by plate number or route.
-          </div>
           <input
-            ref={searchInputRef}
             type="text"
             placeholder="Search by plate or route"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="formInput"
             style={{ marginBottom: 12, width: "100%" }}
-            aria-label="Search bus assignments by plate number or route"
           />
           {isLoading ? (
             <Loading />
           ) : (
-            <table className="data-table" role="table" aria-label="Bus assignments">
-              <thead>
-                <tr>
-                  <th scope="col">Date Assigned</th>
-                  <th scope="col">Trip Fuel Expense</th>
-                  <th scope="col">Plate Number</th>
-                  <th scope="col">Bus Type</th>
-                  <th scope="col">Route</th>
-                  <th scope="col">Driver</th>
-                  <th scope="col">Conductor</th>
+            <table className="data-table">
+            <thead>
+              <tr>
+                  <th>Date Assigned</th>
+                  <th>Trip Fuel Expense</th>
+                  <th>Plate Number</th>
+                  <th>Bus Type</th>
+                  <th>Route</th>
+                  <th>Driver</th>
+                  <th>Conductor</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedAssignments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: "center" }}>
+                    <td colSpan={8} style={{ textAlign: "center" }}>
                       No assignments found.
                     </td>
                   </tr>
                 ) : (
-                  paginatedAssignments.map((assignment) => (
-                    <tr
-                      key={assignment.assignment_id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Select bus assignment ${assignment.bus_plate_number} on route ${assignment.bus_route}`}
+                  paginatedAssignments.map(assignment => {
+                    // Use bus_trip_id if available, else assignment_id + date_assigned for uniqueness
+                    const a = assignment as Assignment & { bus_trip_id?: string };
+                    const uniqueKey = a.bus_trip_id
+                      ? `${a.assignment_id}-${a.bus_trip_id}`
+                      : `${a.assignment_id}-${a.date_assigned}`;
+                    return (
+                      <tr key={uniqueKey}
                       onClick={() => {
                         onSelect(assignment);
                         onClose();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onSelect(assignment);
-                          onClose();
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
-                      className="selectable-row"
-                    >
-                      <td>{assignment.date_assigned.split("T")[0]}</td>
-                      <td>₱ {assignment.trip_fuel_expense}</td>
+                    }}
+                  >
+                    <td>{formatDateTime(assignment.date_assigned)}</td>
+                    <td>₱ {assignment.trip_fuel_expense}</td>
                       <td>{assignment.bus_plate_number}</td>
-                      <td>{assignment.bus_type === "Airconditioned" ? "A" : "O"}</td>
-                      <td>{assignment.bus_route}</td>
-                      <td>{getEmployeeName(assignment.driver_id)}</td>
-                      <td>{getEmployeeName(assignment.conductor_id)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      <td>{formatBusType(assignment.bus_type)}</td>
+                    <td>{assignment.bus_route}</td>
+                      <td>{getEmployeeName(assignment, 'driver')}</td>
+                      <td>{getEmployeeName(assignment, 'conductor')}</td>
+                  </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
           )}
           <PaginationComponent
             currentPage={currentPage}

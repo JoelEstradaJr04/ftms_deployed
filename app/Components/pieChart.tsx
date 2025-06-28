@@ -23,37 +23,24 @@ interface PieChartProps {
 const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
   // Define color mappings for common categories
   // These should match the actual category names in your GlobalCategory table
-  const revenueColors: Record<string, string> = {
-    'Boundary': "#4373A1",
-    'Percentage': "#708D81", 
-    'Bus Rental': "#F4D58D",
-    'Bus_Rental': "#F4D58D", // Handle underscore version
-    'Other': "#001427",
-    // Add more colors as needed for your actual categories
-    'Fare Collection': "#5B9BD5",
-    'Special Trips': "#A5A5A5"
-  };
-
-  const expenseColors: Record<string, string> = {
-    'Fuel': "#8D0801",
-    'Vehicle Parts': "#bf0603",
-    'Vehicle_Parts': "#bf0603", // Handle underscore version
-    'Tools': "#8b0000",
-    'Equipment': "#590202",
-    'Supplies': "#720000",
-    'Other': "#400000",
-    // Add more colors as needed for your actual categories
-    'Maintenance': "#DC143C",
-    'Repairs': "#B22222"
+  const colors: Record<string, string> = {
+    'Fuel': "#ff6b6b",
+    'Vehicle_Parts': "#4ecdc4",
+    'Tools': "#45b7d1",
+    'Equipment': "#96ceb4",
+    'Supplies': "#feca57",
+    'Multiple_Categories': "#ff9ff3",
+    'Boundary': "#54a0ff",
+    'Percentage': "#5f27cd",
   };
 
   // Helper function to get color for a category, with fallbacks
   const getRevenueColor = (category: string): string => {
-    return revenueColors[category] || revenueColors[category.replace(/\s+/g, '_')] || "#6C757D";
+    return (colors as Record<string, string>)[category] || (colors as Record<string, string>)[category.replace(/\s+/g, '_')] || "#6C757D";
   };
 
   const getExpenseColor = (category: string): string => {
-    return expenseColors[category] || expenseColors[category.replace(/\s+/g, '_')] || "#495057";
+    return (colors as Record<string, string>)[category] || (colors as Record<string, string>)[category.replace(/\s+/g, '_')] || "#495057";
   };
 
   // Helper function to format category names for display
