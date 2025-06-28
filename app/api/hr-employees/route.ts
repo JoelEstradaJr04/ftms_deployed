@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 
+interface HREmployee {
+  employeeNumber: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  position: string;
+  department: string;
+  phone?: string;
+}
+
 export async function GET() {
   try {
     const hrApiUrl = process.env.HR_API_EMPLOYEES_URL || 'https://hr-api.agilabuscorp.me/employees/inv';
@@ -18,7 +28,7 @@ export async function GET() {
     const hrEmployees = await response.json();
 
     // Transform HR API data to match our Employee interface
-    const employees = hrEmployees.map((hrEmp: any) => ({
+    const employees = hrEmployees.map((hrEmp: HREmployee) => ({
       employee_id: hrEmp.employeeNumber,
       name: `${hrEmp.firstName} ${hrEmp.middleName ? hrEmp.middleName + ' ' : ''}${hrEmp.lastName}`.trim(),
       job_title: hrEmp.position,

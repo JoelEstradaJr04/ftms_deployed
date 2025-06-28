@@ -23,7 +23,7 @@ interface PieChartProps {
 const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
   // Define color mappings for common categories
   // These should match the actual category names in your GlobalCategory table
-  const colors = {
+  const colors: Record<string, string> = {
     'Fuel': "#ff6b6b",
     'Vehicle_Parts': "#4ecdc4",
     'Tools': "#45b7d1",
@@ -36,11 +36,11 @@ const PieChart: React.FC<PieChartProps> = ({ revenueData, expenseData }) => {
 
   // Helper function to get color for a category, with fallbacks
   const getRevenueColor = (category: string): string => {
-    return colors[category] || colors[category.replace(/\s+/g, '_')] || "#6C757D";
+    return (colors as Record<string, string>)[category] || (colors as Record<string, string>)[category.replace(/\s+/g, '_')] || "#6C757D";
   };
 
   const getExpenseColor = (category: string): string => {
-    return colors[category] || colors[category.replace(/\s+/g, '_')] || "#495057";
+    return (colors as Record<string, string>)[category] || (colors as Record<string, string>)[category.replace(/\s+/g, '_')] || "#495057";
   };
 
   // Helper function to format category names for display

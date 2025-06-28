@@ -1,7 +1,7 @@
 // app\Components\addRevenue.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../../styles/addRevenue.css';
 import {
   showEmptyFieldWarning,
@@ -87,8 +87,8 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
           const categoriesData = await categoriesResponse.json();
           setCategories(categoriesData);
           // Set first revenue category as default if available
-          if (categories.length > 0) {
-            const firstCategory = categories.find(cat => 
+          if (categoriesData.length > 0) {
+            const firstCategory = categoriesData.find((cat: GlobalCategory) => 
               cat.applicable_modules.includes('revenue') &&
               cat.name !== 'Bus_Rental'
             );
@@ -123,16 +123,18 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
   }, []);
 
   // Filter assignments based on selected category
-  const filteredAssignments = assignments
-    .filter(a => {
-      if (!formData.category_id) return false;
-      const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
-      if (!selectedCategory) return false;
-      if (selectedCategory.name === 'Boundary') return a.assignment_type === 'Boundary';
-      if (selectedCategory.name === 'Percentage') return a.assignment_type === 'Percentage';
-      return false;
-    })
-    .sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
+  const filteredAssignments = useMemo(() => {
+    return assignments
+      .filter(a => {
+        if (!formData.category_id) return false;
+        const selectedCategory = categories.find(cat => cat.category_id === formData.category_id);
+        if (!selectedCategory) return false;
+        if (selectedCategory.name === 'Boundary') return a.assignment_type === 'Boundary';
+        if (selectedCategory.name === 'Percentage') return a.assignment_type === 'Percentage';
+        return false;
+      })
+      .sort((a, b) => new Date(a.date_assigned).getTime() - new Date(b.date_assigned).getTime());
+  }, [formData.category_id, categories, assignments]);
 
   // When assignment changes, auto-fill fields
   useEffect(() => {

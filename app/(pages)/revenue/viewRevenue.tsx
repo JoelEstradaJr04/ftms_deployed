@@ -3,25 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import '../../styles/viewRevenue.css';
-import { formatDate, formatDateTime } from '../../utility/dateFormatter';
+import { formatDateTime } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
-
-type Assignment = {
-  assignment_id: string;
-  bus_trip_id: string;
-  bus_route: string;
-  date_assigned: string;
-  trip_fuel_expense: number;
-  trip_revenue: number;
-  assignment_type: string;
-  assignment_value: number;
-  payment_method: string;
-  driver_name: string | null;
-  conductor_name: string | null;
-  bus_plate_number: string;
-  bus_type: string;
-  body_number: string;
-};
+import type { Assignment } from '@/lib/operations/assignments';
 
 type GlobalCategory = {
   category_id: string;

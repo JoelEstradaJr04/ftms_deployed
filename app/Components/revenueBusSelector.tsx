@@ -2,23 +2,7 @@ import React, { useState, useMemo } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/revenueBusSelector.css";
-
-type Assignment = {
-  assignment_id: string;
-  date_assigned: string;
-  trip_revenue: number;
-  bus_plate_number: string | null;
-  bus_type: string | null;
-  bus_route: string;
-  driver_name: string | null;
-  conductor_name: string | null;
-  assignment_type: string;
-  assignment_value?: number;
-  // Legacy fields for backward compatibility
-  driver_id?: string;
-  conductor_id?: string;
-  is_revenue_recorded?: boolean;
-};
+import type { Assignment } from '@/lib/operations/assignments';
 
 type Employee = {
   employee_id: string;

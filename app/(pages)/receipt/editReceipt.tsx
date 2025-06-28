@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import '../../styles/editReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
@@ -142,7 +142,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   const [remarks, setRemarks] = useState(receipt?.remarks || '');
 
   // Function to compute summary category based on items
-  const computeSummaryCategory = (items: EditReceiptItem[]): string => {
+  const computeSummaryCategory = useCallback((items: EditReceiptItem[]): string => {
     if (items.length === 0) return '';
     
     const validItems = items.filter(item => 
@@ -160,7 +160,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     
     // Multiple categories - return Multiple_Categories category
     return categories.find(c => c.name === 'Multiple_Categories')?.category_id || '';
-  };
+  }, [categories]);
 
   // Function to get display text for category
   const getDisplayCategory = (categoryId: string) => {
@@ -233,7 +233,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     const activeItems = items.filter(item => !item.is_deleted);
     const summaryCategoryId = computeSummaryCategory(activeItems);
     setCategoryId(summaryCategoryId);
-  }, [items, categories]);
+  }, [items, categories, computeSummaryCategory]);
 
   if (!receipt) {
     return null;
