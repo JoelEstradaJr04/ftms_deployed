@@ -36,25 +36,25 @@ type Reimbursement = {
   cancelled_date?: string;
 };
 
-type ViewExpenseModalProps = {
-  record: {
-    expense_id: string;
-    category: {
-      category_id: string;
-      name: string;
-    };
-    other_category?: string;
-    total_amount: number;
-    expense_date: string;
-    assignment?: Assignment;
-    receipt?: Receipt;
-    other_source?: string;
-    payment_method: {
-      id: string;
-      name: string;
-    };
-    reimbursements?: Reimbursement[];
+type ExpenseRecord = {
+  expense_id: string;
+  category: {
+    category_id: string;
+    name: string;
   };
+  total_amount: number;
+  expense_date: string;
+  assignment?: Assignment;
+  receipt?: Receipt;
+  payment_method: {
+    id: string;
+    name: string;
+  };
+  reimbursements?: Reimbursement[];
+};
+
+type ViewExpenseModalProps = {
+  record: ExpenseRecord;
   onClose: () => void;
 };
 
@@ -140,9 +140,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
         <div className="mainDetails">
           <div className="detailRow">
             <span className="label">Category:</span>
-            <span className="value">
-              {record.category.name === 'Other' ? record.other_category || 'Other' : formatDisplayText(record.category.name)}
-            </span>
+            <span className="value">{record.category.name === 'Other' ? 'Other' : formatDisplayText(record.category.name)}</span>
           </div>
           <div className="detailRow">
             <span className="label">Submitted Amount:</span>
@@ -175,7 +173,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
           <div className="otherDetails">
             <h3>Expense Source Details</h3>
             <div className="detailRow">
-              <span className="value">{record.other_source || 'N/A'}</span>
+              <span className="value">N/A</span>
             </div>
           </div>
         )}

@@ -31,10 +31,9 @@ const RevenuePieChart: React.FC<RevenuePieChartProps> = ({
 
   // Memoize revenueColors so it doesn't change on every render
   const revenueColors = useMemo(() => ({
-    Boundary: "#4373A1",
-    Percentage: "#708D81",
+    Boundary: "#54a0ff",
+    Percentage: "#5f27cd",
     Bus_Rental: "#F4D58D",
-    Other: "#001427"
   }), []);
 
   useEffect(() => {

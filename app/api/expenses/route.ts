@@ -3,142 +3,136 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateId } from '@/lib/idGenerator'
 import { logAudit } from '@/lib/auditLogger'
-import { getAssignmentById } from '@/lib/operations/assignments'
+import { fetchEmployeesForReimbursement } from '@/lib/supabase/employees'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      category_id, // global
-      source_id,   // global
-      payment_method_id, // global
+      category,
+      category_id,
       assignment_id,
       receipt_id,
       total_amount,
       expense_date,
       created_by,
-      reimbursements, // array for receipt-sourced
-      category: legacy_category,
-      payment_method: legacy_payment_method,
-      source: source_type // field for source type (receipt, operations, etc.)
+      payment_method,
+      payment_method_id,
+      reimbursements
     } = body;
 
-    // Accept legacy fields for transition
-    let final_category_id = category_id;
-    let final_payment_method_id = payment_method_id;
-    let final_source_id = source_id;
-
-    // If missing, look up by legacy field
-    if (!final_category_id && legacy_category) {
-      const cat = await prisma.globalCategory.findFirst({ where: { name: legacy_category } });
-      if (cat) final_category_id = cat.category_id;
-    }
-    if (!final_payment_method_id && legacy_payment_method) {
-      const pm = await prisma.globalPaymentMethod.findFirst({ where: { name: legacy_payment_method } });
-      if (pm) final_payment_method_id = pm.id;
-    }
-
-    // Handle source_type field to determine source_id
-    if (!final_source_id && source_type) {
-      let sourceName = '';
-      if (source_type === 'receipt') {
-        sourceName = 'Receipt';
-      } else if (source_type === 'operations') {
-        sourceName = 'Operations';
-      } else if (source_type === 'other') {
-        sourceName = 'Other';
-      }
-      
-      if (sourceName) {
-        const src = await prisma.globalSource.findFirst({ where: { name: sourceName } });
-        if (src) final_source_id = src.source_id;
-      }
-    }
-
-    if (!final_category_id || !final_payment_method_id) {
-      return NextResponse.json({ error: 'category_id and payment_method_id are required.' }, { status: 400 });
-    }
-
-    // Fetch assignment data if assignment_id is provided
-    let assignmentData = null;
-    if (assignment_id) {
-      assignmentData = await getAssignmentById(assignment_id);
-      if (!assignmentData) {
-        return NextResponse.json(
-          { error: 'Assignment not found in Operations API' },
-          { status: 404 }
-        );
-      }
-    }
-
-    // Validate required global IDs
-    const [category, paymentMethod, source] = await Promise.all([
-      prisma.globalCategory.findUnique({ where: { category_id: final_category_id } }),
-      prisma.globalPaymentMethod.findUnique({ where: { id: final_payment_method_id } }),
-      final_source_id ? prisma.globalSource.findUnique({ where: { source_id: final_source_id } }) : Promise.resolve(null)
-    ]);
-    if (!category || !paymentMethod) {
-      return NextResponse.json({ error: 'Invalid global ID(s) provided.' }, { status: 400 });
-    }
-
-    // --- ANTI-DUPLICATE LOGIC (assignment-based) ---
-    if (assignment_id) {
-      // Check for duplicate expense record for the same assignment and expense_date
-      const duplicate = await prisma.expenseRecord.findFirst({
-        where: {
-          assignment_id,
-          expense_date: new Date(expense_date),
-          category_id: final_category_id,
-        },
-      });
-      if (duplicate) {
-        return NextResponse.json(
-          { error: 'Expense record for this assignment and date already exists.' },
-          { status: 409 }
-        );
-      }
-    }
-
     const result = await prisma.$transaction(async (tx) => {
-      // Create expense
+      // Validate required fields
+      if (!total_amount || !expense_date || !created_by) {
+        throw new Error('Missing required fields: total_amount, expense_date, or created_by');
+      }
+
+      // Handle category - convert name to ID if needed
+      let finalCategoryId = category_id;
+      if (!finalCategoryId && category) {
+        const categoryRecord = await tx.globalCategory.findFirst({ 
+          where: { name: category, is_deleted: false } 
+        });
+        if (!categoryRecord) {
+          throw new Error(`Category '${category}' not found`);
+        }
+        finalCategoryId = categoryRecord.category_id;
+      }
+      if (!finalCategoryId) {
+        throw new Error('Missing category_id or valid category name');
+      }
+
+      // Handle payment method - convert name to ID if needed
+      let finalPaymentMethodId = payment_method_id;
+      if (!finalPaymentMethodId && payment_method) {
+        const paymentMethodRecord = await tx.globalPaymentMethod.findFirst({ 
+          where: { name: payment_method, is_deleted: false } 
+        });
+        if (!paymentMethodRecord) {
+          throw new Error(`Payment method '${payment_method}' not found`);
+        }
+        finalPaymentMethodId = paymentMethodRecord.id;
+      }
+      if (!finalPaymentMethodId) {
+        throw new Error('Missing payment_method_id or valid payment_method name');
+      }
+
+      // Get category, payment method, and source
+      const categoryRecord = await tx.globalCategory.findUnique({ where: { category_id: finalCategoryId } });
+      const paymentMethodRecord = await tx.globalPaymentMethod.findUnique({ where: { id: finalPaymentMethodId } });
+      const source = assignment_id ? await tx.globalSource.findFirst({ where: { name: 'operations' } }) : 
+                    receipt_id ? await tx.globalSource.findFirst({ where: { name: 'receipt' } }) : null;
+
+      if (!categoryRecord || !paymentMethodRecord) {
+        throw new Error('Invalid category or payment method');
+      }
+
+      // Create expense record
       const expense = await tx.expenseRecord.create({
         data: {
           expense_id: await generateId('EXP'),
-          category_id: final_category_id,
-          source_id: final_source_id,
-          payment_method_id: final_payment_method_id,
-          assignment_id,
-          bus_trip_id: assignmentData?.bus_trip_id ?? null,
-          receipt_id,
+          category_id: categoryRecord.category_id,
+          assignment_id: assignment_id || null,
+          receipt_id: receipt_id || null,
           total_amount,
           expense_date: new Date(expense_date),
           created_by,
-          created_at: new Date(),
-          updated_at: null,
+          payment_method_id: paymentMethodRecord.id,
           is_deleted: false,
-        },
-        include: {
-          receipt: {
-            include: {
-              items: { include: { item: true } }
-            }
-          }
         }
       });
 
       // Auto-create reimbursement if needed
-      if (paymentMethod.name === 'REIMBURSEMENT') {
+      if (paymentMethodRecord.name === 'REIMBURSEMENT') {
         const pendingStatus = await tx.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } });
         if (!pendingStatus) throw new Error('PENDING reimbursement status not found');
+        
+        // Operations-sourced: assignment_id present
+        if (assignment_id && (body.driver_reimbursement || body.conductor_reimbursement)) {
+          // Create driver reimbursement if amount provided
+          if (body.driver_reimbursement && body.driver_reimbursement > 0) {
+            await tx.reimbursement.create({
+              data: {
+                expense_id: expense.expense_id,
+                employee_id: body.driver_name || 'UNKNOWN',
+                employee_name: body.driver_name || 'Unknown Driver',
+                job_title: 'Driver',
+                amount: body.driver_reimbursement,
+                status_id: pendingStatus.id,
+                created_by,
+                is_deleted: false,
+              }
+            });
+          }
+          
+          // Create conductor reimbursement if amount provided
+          if (body.conductor_reimbursement && body.conductor_reimbursement > 0) {
+            await tx.reimbursement.create({
+              data: {
+                expense_id: expense.expense_id,
+                employee_id: body.conductor_name || 'UNKNOWN',
+                employee_name: body.conductor_name || 'Unknown Conductor',
+                job_title: 'Conductor',
+                amount: body.conductor_reimbursement,
+                status_id: pendingStatus.id,
+                created_by,
+                is_deleted: false,
+              }
+            });
+          }
+        }
         // Receipt-sourced: assignment_id not present
-        if ((!source || source.name !== 'operations') && total_amount) {
+        else if ((!source || source.name !== 'operations') && total_amount) {
           if (Array.isArray(reimbursements) && reimbursements.length > 0) {
+            // Fetch all employees from HR API
+            const allEmployees = await fetchEmployeesForReimbursement();
+            
             for (const entry of reimbursements) {
               if (!entry.employee_id || !entry.amount) {
                 throw new Error('Missing employee_id or amount in reimbursement entry');
               }
-              // Find employee name and job title
-              const employee = await tx.employeeCache.findUnique({ where: { employee_id: entry.employee_id } });
+              // Find employee from HR API data
+              const employee = allEmployees.find(emp => emp.employee_id === entry.employee_id);
               if (!employee) {
                 throw new Error('Invalid employee_id for reimbursement');
               }
@@ -157,7 +151,8 @@ export async function POST(req: NextRequest) {
             }
           } else if (body.employee_id) {
             // Fallback: single employee_id for backward compatibility
-            const employee = await tx.employeeCache.findUnique({ where: { employee_id: body.employee_id } });
+            const allEmployees = await fetchEmployeesForReimbursement();
+            const employee = allEmployees.find(emp => emp.employee_id === body.employee_id);
             if (!employee) {
               throw new Error('Invalid employee_id for reimbursement');
             }
@@ -192,7 +187,7 @@ export async function POST(req: NextRequest) {
         table_affected: 'ExpenseRecord',
         record_id: expense.expense_id,
         performed_by: created_by,
-        details: `Created expense record with amount ₱${total_amount}${receipt_id ? ' with receipt' : ''}${assignment_id ? ' from assignment' : ''}${paymentMethod.name === 'REIMBURSEMENT' ? ' (REIMBURSEMENT)' : ''}`
+        details: `Created expense record with amount ₱${total_amount}${receipt_id ? ' with receipt' : ''}${assignment_id ? ' from assignment' : ''}${paymentMethodRecord.name === 'REIMBURSEMENT' ? ' (REIMBURSEMENT)' : ''}`
       });
 
       // Fetch the complete expense record with all relationships for the response

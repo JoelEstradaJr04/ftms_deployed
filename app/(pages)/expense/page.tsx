@@ -40,8 +40,6 @@ interface NewExpense {
   employee_id?: string;
   driver_reimbursement?: number;
   conductor_reimbursement?: number;
-  other_source?: string;
-  other_category?: string;
 }
 
 // Define interface based on your Prisma ExpenseRecord schema
@@ -73,9 +71,6 @@ interface ExpenseRecord {
   is_deleted: boolean;
   receipt?: Receipt;
   reimbursements?: Reimbursement[];
-  // Additional fields for expense records
-  other_category?: string;
-  other_source?: string;
   // Legacy fields for backward compatibility
   category_name?: string;
   payment_method_name?: string;
@@ -823,7 +818,6 @@ const filteredData = data.filter((item: ExpenseData) => {
               expense_id: recordToEdit.expense_id,
               expense_date: recordToEdit.expense_date,
               category: recordToEdit.category,
-              other_category: recordToEdit.other_category,
               total_amount: recordToEdit.total_amount,
               assignment: recordToEdit.assignment_id && recordToEdit.bus_trip_id
                 ? allAssignments.find(a => a.assignment_id === recordToEdit.assignment_id && a.bus_trip_id === recordToEdit.bus_trip_id)

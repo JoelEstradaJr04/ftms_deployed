@@ -40,8 +40,11 @@ export async function GET(req: NextRequest) {
     });
   const mapped = reimbursements.map(r => ({
     ...r,
-    // Map status relationship to match frontend expectations
-    status: r.status?.name || 'Pending',
+    // Keep the status as an object with name property for frontend compatibility
+    status: {
+      id: r.status?.id || '',
+      name: r.status?.name || 'PENDING'
+    },
     status_name: r.status?.name || null,
     // Map date fields to match frontend expectations
     submitted_date: r.requested_date,
@@ -60,26 +63,64 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const { reimbursement_id, action, performed_by, payment_reference, payment_method, rejection_reason, remarks } = await req.json();
-    const reimbursement = await prisma.reimbursement.findUnique({ where: { reimbursement_id } });
+    
+    console.log('PATCH /api/reimbursement called with:', {
+      reimbursement_id,
+      action,
+      performed_by,
+      payment_reference,
+      payment_method,
+      rejection_reason,
+      remarks
+    });
+
+    if (!reimbursement_id) {
+      return NextResponse.json({ error: 'reimbursement_id is required' }, { status: 400 });
+    }
+
+    if (!action) {
+      return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    }
+
+    if (!performed_by) {
+      return NextResponse.json({ error: 'performed_by is required' }, { status: 400 });
+    }
+
+    const reimbursement = await prisma.reimbursement.findUnique({ 
+      where: { reimbursement_id },
+      include: { status: true }
+    });
+    
     if (!reimbursement) {
       return NextResponse.json({ error: 'Reimbursement not found' }, { status: 404 });
     }
-    const currentStatus = reimbursement.status_id
-      ? (await prisma.globalReimbursementStatus.findUnique({ where: { id: reimbursement.status_id } }))?.name
-      : null;
+
+    console.log('Found reimbursement:', {
+      reimbursement_id: reimbursement.reimbursement_id,
+      current_status: reimbursement.status?.name,
+      status_id: reimbursement.status_id
+    });
+
+    const currentStatus = reimbursement.status?.name;
     const updateData: Record<string, unknown> = { updated_at: new Date(), updated_by: performed_by };
     let auditAction = '';
     let auditDetails = '';
 
     async function getStatusId(name: string) {
       const status = await prisma.globalReimbursementStatus.findFirst({ where: { name } });
-      if (!status) throw new Error(`Status ${name} not found`);
+      if (!status) {
+        console.error(`Status '${name}' not found in database`);
+        throw new Error(`Status '${name}' not found`);
+      }
       return status.id;
     }
 
     if (action === 'APPROVE') {
       if (currentStatus !== 'PENDING') {
-        return NextResponse.json({ error: 'Can only approve from PENDING status' }, { status: 400 });
+        console.log(`Cannot approve: current status is '${currentStatus}', expected 'PENDING'`);
+        return NextResponse.json({ 
+          error: `Can only approve from PENDING status. Current status: ${currentStatus}` 
+        }, { status: 400 });
       }
       updateData.status_id = await getStatusId('APPROVED');
       updateData.approved_by = performed_by;
@@ -88,7 +129,10 @@ export async function PATCH(req: NextRequest) {
       auditDetails = 'Reimbursement approved.';
     } else if (action === 'PAY') {
       if (currentStatus !== 'APPROVED') {
-        return NextResponse.json({ error: 'Can only pay from APPROVED status' }, { status: 400 });
+        console.log(`Cannot pay: current status is '${currentStatus}', expected 'APPROVED'`);
+        return NextResponse.json({ 
+          error: `Can only pay from APPROVED status. Current status: ${currentStatus}` 
+        }, { status: 400 });
       }
       updateData.status_id = await getStatusId('PAID');
       updateData.paid_by = performed_by;
@@ -103,7 +147,10 @@ export async function PATCH(req: NextRequest) {
       auditDetails = `Reimbursement paid. Reference: ${payment_reference}${remarks ? `. Remarks: ${remarks}` : ''}`;
     } else if (action === 'REJECT') {
       if (currentStatus !== 'PENDING') {
-        return NextResponse.json({ error: 'Can only reject from PENDING status' }, { status: 400 });
+        console.log(`Cannot reject: current status is '${currentStatus}', expected 'PENDING'`);
+        return NextResponse.json({ 
+          error: `Can only reject from PENDING status. Current status: ${currentStatus}` 
+        }, { status: 400 });
       }
       if (!rejection_reason) {
         return NextResponse.json({ error: 'Rejection reason required' }, { status: 400 });
@@ -116,7 +163,10 @@ export async function PATCH(req: NextRequest) {
       auditDetails = `Reimbursement rejected. Reason: ${rejection_reason}`;
     } else if (action === 'CANCEL') {
       if (currentStatus !== 'PENDING') {
-        return NextResponse.json({ error: 'Can only cancel from PENDING status' }, { status: 400 });
+        console.log(`Cannot cancel: current status is '${currentStatus}', expected 'PENDING'`);
+        return NextResponse.json({ 
+          error: `Can only cancel from PENDING status. Current status: ${currentStatus}` 
+        }, { status: 400 });
       }
       updateData.status_id = await getStatusId('CANCELLED');
       updateData.cancelled_by = performed_by;
@@ -124,13 +174,21 @@ export async function PATCH(req: NextRequest) {
       auditAction = 'CANCEL';
       auditDetails = 'Reimbursement cancelled.';
     } else {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+      console.log(`Invalid action: ${action}`);
+      return NextResponse.json({ error: `Invalid action: ${action}` }, { status: 400 });
     }
+
+    console.log('Updating reimbursement with data:', updateData);
 
     const updated = await prisma.reimbursement.update({
       where: { reimbursement_id },
       data: updateData,
       include: { status: true }
+    });
+
+    console.log('Reimbursement updated successfully:', {
+      reimbursement_id: updated.reimbursement_id,
+      new_status: updated.status?.name
     });
 
     await logAudit({
@@ -147,6 +205,10 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating reimbursement:', error);
-    return NextResponse.json({ error: 'Failed to update reimbursement' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ 
+      error: 'Failed to update reimbursement',
+      details: errorMessage 
+    }, { status: 500 });
   }
 }

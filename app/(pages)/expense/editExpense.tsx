@@ -63,12 +63,10 @@ type EditExpenseModalProps = {
       category_id: string;
       name: string;
     };
-    other_category?: string;
     total_amount: number;
     assignment_id?: string;
     assignment?: Assignment;
     receipt?: Receipt;
-    other_source?: string;
     // Updated to match schema structure
     payment_method: {
       id: string;
@@ -443,7 +441,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       type="text"
                       id="category"
                       name="category"
-                      value={record.category.name === 'Other' ? record.other_category || 'Other' : record.category.name}
+                      value={record.category.name}
                       readOnly
                       className="formInput"
                     />
@@ -520,16 +518,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                     })()}
                   </div>
                 </div>
-
-                {/* Source */}
-                {record.other_source && (
-                  <div className="sourceSection">
-                    <div className="sourceBox">
-                      <span className="sourceLabel">Source:</span>
-                      <span className="sourceValue">{record.other_source}</span>
-                    </div>
-                  </div>
-                )}
 
               </div>
             </div>

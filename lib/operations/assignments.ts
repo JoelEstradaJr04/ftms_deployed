@@ -60,75 +60,132 @@ export async function getAllAssignments(): Promise<Assignment[]> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
+    
+    // Check if the response indicates an API issue
+    const apiStatus = response.headers.get('X-API-Status');
+    if (apiStatus === 'fallback-empty' || apiStatus === 'error-fallback') {
+      console.warn('Operations API is unavailable, returning empty assignments array');
+      return [];
+    }
+    
     if (data.error) {
       throw new Error(data.error);
     }
+    
     return data;
   } catch (error) {
     console.error('Error fetching assignments from Operations API:', error);
-    throw new Error(`Failed to fetch assignments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Return empty array as fallback instead of throwing
+    console.warn('Returning empty assignments array as fallback due to API connectivity issues');
+    return [];
   }
 }
 
-// Server-side only function for direct API calls
+// Server-side only function for direct API calls with retry logic
 export async function fetchAssignmentsFromOperationsAPI(): Promise<Assignment[]> {
   if (!process.env.OP_API_BASE_URL) {
     throw new Error('OP_API_BASE_URL environment variable is required for server-side fetching');
   }
 
-  try {
-    const response = await fetch(`${process.env.OP_API_BASE_URL}?RequestType=revenue`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  const maxRetries = 3;
+  const timeout = 15000; // 15 seconds timeout
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempting to fetch assignments from Operations API (attempt ${attempt}/${maxRetries})`);
+      
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(`${process.env.OP_API_BASE_URL}?RequestType=revenue`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'FTMS-System/1.0',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array');
+      }
+      
+      // Transform the data to match our Assignment type and deduplicate
+      const transformedData = data.map((assignment: RawAssignment) => {
+        let normalizedBusType = assignment.bus_type;
+        if (normalizedBusType === 'Non-Aircon') normalizedBusType = 'Ordinary';
+        return {
+          assignment_id: assignment.assignment_id,
+          bus_trip_id: assignment.bus_trip_id,
+          bus_route: assignment.bus_route,
+          is_revenue_recorded: assignment.is_revenue_recorded ?? false,
+          is_expense_recorded: assignment.is_expense_recorded ?? false,
+          date_assigned: assignment.date_assigned,
+          trip_fuel_expense: Number(assignment.trip_fuel_expense) || 0,
+          trip_revenue: Number(assignment.trip_revenue) || 0,
+          assignment_type: assignment.assignment_type,
+          assignment_value: Number(assignment.assignment_value) || 0,
+          payment_method: assignment.payment_method ?? '',
+          driver_name: assignment.driver_name,
+          conductor_name: assignment.conductor_name,
+          bus_plate_number: assignment.bus_plate_number,
+          bus_type: normalizedBusType,
+          body_number: assignment.body_number,
+          driver_id: assignment.driver_name || undefined,
+          conductor_id: assignment.conductor_name || undefined,
+        };
+      });
+
+      // Deduplicate based on assignment_id and date_assigned combination
+      const uniqueAssignments = transformedData.filter((assignment, index, self) => {
+        const key = `${assignment.assignment_id}-${assignment.date_assigned}`;
+        return index === self.findIndex(a => `${a.assignment_id}-${a.date_assigned}` === key);
+      });
+
+      console.log(`Successfully fetched ${data.length} assignments from Operations API, deduplicated to ${uniqueAssignments.length}`);
+      return uniqueAssignments;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      
+      // Log detailed error information
+      console.error(`Attempt ${attempt}/${maxRetries} failed:`, {
+        error: lastError.message,
+        stack: lastError.stack,
+        url: process.env.OP_API_BASE_URL,
+        attempt,
+        maxRetries
+      });
+
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Wait before retrying (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5 seconds
+      console.log(`Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-    
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      throw new Error('Invalid response format: expected array');
-    }
-    
-    // Transform the data to match our Assignment type and deduplicate
-    const transformedData = data.map((assignment: RawAssignment) => {
-      let normalizedBusType = assignment.bus_type;
-      if (normalizedBusType === 'Non-Aircon') normalizedBusType = 'Ordinary';
-      return {
-        assignment_id: assignment.assignment_id,
-        bus_trip_id: assignment.bus_trip_id,
-        bus_route: assignment.bus_route,
-        is_revenue_recorded: assignment.is_revenue_recorded ?? false,
-        is_expense_recorded: assignment.is_expense_recorded ?? false,
-        date_assigned: assignment.date_assigned,
-        trip_fuel_expense: Number(assignment.trip_fuel_expense) || 0,
-        trip_revenue: Number(assignment.trip_revenue) || 0,
-        assignment_type: assignment.assignment_type,
-        assignment_value: Number(assignment.assignment_value) || 0,
-        payment_method: assignment.payment_method ?? '',
-        driver_name: assignment.driver_name,
-        conductor_name: assignment.conductor_name,
-        bus_plate_number: assignment.bus_plate_number,
-        bus_type: normalizedBusType,
-        body_number: assignment.body_number,
-        driver_id: assignment.driver_name || undefined,
-        conductor_id: assignment.conductor_name || undefined,
-      };
-    });
-
-    // Deduplicate based on assignment_id and date_assigned combination
-    const uniqueAssignments = transformedData.filter((assignment, index, self) => {
-      const key = `${assignment.assignment_id}-${assignment.date_assigned}`;
-      return index === self.findIndex(a => `${a.assignment_id}-${a.date_assigned}` === key);
-    });
-
-    // console.log(`Fetched ${data.length} assignments from Operations API, deduplicated to ${uniqueAssignments.length}`);
-    // console.log('Sample assignment data:', uniqueAssignments[0]);
-
-    return uniqueAssignments;
-  } catch (error) {
-    console.error('Error fetching assignments from Operations API:', error);
-    throw new Error(`Failed to fetch assignments: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+
+  // If we get here, all retries failed
+  const errorMessage = lastError ? lastError.message : 'Unknown error';
+  console.error(`All ${maxRetries} attempts to fetch assignments failed. Last error: ${errorMessage}`);
+  
+  // Return empty array as fallback instead of throwing
+  console.warn('Returning empty assignments array as fallback due to API connectivity issues');
+  return [];
 }
 
 // Get assignment by ID
@@ -160,7 +217,8 @@ export async function getUnrecordedRevenueAssignments(): Promise<Assignment[]> {
     return assignments;
   } catch (error) {
     console.error('Error fetching unrecorded revenue assignments:', error);
-    throw error;
+    // Return empty array as fallback
+    return [];
   }
 }
 
@@ -173,7 +231,8 @@ export async function getUnrecordedExpenseAssignments(): Promise<Assignment[]> {
     return assignments;
   } catch (error) {
     console.error('Error fetching unrecorded expense assignments:', error);
-    throw error;
+    // Return empty array as fallback
+    return [];
   }
 }
 
@@ -190,7 +249,8 @@ export async function getAllAssignmentsWithRecorded(): Promise<Assignment[]> {
     }));
   } catch (error) {
     console.error('Error fetching assignments with recorded status:', error);
-    throw error;
+    // Return empty array as fallback
+    return [];
   }
 }
 

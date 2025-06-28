@@ -33,6 +33,7 @@ async function main() {
     { name: 'APPROVED', modules: ['reimbursement'] },
     { name: 'REJECTED', modules: ['reimbursement'] },
     { name: 'PAID', modules: ['reimbursement'] },
+    { name: 'CANCELLED', modules: ['reimbursement'] },
   ];
   
   // Fix: Properly type the statusMap to avoid TypeScript error

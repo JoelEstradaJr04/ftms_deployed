@@ -51,8 +51,6 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
 }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const today = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [categories, setCategories] = useState<GlobalCategory[]>([]);
   
@@ -88,14 +86,19 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
         if (categoriesResponse.ok) {
           const categoriesData = await categoriesResponse.json();
           setCategories(categoriesData);
-          // Set first revenue category as default if available (excluding Other and Bus_Rental)
-          const revenueCategories = categoriesData.filter((cat: GlobalCategory) => 
-            cat.applicable_modules.includes('revenue') && 
-            cat.name !== 'Other' && 
-            cat.name !== 'Bus_Rental'
-          );
-          if (revenueCategories.length > 0) {
-            setFormData(prev => ({ ...prev, category_id: revenueCategories[0].category_id }));
+          // Set first revenue category as default if available
+          if (categories.length > 0) {
+            const firstCategory = categories.find(cat => 
+              cat.applicable_modules.includes('revenue') &&
+              cat.name !== 'Bus_Rental'
+            );
+            if (firstCategory) {
+              setFormData(prev => ({
+                ...prev,
+                category: firstCategory.name,
+                category_id: firstCategory.category_id
+              }));
+            }
           }
           console.log('[DATA] Categories loaded:', categoriesData.length);
         }
@@ -377,7 +380,6 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
                       {categories
                         .filter(cat => 
                           cat.applicable_modules.includes('revenue') && 
-                          cat.name !== 'Other' && 
                           cat.name !== 'Bus_Rental'
                         )
                         .map((category) => (

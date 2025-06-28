@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { logAudit } from '@/lib/auditLogger';
+import { fetchEmployeesForReimbursement } from '@/lib/supabase/employees';
 
 export async function GET(
   request: NextRequest,
@@ -88,368 +89,224 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const data = await request.json();
-    const { 
-      payment_method, 
-      reimbursable_amount, 
-      employee_id,
-      expense_date,
-      total_amount
-    } = data;
+    const body = await request.json();
+    const { payment_method, reimbursable_amount, employee_id } = body;
 
-    // Get the original record for comparison
+    // Validate the expense record exists
     const originalRecord = await prisma.expenseRecord.findUnique({
       where: { expense_id: id },
-      include: {
-        receipt: {
-          include: {
-            items: {
-              include: {
-                item: true
-              }
-            }
-          }
-        },
-        reimbursements: true,
-      }
+      include: { reimbursements: true }
     });
 
     if (!originalRecord) {
-      return NextResponse.json(
-        { error: 'Record not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Expense record not found' }, { status: 404 });
     }
 
-    // Handle basic expense field updates (expense_date, total_amount)
-    if (expense_date !== undefined || total_amount !== undefined) {
-      // Validate expense_date if provided
-      if (expense_date !== undefined) {
-        const expenseDateTime = new Date(expense_date);
-        const now = new Date();
-        if (expenseDateTime > now) {
-          return NextResponse.json(
-            { error: 'Expense date cannot be in the future' },
-            { status: 400 }
-          );
+    // Get payment methods
+    const [cashMethod, reimbMethod, pendingStatus] = await Promise.all([
+      prisma.globalPaymentMethod.findFirst({ where: { name: 'CASH' } }),
+      prisma.globalPaymentMethod.findFirst({ where: { name: 'REIMBURSEMENT' } }),
+      prisma.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } })
+    ]);
+
+    if (!cashMethod || !reimbMethod || !pendingStatus) {
+      return NextResponse.json({ error: 'Required payment methods or status not found' }, { status: 500 });
+    }
+
+    // Fetch all employees from HR API for validation
+    const allEmployees = await fetchEmployeesForReimbursement();
+
+    // Operations-sourced: assignment_id present
+    if (originalRecord.assignment_id) {
+      if (payment_method === 'REIMBURSEMENT') {
+        if (!reimbursable_amount || !employee_id) {
+          return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
         }
-      }
-
-      // Validate total_amount if provided
-      if (total_amount !== undefined && (isNaN(total_amount) || total_amount <= 0)) {
-        return NextResponse.json(
-          { error: 'Total amount must be a positive number' },
-          { status: 400 }
-        );
-      }
-
-      // Prepare update data
-      const updateData: {
-        updated_at: Date;
-        expense_date?: Date;
-        total_amount?: number;
-      } = {
-        updated_at: new Date()
-      };
-
-      if (expense_date !== undefined) {
-        updateData.expense_date = new Date(expense_date);
-      }
-
-      if (total_amount !== undefined) {
-        updateData.total_amount = total_amount;
-      }
-
-      // Update the expense record
-      const updatedExpense = await prisma.expenseRecord.update({
-        where: { expense_id: id },
-        data: updateData,
-        include: {
-          category: true,
-          payment_method: true,
-          source: true,
-          receipt: {
-            include: {
-              payment_status: true,
-              terms: true,
-              category: true,
-              source: true,
-              items: {
-                where: {
-                  is_deleted: false
-                },
-                include: {
-                  item: {
-                    include: {
-                      unit: true,
-                      category: true
-                    }
-                  }
-                }
-              }
-            }
+        // Find employee from HR API data
+        const employee = allEmployees.find(emp => emp.employee_id === employee_id);
+        if (!employee) {
+          return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
+        }
+        // Remove any existing reimbursements for this expense (enforce only one per expense for operations)
+        await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
+        // Create reimbursement record
+        await prisma.reimbursement.create({
+          data: {
+            expense_id: id,
+            employee_id,
+            employee_name: employee.name,
+            job_title: employee.job_title,
+            amount: reimbursable_amount,
+            status_id: pendingStatus.id,
+            created_by: originalRecord.created_by,
+            is_deleted: false,
+          }
+        });
+        // Update expense record
+        const updatedExpense = await prisma.expenseRecord.update({
+          where: { expense_id: id },
+          data: {
+            payment_method_id: reimbMethod.id,
+            updated_at: new Date(),
           },
-          reimbursements: {
-            where: {
-              is_deleted: false
-            },
-            include: {
-              status: true
+          include: {
+            payment_method: true,
+            reimbursements: true,
+            receipt: {
+              include: {
+                items: {
+                  include: {
+                    item: true
+                  }
+                }
+              }
             }
           }
-        }
-      });
-
-      // Log the audit trail
-      let auditDetails = `Updated expense record.`;
-      if (expense_date !== undefined) {
-        auditDetails += ` Expense date changed to ${new Date(expense_date).toISOString()}.`;
+        });
+        await logAudit({
+          action: 'UPDATE',
+          table_affected: 'ExpenseRecord',
+          record_id: id,
+          performed_by: 'ftms_user',
+          details: `Set as REIMBURSEMENT for employee ${employee.name} (₱${reimbursable_amount})`,
+        });
+        // Attach payment_method_name for frontend
+        return NextResponse.json({
+          ...updatedExpense,
+          payment_method_name: updatedExpense.payment_method?.name || null,
+        });
+      } else if (payment_method === 'CASH') {
+        // Remove reimbursement record(s)
+        await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
+        // Update expense record
+        const updatedExpense = await prisma.expenseRecord.update({
+          where: { expense_id: id },
+          data: {
+            payment_method_id: cashMethod.id,
+            updated_at: new Date(),
+          },
+          include: {
+            payment_method: true,
+            reimbursements: true,
+            receipt: {
+              include: {
+                items: {
+                  include: {
+                    item: true
+                  }
+                }
+              }
+            }
+          }
+        });
+        await logAudit({
+          action: 'UPDATE',
+          table_affected: 'ExpenseRecord',
+          record_id: id,
+          performed_by: 'ftms_user',
+          details: `Set as CASH, removed reimbursement`,
+        });
+        // Attach payment_method_name for frontend
+        return NextResponse.json({
+          ...updatedExpense,
+          payment_method_name: updatedExpense.payment_method?.name || null,
+        });
       }
-      if (total_amount !== undefined) {
-        auditDetails += ` Amount changed from ₱${originalRecord.total_amount} to ₱${total_amount}.`;
-      }
-
-      await logAudit({
-        action: 'UPDATE',
-        table_affected: 'ExpenseRecord',
-        record_id: id,
-        performed_by: 'ftms_user',
-        details: auditDetails,
-      });
-
-      // Transform the response to match frontend expectations
-      const transformedExpense = {
-        ...updatedExpense,
-        total_amount: Number(updatedExpense.total_amount),
-        category_name: updatedExpense.category?.name || null,
-        payment_method_name: updatedExpense.payment_method?.name || null,
-        source_name: updatedExpense.source?.name || null,
-        // Transform receipt data if present
-        receipt: updatedExpense.receipt ? {
-          ...updatedExpense.receipt,
-          total_amount: Number(updatedExpense.receipt.total_amount),
-          vat_amount: updatedExpense.receipt.vat_amount ? Number(updatedExpense.receipt.vat_amount) : null,
-          total_amount_due: Number(updatedExpense.receipt.total_amount_due),
-          items: updatedExpense.receipt.items.map(item => ({
-            ...item,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price),
-            total_price: Number(item.total_price)
-          }))
-        } : null,
-        // Transform reimbursements data
-        reimbursements: updatedExpense.reimbursements.map(reimb => ({
-          ...reimb,
-          amount: Number(reimb.amount)
-        }))
-      };
-
-      return NextResponse.json(transformedExpense);
     }
-
-    // Handle payment method changes (existing logic)
-    if (payment_method) {
-      // Fetch required global IDs
-      const cashMethod = await prisma.globalPaymentMethod.findFirst({ where: { name: 'CASH' } });
-      const reimbMethod = await prisma.globalPaymentMethod.findFirst({ where: { name: 'REIMBURSEMENT' } });
-      const pendingStatus = await prisma.globalReimbursementStatus.findFirst({ where: { name: 'PENDING' } });
-
-      if (!cashMethod || !reimbMethod || !pendingStatus) {
-        return NextResponse.json({ error: 'Required global values not found' }, { status: 500 });
-      }
-
-      // Operations-sourced: assignment_id present
-      if (originalRecord.assignment_id) {
-        if (payment_method === 'REIMBURSEMENT') {
-          if (!reimbursable_amount || !employee_id) {
-            return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
-          }
-          // Fetch employee_name
-          const employee = await prisma.employeeCache.findUnique({ where: { employee_id } });
-          if (!employee) {
-            return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
-          }
-          // Remove any existing reimbursements for this expense (enforce only one per expense for operations)
-          await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
-          // Create reimbursement record
-          await prisma.reimbursement.create({
-            data: {
+    // Receipt-sourced: receipt_id present (and not assignment_id)
+    else if (originalRecord.receipt_id) {
+      if (payment_method === 'REIMBURSEMENT') {
+        if (!reimbursable_amount || !employee_id) {
+          return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
+        }
+        // Find employee from HR API data
+        const employee = allEmployees.find(emp => emp.employee_id === employee_id);
+        if (!employee) {
+          return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
+        }
+        // Upsert reimbursement record
+        await prisma.reimbursement.upsert({
+          where: {
+            expense_id_employee_id: {
               expense_id: id,
-              employee_id,
-              employee_name: employee.name,
-              job_title: employee.job_title,
-              amount: reimbursable_amount,
-              status_id: pendingStatus.id,
-              created_by: originalRecord.created_by,
-              is_deleted: false,
-            }
-          });
-          // Update expense record
-          const updatedExpense = await prisma.expenseRecord.update({
-            where: { expense_id: id },
-            data: {
-              payment_method_id: reimbMethod.id,
-              updated_at: new Date(),
+              employee_id: employee_id,
             },
-            include: {
-              payment_method: true,
-              reimbursements: true,
-              receipt: {
-                include: {
-                  items: {
-                    include: {
-                      item: true
-                    }
+          },
+          update: {
+            amount: reimbursable_amount,
+            employee_name: employee.name,
+            status_id: pendingStatus.id,
+            is_deleted: false,
+          },
+          create: {
+            expense_id: id,
+            employee_id: employee.employee_id,
+            employee_name: employee.name,
+            amount: reimbursable_amount,
+            status_id: pendingStatus.id,
+            created_by: originalRecord.created_by,
+            is_deleted: false,
+          }
+        });
+        // Update expense record
+        const updatedExpense = await prisma.expenseRecord.update({
+          where: { expense_id: id },
+          data: {
+            payment_method_id: reimbMethod.id,
+            updated_at: new Date(),
+          },
+          include: {
+            receipt: {
+              include: {
+                items: {
+                  include: {
+                    item: true
                   }
                 }
               }
-            }
-          });
-          await logAudit({
-            action: 'UPDATE',
-            table_affected: 'ExpenseRecord',
-            record_id: id,
-            performed_by: 'ftms_user',
-            details: `Set as REIMBURSEMENT for employee ${employee.name} (₱${reimbursable_amount})`,
-          });
-          // Attach payment_method_name for frontend
-          return NextResponse.json({
-            ...updatedExpense,
-            payment_method_name: updatedExpense.payment_method?.name || null,
-          });
-        } else if (payment_method === 'CASH') {
-          // Remove reimbursement record(s)
-          await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
-          // Update expense record
-          const updatedExpense = await prisma.expenseRecord.update({
-            where: { expense_id: id },
-            data: {
-              payment_method_id: cashMethod.id,
-              updated_at: new Date(),
             },
-            include: {
-              payment_method: true,
-              reimbursements: true,
-              receipt: {
-                include: {
-                  items: {
-                    include: {
-                      item: true
-                    }
+            reimbursements: true,
+          }
+        });
+        await logAudit({
+          action: 'UPDATE',
+          table_affected: 'ExpenseRecord',
+          record_id: id,
+          performed_by: 'ftms_user',
+          details: `Set as REIMBURSEMENT for employee ${employee.name} (₱${reimbursable_amount}) [RECEIPT]`,
+        });
+        return NextResponse.json(updatedExpense);
+      } else if (payment_method === 'CASH') {
+        // Remove reimbursement record(s)
+        await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
+        // Update expense record
+        const updatedExpense = await prisma.expenseRecord.update({
+          where: { expense_id: id },
+          data: {
+            payment_method_id: cashMethod.id,
+            updated_at: new Date(),
+          },
+          include: {
+            receipt: {
+              include: {
+                items: {
+                  include: {
+                    item: true
                   }
                 }
               }
-            }
-          });
-          await logAudit({
-            action: 'UPDATE',
-            table_affected: 'ExpenseRecord',
-            record_id: id,
-            performed_by: 'ftms_user',
-            details: `Set as CASH, removed reimbursement`,
-          });
-          // Attach payment_method_name for frontend
-          return NextResponse.json({
-            ...updatedExpense,
-            payment_method_name: updatedExpense.payment_method?.name || null,
-          });
-        }
-      }
-      // Receipt-sourced: receipt_id present (and not assignment_id)
-      else if (originalRecord.receipt_id) {
-        if (payment_method === 'REIMBURSEMENT') {
-          if (!reimbursable_amount || !employee_id) {
-            return NextResponse.json({ error: 'reimbursable_amount and employee_id are required for reimbursement.' }, { status: 400 });
+            },
+            reimbursements: true,
           }
-          // Fetch employee_name
-          const employee = await prisma.employeeCache.findUnique({ where: { employee_id } });
-          if (!employee) {
-            return NextResponse.json({ error: 'Invalid employee_id' }, { status: 400 });
-          }
-          // Upsert reimbursement record
-          await prisma.reimbursement.upsert({
-            where: {
-              expense_id_employee_id: {
-                expense_id: id,
-                employee_id: employee_id,
-              },
-            },
-            update: {
-              amount: reimbursable_amount,
-              employee_name: employee.name,
-              status_id: pendingStatus.id,
-              is_deleted: false,
-            },
-            create: {
-              expense_id: id,
-              employee_id: employee.employee_id,
-              employee_name: employee.name,
-              amount: reimbursable_amount,
-              status_id: pendingStatus.id,
-              created_by: originalRecord.created_by,
-              is_deleted: false,
-            }
-          });
-          // Update expense record
-          const updatedExpense = await prisma.expenseRecord.update({
-            where: { expense_id: id },
-            data: {
-              payment_method_id: reimbMethod.id,
-              updated_at: new Date(),
-            },
-            include: {
-              receipt: {
-                include: {
-                  items: {
-                    include: {
-                      item: true
-                    }
-                  }
-                }
-              },
-              reimbursements: true,
-            }
-          });
-          await logAudit({
-            action: 'UPDATE',
-            table_affected: 'ExpenseRecord',
-            record_id: id,
-            performed_by: 'ftms_user',
-            details: `Set as REIMBURSEMENT for employee ${employee.name} (₱${reimbursable_amount}) [RECEIPT]`,
-          });
-          return NextResponse.json(updatedExpense);
-        } else if (payment_method === 'CASH') {
-          // Remove reimbursement record(s)
-          await prisma.reimbursement.deleteMany({ where: { expense_id: id } });
-          // Update expense record
-          const updatedExpense = await prisma.expenseRecord.update({
-            where: { expense_id: id },
-            data: {
-              payment_method_id: cashMethod.id,
-              updated_at: new Date(),
-            },
-            include: {
-              receipt: {
-                include: {
-                  items: {
-                    include: {
-                      item: true
-                    }
-                  }
-                }
-              },
-              reimbursements: true,
-            }
-          });
-          await logAudit({
-            action: 'UPDATE',
-            table_affected: 'ExpenseRecord',
-            record_id: id,
-            performed_by: 'ftms_user',
-            details: `Set as CASH, removed reimbursement [RECEIPT]`,
-          });
-          return NextResponse.json(updatedExpense);
-        }
+        });
+        await logAudit({
+          action: 'UPDATE',
+          table_affected: 'ExpenseRecord',
+          record_id: id,
+          performed_by: 'ftms_user',
+          details: `Set as CASH, removed reimbursement [RECEIPT]`,
+        });
+        return NextResponse.json(updatedExpense);
       }
     }
     
@@ -459,11 +316,8 @@ export async function PUT(
       { status: 400 }
     );
   } catch (error) {
-    console.error('Update failed:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    console.error('Error updating expense:', error);
+    return NextResponse.json({ error: 'Failed to update expense' }, { status: 500 });
   }
 }
 

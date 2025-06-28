@@ -574,6 +574,17 @@ const AddExpense: React.FC<AddExpenseProps> = ({
         await showError('Please select an assignment', 'Error');
         return;
       }
+      // Find driver and conductor employee IDs
+      const driver = allEmployees.find(e => e.employee_id === assignment.driver_id);
+      const conductor = allEmployees.find(e => e.employee_id === assignment.conductor_id);
+      if (!driver || !conductor) {
+        await showError('Both driver and conductor must be valid employees for reimbursement.', 'Error');
+        return;
+      }
+      if (!driver.employee_id || !conductor.employee_id) {
+        await showError('Missing employee ID for driver or conductor.', 'Error');
+        return;
+      }
       // Validate reimbursement amounts
       if (!driverReimb || isNaN(Number(driverReimb)) || Number(driverReimb) < 1) {
         await showError('Please enter a valid reimbursement amount for the driver.', 'Error');
@@ -599,11 +610,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
 
     if (result.isConfirmed) {
       try {
-        // Get assignment details for operations-sourced expenses
-        const assignment = source === 'operations' && formData.assignment_id 
-          ? assignments.find(a => a.assignment_id === formData.assignment_id)
-          : null;
-
         const payload = {
           // For receipt-sourced expenses, send category_id instead of category
           ...(source === 'receipt' ? { category_id: formData.category_id } : { category: category }),
@@ -613,12 +619,8 @@ const AddExpense: React.FC<AddExpenseProps> = ({
           ...(source === 'operations' ? { assignment_id } : {}),
           ...(source === 'receipt' ? { receipt_id } : {}),
           payment_method: paymentMethod,
-          ...(paymentMethod === 'REIMBURSEMENT' && source === 'operations' ? {
-            driver_reimbursement: Number(driverReimb),
-            conductor_reimbursement: Number(conductorReimb),
-            driver_name: assignment?.driver_name || 'Unknown Driver',
-            conductor_name: assignment?.conductor_name || 'Unknown Conductor',
-          } : {}),
+          driver_reimbursement: paymentMethod === 'REIMBURSEMENT' && source === 'operations' ? Number(driverReimb) : undefined,
+          conductor_reimbursement: paymentMethod === 'REIMBURSEMENT' && source === 'operations' ? Number(conductorReimb) : undefined,
           ...(source === 'receipt' && paymentMethod === 'REIMBURSEMENT' ? {
             reimbursements: reimbursementRows.map(row => ({
               employee_id: row.employee_id,
@@ -890,16 +892,15 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                 {paymentMethod === 'REIMBURSEMENT' && source === 'operations' && formData.assignment_id && (() => {
                   const assignment = assignments.find(a => a.assignment_id === formData.assignment_id);
                   if (!assignment) return null;
-                  // Use driver_name and conductor_name directly from assignment
-                  const driverName = assignment.driver_name || 'N/A';
-                  const conductorName = assignment.conductor_name || 'N/A';
+                  const driver = assignment ? allEmployees.find(e => e.employee_id === assignment.driver_id) : undefined;
+                  const conductor = assignment ? allEmployees.find(e => e.employee_id === assignment.conductor_id) : undefined;
                   return (
                     <div className="reimbBox">
                       <div className="reimbHeader">Reimbursement Breakdown</div>
                       <div className="reimbGrid">
                         <div className="reimbField">
                           <label>Driver Name</label>
-                          <input type="text" value={driverName} readOnly className="formInput" />
+                          <input type="text" value={driver?.name || ''} readOnly className="formInput" />
                         </div>
                         <div className="reimbField">
                           <label>Job Title</label>
@@ -911,7 +912,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                         </div>
                         <div className="reimbField">
                           <label>Conductor Name</label>
-                          <input type="text" value={conductorName} readOnly className="formInput" />
+                          <input type="text" value={conductor?.name || ''} readOnly className="formInput" />
                         </div>
                         <div className="reimbField">
                           <label>Job Title</label>

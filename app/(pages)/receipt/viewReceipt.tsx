@@ -98,19 +98,17 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
   };
 
   const getDisplayUnit = (item: ReceiptItem) => {
-    if (!item.item) return '';
-    if (item.item.unit.name === 'Other' && item.item.other_unit) {
-      return formatDisplayText(item.item.other_unit);
+    if (item.item.unit.name && item.item.unit.name !== 'Other') {
+      return formatDisplayText(item.item.unit.name);
     }
-    return formatDisplayText(item.item.unit.name);
+    return formatDisplayText('Unknown');
   };
 
-  const getDisplayCategory = (receipt: Receipt) => {
-    const categoryName = typeof receipt.category === 'string' ? receipt.category : receipt.category?.name;
-    if (categoryName === 'Other') {
-      return formatDisplayText('Other'); // You might want to add other_category field if needed
+  const getDisplayCategory = (categoryName: string) => {
+    if (categoryName && categoryName !== 'Other') {
+      return formatDisplayText(categoryName);
     }
-    return formatDisplayText(categoryName || '');
+    return formatDisplayText('Unknown');
   };
 
   const getItemDisplayCategory = (item: ReceiptItem) => {
@@ -146,7 +144,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
           <div className="detailRow">
             <span className="label">Category:</span>
             <span className="value">
-              {getDisplayCategory(record)}
+              {getDisplayCategory(typeof record.category === 'string' ? record.category : record.category?.name || '')}
             </span>
           </div>
           <div className="detailRow">

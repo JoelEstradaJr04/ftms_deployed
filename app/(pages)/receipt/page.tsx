@@ -315,11 +315,11 @@ const ReceiptPage = () => {
     }
   };
 
-  const getDisplayCategory = (receipt: Receipt) => {
-    if (receipt.category_name === 'Other' && receipt.other_category) {
-      return formatDisplayText(receipt.other_category);
+  const getCategoryDisplayName = (receipt: Receipt) => {
+    if (receipt.category_name && receipt.category_name !== 'Other') {
+      return formatDisplayText(receipt.category_name);
     }
-    return formatDisplayText(receipt.category_name);
+    return formatDisplayText('Unknown');
   };
 
   const currentUser = 'ftms_user';
@@ -429,7 +429,7 @@ const ReceiptPage = () => {
                     <td>{indexOfFirstRecord + index + 1}</td>
                     <td>{formatDateTime(item.transaction_date)}</td>
                     <td>{item.supplier}</td>
-                    <td>{formatDisplayText(getDisplayCategory(item) || '')}</td>
+                    <td>{getCategoryDisplayName(item)}</td>
                     <td>
                       {(() => {
                         if (item.terms_name) {

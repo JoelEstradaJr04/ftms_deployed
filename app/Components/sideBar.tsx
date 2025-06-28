@@ -110,14 +110,14 @@ const Sidebar: React.FC = () => {
             <span>Receipt Management</span>
           </Link>
 
-          <Link
+          {/* <Link
             href="/financial-management/payroll"
             className={`nav-item ${activeItem === "payroll" ? "active" : ""}`}
             onClick={() => setActiveItem("payroll")}
           >
             <i className="ri-group-line" />
             <span>Payroll</span>
-          </Link>
+          </Link> */}
           {/* 
           <Link
             href="/report"
