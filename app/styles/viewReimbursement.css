@@ -12,7 +12,7 @@
   z-index: 1000 !important;
 }
 
-.modalContent {
+.viewReimbursementModal {
   background: white !important;
   padding: 2rem !important;
   border-radius: 8px !important;
@@ -60,34 +60,34 @@
   color: var(--primary-text-color) !important;
 }
 
-.modalContent .mainDetails {
+.viewReimbursementModal .mainDetails {
   margin-bottom: 2rem !important;
   background-color: #f8f9fa !important;
   padding: 1rem;
 }
 
-.modalContent .payrollDetails,
-.modalContent .deductionDetails,
-.modalContent .bonusDetails {
+.viewReimbursementModal .payrollDetails,
+.viewReimbursementModal .deductionDetails,
+.viewReimbursementModal .bonusDetails {
   margin-bottom: 2rem !important;
 }
 
-.modalContent .payrollDetails h3,
-.modalContent .deductionDetails h3,
-.modalContent .bonusDetails h3 {
+.viewReimbursementModal .payrollDetails h3,
+.viewReimbursementModal .deductionDetails h3,
+.viewReimbursementModal .bonusDetails h3 {
   color: #333 !important;
   margin-bottom: 1rem !important;
   padding-bottom: 0.5rem !important;
   border-bottom: 1px solid #eee !important;
 }
 
-.modalContent .detailRow {
+.viewReimbursementModal .detailRow {
   display: flex !important;
   margin-bottom: 0.5rem !important;
   word-break: break-word !important;
 }
 
-.modalContent .label {
+.viewReimbursementModal .label {
   font-weight: 500 !important;
   color: #666 !important;
   width: 150px !important;
@@ -95,41 +95,41 @@
   margin-right: 3rem !important;
 }
 
-.modalContent .value {
+.viewReimbursementModal .value {
   color: #333 !important;
   flex: 1 !important;
 }
 
-.modalContent .deductionTable,
-.modalContent .bonusTable {
+.viewReimbursementModal .deductionTable,
+.viewReimbursementModal .bonusTable {
   width: 100% !important;
   border-collapse: collapse !important;
   margin-top: 1rem !important;
   min-width: 400px !important;
 }
 
-.modalContent .grossEarningsTable tbody td,
-.modalContent .deductionTable tbody td,
-.modalContent .bonusTable tbody td {
+.viewReimbursementModal .grossEarningsTable tbody td,
+.viewReimbursementModal .deductionTable tbody td,
+.viewReimbursementModal .bonusTable tbody td {
   padding: 0.75rem !important;
   text-align: left !important;
   border-bottom: 1px solid #eee !important;
 }
 
-.modalContent .deductionTable th,
-.modalContent .bonusTable th {
+.viewReimbursementModal .deductionTable th,
+.viewReimbursementModal .bonusTable th {
   background-color: #B3B3B3 !important;
   font-weight: bold !important;
   color: #000000 !important;
 }
 
-.modalContent .deductionTable tr:hover,
-.modalContent .bonusTable tr:hover {
+.viewReimbursementModal .deductionTable tr:hover,
+.viewReimbursementModal .bonusTable tr:hover {
   background-color: #f8f9fa !important;
 }
 
 /* ---------- Gross Earnings Table ---------- */
-.modalContent .grossEarningsTable {
+.viewReimbursementModal .grossEarningsTable {
   width: 100% !important;
   border-collapse: collapse !important;
   margin-top: 1rem !important;
@@ -137,9 +137,9 @@
   background-color: #fff !important;
 }
 
-.modalContent .grossEarningsTable th,
-.modalContent .deductionTable th,
-.modalContent .bonusTable th {
+.viewReimbursementModal .grossEarningsTable th,
+.viewReimbursementModal .deductionTable th,
+.viewReimbursementModal .bonusTable th {
   background-color: #FFD966 !important; /* Light yellow for header */
   font-weight: bold !important;
   color: #000 !important;
@@ -148,25 +148,25 @@
   text-align: center !important;
 }
 
-.modalContent .grossEarningsTable td {
+.viewReimbursementModal .grossEarningsTable td {
   padding: 0.75rem !important;
   border-bottom: 1px solid #eee !important;
   text-align: center !important;
   color: #333 !important;
 }
 
-.modalContent .grossEarningsTable tr.section-header td {
+.viewReimbursementModal .grossEarningsTable tr.section-header td {
   background-color: #f8f9fa !important;
   font-weight: bold !important;
   text-align: left !important;
   color: #333 !important;
 }
 
-.modalContent .grossEarningsTable tr:hover td {
+.viewReimbursementModal .grossEarningsTable tr:hover td {
   background-color: #f8f9fa !important;
 }
 
-.modalContent .modalFooter {
+.viewReimbursementModal .modalFooter {
   margin-top: 2rem !important;
   padding-top: 1rem !important;
   border-top: 1px solid #eee !important;
@@ -174,7 +174,7 @@
   justify-content: flex-end !important;
 }
 
-.modalContent .closeBtn {
+.viewReimbursementModal .closeBtn {
   padding: 0.5rem 1.5rem !important;
   background-color: #f8f9fa !important;
   border: 1px solid #ddd !important;
@@ -184,7 +184,7 @@
   font-weight: 500 !important;
 }
 
-.modalContent .closeBtn:hover {
+.viewReimbursementModal .closeBtn:hover {
   background-color: #e9ecef !important;
   color: #4b4b4b !important;
 }
@@ -238,7 +238,7 @@
 /* ---------- Responsive Styles ---------- */
 
 @media (max-width: 768px) {
-  .modalContent {
+  .viewReimbursementModal {
     width: 95% !important;
     max-width: none !important;
     min-width: auto !important;
@@ -252,26 +252,26 @@
     gap: 1rem !important;
   }
 
-  .modalContent .closeButton {
+  .viewReimbursementModal .closeButton {
     position: absolute !important;
     top: 0.5rem !important;
     right: 0.5rem !important;
     margin: 0 !important;
   }
 
-  .modalContent .detailRow {
+  .viewReimbursementModal .detailRow {
     flex-direction: column !important;
     gap: 0.25rem !important;
   }
 
-  .modalContent .label {
+  .viewReimbursementModal .label {
     width: auto !important;
     margin-right: 0 !important;
   }
 
-  .modalContent .deductionTable,
-  .modalContent .bonusTable,
-  .modalContent .grossEarningsTable {
+  .viewReimbursementModal .deductionTable,
+  .viewReimbursementModal .bonusTable,
+  .viewReimbursementModal .grossEarningsTable {
     min-width: auto !important;
     font-size: 0.95em !important;
   }

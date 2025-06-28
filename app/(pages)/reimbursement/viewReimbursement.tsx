@@ -67,7 +67,7 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
   return (
     <>
       <div className="modalOverlay" onClick={onClose}>
-        <div className="modalContent" onClick={e => e.stopPropagation()}>
+        <div className="viewReimbursementModal" onClick={e => e.stopPropagation()}>
           <div className="modalHeader">
             <h2>Reimbursement Details</h2>
             <button className="closeButton" onClick={onClose}>
