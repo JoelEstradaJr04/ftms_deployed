@@ -264,6 +264,18 @@ const filteredData = data.filter((item: ExpenseData) => {
   const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
                     (!dateTo || item.expense_date <= dateTo);
   return matchesSearch && matchesCategory && matchesDate;
+}).sort((a, b) => {
+  // Sort by latest action (updated_at if available, otherwise created_at)
+  // This ensures that the most recently added or edited records appear at the top
+  const aLatestAction = a.updated_at || a.created_at;
+  const bLatestAction = b.updated_at || b.created_at;
+  
+  // Convert to timestamps for comparison
+  const aTimestamp = new Date(aLatestAction).getTime();
+  const bTimestamp = new Date(bLatestAction).getTime();
+  
+  // Sort in descending order (latest first)
+  return bTimestamp - aTimestamp;
 });
 
   const indexOfLastRecord = currentPage * pageSize;
@@ -287,10 +299,11 @@ const filteredData = data.filter((item: ExpenseData) => {
 
       const result: ExpenseRecord = await response.json();
       
-      // Update expenses state and trigger a refresh
+      // Update expenses state with proper timestamps
       setData(prev => [{
         ...result,
         created_at: result.created_at || new Date().toISOString(),
+        updated_at: result.updated_at || undefined, // Ensure updated_at is set if available
         is_deleted: result.is_deleted ?? false,
       }, ...prev]);
       
@@ -345,14 +358,15 @@ const filteredData = data.filter((item: ExpenseData) => {
 
       const result = await response.json();
       
-      // Update local state by moving the edited record to the top
+      // Update local state by moving the edited record to the top with proper timestamps
       setData(prev => {
         // Remove the old version of the record
         const filtered = prev.filter(rec => rec.expense_id !== updatedRecord.expense_id);
-        // Create the updated record
+        // Create the updated record with proper timestamps
         const updated = {
           ...result,
           created_at: result.created_at || new Date().toISOString(),
+          updated_at: result.updated_at || new Date().toISOString(), // Set updated_at to current time
           is_deleted: result.is_deleted ?? false,
         };
         // Add the updated record at the beginning of the array

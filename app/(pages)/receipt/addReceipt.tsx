@@ -141,7 +141,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
       item_id: '',
       item_name: '',
       unit: '',
-      category: 'Fuel',
+      category: '',
     },
     quantity: 0,
     unit_price: 0,
@@ -178,7 +178,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   };
 
   const computeSummaryCategory = useCallback((items: ReceiptItem[]): string => {
-    if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (items.length === 0) return '';
     
     const categoryTotals: Record<string, number> = {};
     
@@ -187,14 +187,14 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
         ? item.item.other_category 
         : item.item.category;
       
-      if (resolvedCategory) {
+      if (resolvedCategory && resolvedCategory.trim() !== '') {
         categoryTotals[resolvedCategory] = (categoryTotals[resolvedCategory] || 0) + item.total_price;
       }
     });
 
     const uniqueCategories = Object.keys(categoryTotals);
     
-    if (uniqueCategories.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (uniqueCategories.length === 0) return '';
     if (uniqueCategories.length === 1) {
       const singleCategoryName = uniqueCategories[0];
       const category = categories.find(c => c.name === singleCategoryName);
@@ -294,7 +294,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: '',
           unit: '',
-          category: 'Fuel' as string,
+          category: '',
         },
         quantity: 0,
         unit_price: 0,
@@ -432,7 +432,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     if (!categoryOverride) {
       setFormData(prev => ({
         ...prev,
-        category_id: prev.category_id || (categories.find(c => c.name === 'Fuel')?.category_id || ''),
+        category_id: prev.category_id || '', // Remove the default to Fuel
         other_category: categories.find(c => c.category_id === prev.category_id)?.name === 'Other' ? otherCategory : undefined
       }));
     } else {
@@ -464,7 +464,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
           item_id: '',
           item_name: item.item_name,
           unit: item.unit,
-          category: 'Fuel' as string,
+          category: '',
         },
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -587,7 +587,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                                 setOtherCategory('');
                                 setFormData(prev => ({ 
                                   ...prev, 
-                                  category_id: categories.find(c => c.name === 'Fuel')?.category_id || ''
+                                  category_id: ''
                                 }));
                               }}
                               className="clearCustomBtn"

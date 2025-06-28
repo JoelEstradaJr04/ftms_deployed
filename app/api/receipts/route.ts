@@ -61,6 +61,9 @@ export async function GET(req: NextRequest) {
         source: true,
         terms: true,
         items: {
+          where: {
+            is_deleted: false
+          },
           include: {
             item: {
               include: {

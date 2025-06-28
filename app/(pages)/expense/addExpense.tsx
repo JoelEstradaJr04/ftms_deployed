@@ -119,6 +119,10 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     error: '',
   }]);
 
+  // Add state for original auto-filled values from receipt
+  const [originalReceiptAutoFilledAmount, setOriginalReceiptAutoFilledAmount] = useState<number | null>(null);
+  const [originalReceiptAutoFilledDate, setOriginalReceiptAutoFilledDate] = useState<string>('');
+
   // Add state for original auto-filled values
   const [originalAutoFilledAmount, setOriginalAutoFilledAmount] = useState<number | null>(null);
   const [originalAutoFilledDate, setOriginalAutoFilledDate] = useState<string>('');
@@ -321,57 +325,160 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     }
   }, [formData.assignment_id, assignments]);
 
+  // Add useEffect for receipt autofill
+  useEffect(() => {
+    if (formData.receipt_id && source === 'receipt') {
+      const selectedReceipt = receipts.find(r => r.receipt_id === formData.receipt_id);
+      if (selectedReceipt) {
+        // Set original auto-filled values from receipt
+        setOriginalReceiptAutoFilledAmount(selectedReceipt.total_amount_due);
+        
+        // Convert receipt transaction_date to datetime-local format
+        const receiptDate = new Date(selectedReceipt.transaction_date);
+        const year = receiptDate.getFullYear();
+        const month = String(receiptDate.getMonth() + 1).padStart(2, '0');
+        const day = String(receiptDate.getDate()).padStart(2, '0');
+        const hours = String(receiptDate.getHours()).padStart(2, '0');
+        const minutes = String(receiptDate.getMinutes()).padStart(2, '0');
+        const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        setOriginalReceiptAutoFilledDate(dateTimeLocal);
+        
+        // Determine payment method based on receipt payment status
+        const paymentMethodFromReceipt = 'CASH';
+        // Always default to CASH for receipt-sourced expenses, regardless of receipt payment status
+        
+        setFormData(prev => ({
+          ...prev,
+          category: selectedReceipt.category?.name || selectedReceipt.category_name || 'Other',
+          category_id: selectedReceipt.category?.category_id || selectedReceipt.category_id || '',
+          total_amount: selectedReceipt.total_amount_due,
+          expense_date: dateTimeLocal,
+          payment_method: paymentMethodFromReceipt,
+        }));
+        
+        // Update payment method state
+        setPaymentMethod(paymentMethodFromReceipt as 'CASH' | 'REIMBURSEMENT');
+      }
+    } else {
+      setOriginalReceiptAutoFilledAmount(null);
+      setOriginalReceiptAutoFilledDate('');
+    }
+  }, [formData.receipt_id, source, receipts]);
+
   // Calculate amount deviation
   const getAmountDeviation = () => {
-    if (originalAutoFilledAmount === null || originalAutoFilledAmount === 0) return null;
-    const currentAmount = Number(formData.total_amount);
-    if (currentAmount === originalAutoFilledAmount) return null;
-    const difference = currentAmount - originalAutoFilledAmount;
-    const percentageChange = Math.abs((difference / originalAutoFilledAmount) * 100);
-    const isIncrease = difference > 0;
-    return {
-      difference: Math.abs(difference),
-      percentage: percentageChange,
-      isIncrease,
-      formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
-      formattedPercentage: `${percentageChange.toFixed(1)}%`
-    };
+    // Check for assignment autofill first
+    if (originalAutoFilledAmount !== null && originalAutoFilledAmount !== 0) {
+      const currentAmount = Number(formData.total_amount);
+      if (currentAmount === originalAutoFilledAmount) return null;
+      const difference = currentAmount - originalAutoFilledAmount;
+      const percentageChange = Math.abs((difference / originalAutoFilledAmount) * 100);
+      const isIncrease = difference > 0;
+      return {
+        difference: Math.abs(difference),
+        percentage: percentageChange,
+        isIncrease,
+        formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
+        formattedPercentage: `${percentageChange.toFixed(1)}%`,
+        source: 'assignment'
+      };
+    }
+    
+    // Check for receipt autofill
+    if (originalReceiptAutoFilledAmount !== null && originalReceiptAutoFilledAmount !== 0) {
+      const currentAmount = Number(formData.total_amount);
+      if (currentAmount === originalReceiptAutoFilledAmount) return null;
+      const difference = currentAmount - originalReceiptAutoFilledAmount;
+      const percentageChange = Math.abs((difference / originalReceiptAutoFilledAmount) * 100);
+      const isIncrease = difference > 0;
+      return {
+        difference: Math.abs(difference),
+        percentage: percentageChange,
+        isIncrease,
+        formattedDifference: `₱${Math.abs(difference).toLocaleString()}`,
+        formattedPercentage: `${percentageChange.toFixed(1)}%`,
+        source: 'receipt'
+      };
+    }
+    
+    return null;
   };
 
   // Calculate date deviation
   const getDateDeviation = () => {
-    if (!originalAutoFilledDate || !formData.expense_date) return null;
-    const originalDate = new Date(originalAutoFilledDate);
-    const currentDate = new Date(formData.expense_date);
-    if (originalDate.getTime() === currentDate.getTime()) return null;
-    const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
-    const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-    const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
-    let deviationText = '';
-    if (daysDifference > 0) {
-      deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
-      if (hoursDifference > 0) {
-        deviationText += `, ${hoursDifference}h`;
+    // Check for assignment autofill first
+    if (originalAutoFilledDate && formData.expense_date) {
+      const originalDate = new Date(originalAutoFilledDate);
+      const currentDate = new Date(formData.expense_date);
+      if (originalDate.getTime() === currentDate.getTime()) return null;
+      const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
+      const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+      const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+      let deviationText = '';
+      if (daysDifference > 0) {
+        deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
+        if (hoursDifference > 0) {
+          deviationText += `, ${hoursDifference}h`;
+        }
+      } else if (hoursDifference > 0) {
+        deviationText = `${hoursDifference}h`;
+        if (minutesDifference > 0) {
+          deviationText += ` ${minutesDifference}m`;
+        }
+      } else if (minutesDifference > 0) {
+        deviationText = `${minutesDifference}m`;
+      } else {
+        deviationText = 'few seconds';
       }
-    } else if (hoursDifference > 0) {
-      deviationText = `${hoursDifference}h`;
-      if (minutesDifference > 0) {
-        deviationText += ` ${minutesDifference}m`;
-      }
-    } else if (minutesDifference > 0) {
-      deviationText = `${minutesDifference}m`;
-    } else {
-      deviationText = 'few seconds';
+      const isLater = currentDate.getTime() > originalDate.getTime();
+      return {
+        deviationText,
+        isLater,
+        daysDifference,
+        hoursDifference,
+        minutesDifference,
+        source: 'assignment'
+      };
     }
-    const isLater = currentDate.getTime() > originalDate.getTime();
-    return {
-      deviationText,
-      isLater,
-      daysDifference,
-      hoursDifference,
-      minutesDifference
-    };
+    
+    // Check for receipt autofill
+    if (originalReceiptAutoFilledDate && formData.expense_date) {
+      const originalDate = new Date(originalReceiptAutoFilledDate);
+      const currentDate = new Date(formData.expense_date);
+      if (originalDate.getTime() === currentDate.getTime()) return null;
+      const timeDifference = Math.abs(currentDate.getTime() - originalDate.getTime());
+      const daysDifference = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+      const hoursDifference = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutesDifference = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+      let deviationText = '';
+      if (daysDifference > 0) {
+        deviationText = `${daysDifference} day${daysDifference !== 1 ? 's' : ''}`;
+        if (hoursDifference > 0) {
+          deviationText += `, ${hoursDifference}h`;
+        }
+      } else if (hoursDifference > 0) {
+        deviationText = `${hoursDifference}h`;
+        if (minutesDifference > 0) {
+          deviationText += ` ${minutesDifference}m`;
+        }
+      } else if (minutesDifference > 0) {
+        deviationText = `${minutesDifference}m`;
+      } else {
+        deviationText = 'few seconds';
+      }
+      const isLater = currentDate.getTime() > originalDate.getTime();
+      return {
+        deviationText,
+        isLater,
+        daysDifference,
+        hoursDifference,
+        minutesDifference,
+        source: 'receipt'
+      };
+    }
+    
+    return null;
   };
 
   // Filter assignments based on is_expense_recorded
@@ -738,6 +845,9 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                       {formData.assignment_id && (
                         <span className="autofill-note">Auto-calculated from assignment (editable)</span>
                       )}
+                      {source === 'receipt' && formData.receipt_id && (
+                        <span className="autofill-note">Auto-filled from receipt total amount due (editable)</span>
+                      )}
                       {(() => {
                         const amountDeviation = getAmountDeviation();
                         return amountDeviation && (
@@ -745,7 +855,7 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                             <i className="ri-error-warning-line"></i> 
                             {amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedDifference} 
                             ({amountDeviation.isIncrease ? '+' : '-'}{amountDeviation.formattedPercentage}) 
-                            from auto-filled amount
+                            from auto-filled {amountDeviation.source === 'receipt' ? 'receipt' : 'assignment'} amount
                           </div>
                         );
                       })()}
@@ -769,12 +879,15 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                   {formData.assignment_id && (
                     <span className="autofill-note">Auto-filled from assignment date with current time (editable)</span>
                   )}
+                  {source === 'receipt' && formData.receipt_id && (
+                    <span className="autofill-note">Auto-filled from receipt transaction date (editable)</span>
+                  )}
                   {(() => {
                     const dateDeviation = getDateDeviation();
                     return dateDeviation && (
                       <div className="deviation-note" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>
                         <i className="ri-time-line"></i> 
-                        {dateDeviation.deviationText} {dateDeviation.isLater ? 'after' : 'before'} auto-filled date
+                        {dateDeviation.deviationText} {dateDeviation.isLater ? 'after' : 'before'} auto-filled {dateDeviation.source === 'receipt' ? 'receipt' : 'assignment'} date
                       </div>
                     );
                   })()}
@@ -784,20 +897,25 @@ const AddExpense: React.FC<AddExpenseProps> = ({
                 <div className="formField">
                   <label htmlFor="payment_method">Payment Method<span className='requiredTags'> *</span></label>
                   {source === 'receipt' ? (
-                    <select
-                      id="payment_method"
-                      name="payment_method"
-                      value={paymentMethod}
-                      onChange={e => {
-                        setPaymentMethod(e.target.value as 'CASH' | 'REIMBURSEMENT');
-                        if (e.target.value === 'REIMBURSEMENT') setReimbursementRows([{ employee_id: '', job_title: '', amount: '', error: '' }]);
-                      }}
-                      required
-                      className="formSelect"
-                    >
-                      <option value="CASH">Company Paid (CASH)</option>
-                      <option value="REIMBURSEMENT">Employee Reimbursement</option>
-                    </select>
+                    <>
+                      <select
+                        id="payment_method"
+                        name="payment_method"
+                        value={paymentMethod}
+                        onChange={e => {
+                          setPaymentMethod(e.target.value as 'CASH' | 'REIMBURSEMENT');
+                          if (e.target.value === 'REIMBURSEMENT') setReimbursementRows([{ employee_id: '', job_title: '', amount: '', error: '' }]);
+                        }}
+                        required
+                        className="formSelect"
+                      >
+                        <option value="CASH">Company Paid (CASH)</option>
+                        <option value="REIMBURSEMENT">Employee Reimbursement</option>
+                      </select>
+                      {formData.receipt_id && (
+                        <span className="autofill-note">Defaults to CASH for receipt-sourced expenses (editable)</span>
+                      )}
+                    </>
                   ) : (
                     <input
                       type="text"

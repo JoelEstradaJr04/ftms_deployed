@@ -79,7 +79,9 @@ export type UpdatedReceiptData = {
     unit_price: number;
     total_price: number;
     category_id: string;
+    receipt_item_id?: string; // Optional for new items
   }[];
+  deleted_items?: string[]; // Array of receipt_item_ids to soft delete
   created_by: string;
   updated_by: string;
 };
@@ -105,6 +107,16 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   paymentStatuses,
   itemUnits,
 }) => {
+  console.log('EditReceiptModal received receipt:', receipt);
+  console.log('Receipt items:', receipt?.items);
+  receipt?.items?.forEach((item, index) => {
+    console.log(`Item ${index}:`, {
+      receipt_item_id: item.receipt_item_id,
+      item_name: item.item.item_name,
+      item_id: item.item_id
+    });
+  });
+
   const [supplier, setSupplier] = useState(receipt?.supplier || '');
   const [transactionDate, setTransactionDate] = useState(() => {
     const date = receipt?.transaction_date ? new Date(receipt.transaction_date) : new Date();
@@ -131,17 +143,17 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
   // Function to compute summary category based on items
   const computeSummaryCategory = (items: EditReceiptItem[]): string => {
-    if (items.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (items.length === 0) return '';
     
     const validItems = items.filter(item => 
       item.item_name && item.unit_id && item.quantity > 0 && item.unit_price > 0 && item.category_id
     );
     
-    if (validItems.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (validItems.length === 0) return '';
     
     const uniqueCategories = [...new Set(validItems.map(item => item.category_id))];
     
-    if (uniqueCategories.length === 0) return categories.find(c => c.name === 'Fuel')?.category_id || '';
+    if (uniqueCategories.length === 0) return '';
     if (uniqueCategories.length === 1) {
       return uniqueCategories[0];
     }
@@ -154,11 +166,11 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   const getDisplayCategory = (categoryId: string) => {
     const category = categories.find(c => c.category_id === categoryId);
     if (!category) return 'N/A';
-    return formatDisplayText(category.name);
+    return formatDisplayText(category.name); // <-- Already using formatDisplayText
   };
 
   const [items, setItems] = useState<EditReceiptItem[]>(() => {
-    return (receipt?.items || []).map(item => ({
+    const initialItems = (receipt?.items || []).map(item => ({
       receipt_item_id: item.receipt_item_id,
       item_id: item.item_id,
       item_name: item.item.item_name,
@@ -168,6 +180,8 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
       unit_price: Number(item.unit_price),
       total_price: Number(item.total_price),
     }));
+    console.log('Initialized items state:', initialItems);
+    return initialItems;
   });
 
   useEffect(() => {
@@ -269,9 +283,30 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
   };
 
   const removeItem = (index: number) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], is_deleted: true };
-    setItems(updatedItems);
+    const activeItemsCount = items.filter(i => !i.is_deleted).length;
+    const isOnlyItem = activeItemsCount === 1;
+    
+    const confirmMessage = isOnlyItem 
+      ? 'This is the last item. Are you sure you want to delete it?' 
+      : 'Are you sure you want to delete this item?';
+    
+    Swal.fire({
+      title: 'Confirm Delete',
+      text: confirmMessage,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#961C1E',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const updatedItems = [...items];
+        updatedItems[index] = { ...updatedItems[index], is_deleted: true };
+        setItems(updatedItems);
+        Swal.fire('Deleted!', 'Item has been removed.', 'success');
+      }
+    });
   };
   
   const handleSave = async () => {
@@ -326,10 +361,28 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             unit_price: item.unit_price,
             total_price: item.total_price,
             category_id: item.category_id,
+            receipt_item_id: item.receipt_item_id,
           })),
+          deleted_items: items
+            .filter(item => item.is_deleted && !item.receipt_item_id.startsWith('temp-'))
+            .map(item => item.receipt_item_id),
           created_by: receipt.created_by,  // Use existing created_by from receipt
           updated_by: 'ftms_user'
         };
+        
+        // Debug logging
+        console.log('All items:', items);
+        console.log('Deleted items:', items.filter(item => item.is_deleted));
+        console.log('Deleted item IDs:', updatedData.deleted_items);
+        console.log('Updated data being sent:', updatedData);
+        console.log('Items being sent to backend:');
+        updatedData.items.forEach((item, index) => {
+          console.log(`Item ${index}:`, {
+            item_name: item.item_name,
+            receipt_item_id: item.receipt_item_id,
+            is_existing: item.receipt_item_id && !item.receipt_item_id.startsWith('temp-')
+          });
+        });
         
         onSave(updatedData);
       } catch (error) {
@@ -479,8 +532,6 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                 .filter(item => !item.is_deleted)
                 .map((item) => {
                   const originalIndex = items.findIndex(i => i.receipt_item_id === item.receipt_item_id);
-                  const activeItemsCount = items.filter(i => !i.is_deleted).length;
-                  const isOnlyItem = activeItemsCount === 1;
                   
                   return (
                     <tr key={item.receipt_item_id}>
@@ -545,8 +596,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
                           type="button"
                           onClick={() => removeItem(originalIndex)}
                           className="removeItemBtn"
-                          title={isOnlyItem ? "Cannot delete the last item" : "Remove Item"}
-                          disabled={isOnlyItem}
+                          title="Remove Item"
                         >
                           <i className="ri-delete-bin-line" />
                         </button>

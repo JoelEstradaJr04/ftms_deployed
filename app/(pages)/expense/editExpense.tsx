@@ -118,9 +118,29 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   const [originalAutoFilledAmount, setOriginalAutoFilledAmount] = useState<number | null>(null);
   const [originalAutoFilledDate, setOriginalAutoFilledDate] = useState<string>('');
 
-  // On mount, set original initial values from assignment data
+  // Determine if this is a receipt-based expense
+  const isReceiptBasedExpense = !!record.receipt;
+
+  // On mount, set original initial values from assignment or receipt data
   useEffect(() => {
-    if (record.assignment) {
+    if (isReceiptBasedExpense && record.receipt) {
+      // For receipt-based expenses, use receipt data for autofill values
+      setOriginalAutoFilledAmount(record.receipt.total_amount_due);
+      
+      // Set original date to receipt transaction date with current time
+      if (record.receipt.transaction_date) {
+        const receiptDate = new Date(record.receipt.transaction_date);
+        const now = new Date();
+        receiptDate.setHours(now.getHours(), now.getMinutes());
+        const year = receiptDate.getFullYear();
+        const month = String(receiptDate.getMonth() + 1).padStart(2, '0');
+        const day = String(receiptDate.getDate()).padStart(2, '0');
+        const hours = String(receiptDate.getHours()).padStart(2, '0');
+        const minutes = String(receiptDate.getMinutes()).padStart(2, '0');
+        setOriginalAutoFilledDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+      }
+    } else if (record.assignment) {
+      // For assignment-based expenses, use assignment data
       setAssignment(record.assignment);
       setOriginalAutoFilledAmount(record.assignment.trip_fuel_expense);
       
@@ -168,7 +188,7 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
     } else {
       setAssignment(null);
     }
-  }, [record.assignment, record.assignment_id]);
+  }, [record.assignment, record.assignment_id, record.receipt, isReceiptBasedExpense]);
 
   const validationRules: Record<string, ValidationRule> = {
     amount: { 
@@ -312,6 +332,36 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
     return formatted;
   };
 
+  // Format receipt for display
+  const formatReceipt = (receipt: Receipt) => {
+    if (!receipt) return 'N/A';
+    
+    const paymentStatusName = receipt.payment_status?.name || 'Unknown';
+    const transactionDate = receipt.transaction_date ? new Date(receipt.transaction_date).toLocaleDateString() : 'N/A';
+    
+    return `${receipt.supplier} | ${transactionDate} | ₱${receipt.total_amount_due?.toLocaleString() || 'N/A'} (${paymentStatusName})`;
+  };
+
+  // Get the appropriate reference display based on expense type
+  const getReferenceDisplay = () => {
+    if (isReceiptBasedExpense && record.receipt) {
+      return formatReceipt(record.receipt);
+    } else if (assignment) {
+      return formatAssignment(assignment);
+    } else {
+      return 'N/A';
+    }
+  };
+
+  // Get the appropriate reference label based on expense type
+  const getReferenceLabel = () => {
+    if (isReceiptBasedExpense) {
+      return 'Receipt Reference';
+    } else {
+      return 'Assignment';
+    }
+  };
+
   // Amount deviation calculation
   const getAmountDeviation = () => {
     if (originalAutoFilledAmount === null || originalAutoFilledAmount === 0) return null;
@@ -398,14 +448,14 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                       className="formInput"
                     />
                   </div>
-                  {/* ASSIGNMENT (read-only) */}
+                  {/* REFERENCE (read-only) - shows Assignment or Receipt based on expense type */}
                   <div className="formField">
-                    <label htmlFor="assignment_id">Assignment</label>
+                    <label htmlFor="reference">{getReferenceLabel()}</label>
                     <input
                       type="text"
-                      id="assignment_id"
-                      name="assignment_id"
-                      value={formatAssignment(assignment)}
+                      id="reference"
+                      name="reference"
+                      value={getReferenceDisplay()}
                       readOnly
                       className="formInput"
                     />

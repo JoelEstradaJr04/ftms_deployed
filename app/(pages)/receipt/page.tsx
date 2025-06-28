@@ -4,7 +4,7 @@ import "../../styles/receipt.css";
 import "../../styles/table.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from 'sweetalert2';
-import { formatDate, formatDateTime } from '../../utility/dateFormatter';
+import { formatDateTime } from '../../utility/dateFormatter';
 import ViewReceiptModal from './viewReceipt';
 import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
@@ -263,40 +263,11 @@ const ReceiptPage = () => {
 
   const handleUpdateReceiptAsync = async (receiptId: string, updatedData: UpdatedReceiptData) => {
     try {
-      // Convert UpdatedReceiptData to AddReceiptSubmitData format for API compatibility
-      const apiData: AddReceiptSubmitData = {
-        supplier: updatedData.supplier,
-        transaction_date: updatedData.transaction_date,
-        vat_reg_tin: updatedData.vat_reg_tin || undefined,
-        terms_id: updatedData.terms_id,
-        date_paid: updatedData.date_paid || undefined,
-        payment_status_id: updatedData.payment_status_id,
-        total_amount: updatedData.total_amount,
-        vat_amount: updatedData.vat_amount,
-        total_amount_due: updatedData.total_amount_due,
-        category_id: updatedData.category_id,
-        remarks: updatedData.remarks || undefined,
-        source_id: updatedData.source_id,
-        created_by: updatedData.created_by,
-        // Transform items to match AddReceiptSubmitData format
-        items: updatedData.items.map(item => ({
-          item_name: item.item_name,
-          unit_id: item.unit_id,
-          unit: '', // API might expect this field
-          other_unit: item.other_unit,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          category_id: item.category_id,
-          category: undefined, // Let API handle this
-          other_category: undefined, // Let API handle this
-        }))
-      };
-
+      // Send the data directly as UpdatedReceiptData format since the PATCH API expects this format
       const response = await fetch(`/api/receipts/${receiptId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiData),
+        body: JSON.stringify(updatedData),
       });
 
       if (!response.ok) {
