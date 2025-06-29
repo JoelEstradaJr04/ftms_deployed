@@ -501,18 +501,18 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 <p>Manual Entry</p>
               </div>
               <div 
-                // className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
-                // onClick={() => setSourceOption('OCR_Camera')}
+                className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
+                onClick={() => setSourceOption('OCR_Camera')}
               >
-                {/* <i className="ri-camera-line"></i>
-                <p>Camera Scan</p> */}
+                <i className="ri-camera-line"></i>
+                <p>Camera Scan</p> 
               </div>
               <div 
-                // className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
-                // onClick={() => setSourceOption('OCR_File')}
+                 className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
+                 onClick={() => setSourceOption('OCR_File')}
               >
-                {/* <i className="ri-upload-line"></i>
-                <p>File Upload</p> */}
+                <i className="ri-upload-line"></i>
+                <p>File Upload</p> 
               </div>
             </div>
 

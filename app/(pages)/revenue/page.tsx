@@ -766,7 +766,7 @@ const RevenuePage = () => {
                   }
                   
                   // Use exact field names from Operations API
-                  const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
+                  //const busType = assignment.bus_type === 'Airconditioned' ? 'A' : 'O';
                   const driverName = assignment.driver_name || 'N/A';
                   const conductorName = assignment.conductor_name || 'N/A';
                   
@@ -776,7 +776,7 @@ const RevenuePage = () => {
                     displayAmount = assignment.trip_revenue * (assignment.assignment_value);
                   }
                   
-                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ${assignment.bus_plate_number || 'N/A'} (${busType}) - ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
+                  return `${formatDate(assignment.date_assigned)} | ₱ ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | ${assignment.bus_plate_number || 'N/A'} | ${assignment.bus_route || 'N/A'} | ${driverName} & ${conductorName}`;
                 };
 
                 return (
@@ -786,7 +786,7 @@ const RevenuePage = () => {
                     <td>{formatAssignmentForTable(assignment)}</td>
                     <td>₱{(() => {
                       if (item.category?.name === 'Percentage' && assignment?.assignment_value) {
-                        return (item.total_amount * assignment.assignment_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        return (assignment.trip_revenue * (assignment.assignment_value)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                       } else if (item.category?.name === 'Boundary' && assignment?.trip_revenue) {
                         return assignment.trip_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                       }
