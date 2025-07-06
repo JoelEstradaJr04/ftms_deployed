@@ -173,6 +173,71 @@ button.releaseAllBtn:hover {
   color: var(--primary-text-color) !important;
 }
 
+/* ---------- Action Buttons ---------- */
+.actionButtonsContainer {
+  display: flex !important;
+  gap: 4px !important;
+  align-items: center !important;
+}
+
+.viewBtn,
+.exportBtn,
+.releaseBtn,
+.deleteBtn {
+  padding: 4px 8px !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  transition: background-color 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 32px !important;
+  height: 32px !important;
+}
+
+.viewBtn {
+  background-color: var(--info-color) !important;
+  color: white !important;
+}
+
+.viewBtn:hover {
+  background-color: var(--info-hover-color) !important;
+}
+
+.exportBtn {
+  background-color: var(--secondary-color) !important;
+  color: white !important;
+}
+
+.exportBtn:hover {
+  background-color: var(--secondary-hover-color) !important;
+}
+
+.releaseBtn {
+  background-color: var(--success-color) !important;
+  color: white !important;
+}
+
+.releaseBtn:hover {
+  background-color: var(--success-hover-color) !important;
+}
+
+.releaseBtn:disabled {
+  background-color: var(--secondary-text-color) !important;
+  cursor: not-allowed !important;
+}
+
+.deleteBtn {
+  background-color: var(--error-color) !important;
+  color: white !important;
+}
+
+.deleteBtn:hover {
+  background-color: var(--error-hover-color) !important;
+}
+
 /* ---------- View Modal ---------- */
 .modalOverlay {
   position: fixed !important;

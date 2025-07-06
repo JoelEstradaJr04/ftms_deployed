@@ -500,6 +500,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 <i className="ri-edit-line"></i>
                 <p>Manual Entry</p>
               </div>
+<<<<<<< Updated upstream
               <div 
                 // className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
                 // onClick={() => setSourceOption('OCR_Camera')}
@@ -507,6 +508,15 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 {/* <i className="ri-camera-line"></i>
                 <p>Camera Scan</p> */}
               </div>
+=======
+              {/*<div 
+                className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
+                onClick={() => setSourceOption('OCR_Camera')}
+              >
+                <i className="ri-camera-line"></i>
+                <p>Camera Scan</p> 
+              </div>*/}
+>>>>>>> Stashed changes
               <div 
                 // className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
                 // onClick={() => setSourceOption('OCR_File')}
