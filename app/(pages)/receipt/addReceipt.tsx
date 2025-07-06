@@ -64,6 +64,7 @@ type AddReceiptFormData = {
 type OCRData = {
   supplier: string;
   transaction_date: string;
+  payment_terms?: string;  // ADDED
   vat_reg_tin?: string;
   total_amount: number;
   vat_amount?: number;
@@ -88,6 +89,7 @@ type FormDataState = {
   transaction_date: string; // Will be in YYYY-MM-DDTHH:mm format
   vat_reg_tin: string;
   terms_id: string;
+  payment_terms?: string;  // ADDED: Optional payment terms from OCR
   date_paid: string;
   payment_status_id: string;
   total_amount: number;
@@ -119,9 +121,10 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
   
   const [formData, setFormData] = useState<FormDataState>({
     supplier: '',
-    transaction_date: new Date().toISOString().slice(0, 16), // Include time (YYYY-MM-DDTHH:mm)
+    transaction_date: new Date().toISOString().slice(0, 16),
     vat_reg_tin: '',
     terms_id: '',
+    payment_terms: undefined,  // ADDED
     date_paid: '',
     payment_status_id: '',
     total_amount: 0,
@@ -445,40 +448,163 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
     }
   };
 
-  const handleOCRComplete = (data: OCRData) => {
-    setFormData(prev => ({
-      ...prev,
-      supplier: data.supplier || prev.supplier,
-      transaction_date: data.transaction_date || prev.transaction_date,
-      vat_reg_tin: data.vat_reg_tin || prev.vat_reg_tin,
-      total_amount: data.total_amount || prev.total_amount,
-      vat_amount: data.vat_amount || prev.vat_amount,
-      total_amount_due: (data.total_amount || 0) + (data.vat_amount || 0),
-    }));
-
-    if (data.items.length > 0) {
-      const newItems: ReceiptItem[] = data.items.map((item) => ({
-        item_id: '',
-        unit_id: '',
-        item: {
-          item_id: '',
-          item_name: item.item_name,
-          unit: item.unit,
-          category: '',
-        },
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
+  const handleOCRComplete = async (data: any) => {
+    try {
+      console.log('OCR Data received:', data);
+      
+      // Auto-fill form fields
+      setFormData(prev => ({
+        ...prev,
+        supplier: data.supplier || prev.supplier,
+        transaction_date: data.transaction_date ? 
+          new Date(data.transaction_date).toISOString().slice(0, 16) : 
+          prev.transaction_date,
+        payment_terms: data.payment_terms || prev.payment_terms,  // FIXED: Now properly typed
+        vat_reg_tin: data.vat_reg_tin || prev.vat_reg_tin,
+        total_amount: data.total_amount || prev.total_amount,
+        vat_amount: data.vat_amount || prev.vat_amount,
+        total_amount_due: (data.total_amount || 0) + (data.vat_amount || 0),
       }));
-      setItems(newItems);
+
+      // Auto-fill items if available
+      if (data.items && data.items.length > 0) {
+        const newItems: ReceiptItem[] = await Promise.all(
+          data.items.map(async (item: any) => {
+            // Try to match unit
+            let unitId = '';
+            const matchedUnit = itemUnits.find(u => 
+              u.name.toLowerCase().includes(item.unit?.toLowerCase() || '') ||
+              item.unit?.toLowerCase().includes(u.name.toLowerCase())
+            );
+            if (matchedUnit) {
+              unitId = matchedUnit.id;
+            } else {
+              // Default to 'Piece' if no match found
+              const defaultUnit = itemUnits.find(u => u.name === 'Piece');
+              unitId = defaultUnit?.id || '';
+            }
+
+            return {
+              item_id: '',
+              unit_id: unitId,
+              item: {
+                item_id: '',
+                item_name: item.item_name || '',
+                unit: matchedUnit?.name || 'Piece',
+                category: item.category || 'Other',
+              },
+              quantity: item.quantity || 1,
+              unit_price: item.unit_price || 0,
+              total_price: item.total_price || 0,
+            };
+          })
+        );
+
+        // Add empty row at the end for additional items
+        newItems.push({
+          item_id: '',
+          unit_id: '',
+          item: {
+            item_id: '',
+            item_name: '',
+            unit: '',
+            category: '',
+          },
+          quantity: 0,
+          unit_price: 0,
+          total_price: 0,
+        });
+
+        setItems(newItems);
+      }
+
+      // Auto-suggest form selections based on OCR data
+      await autoSuggestSelections(data);
+
+      // Show success message
+      Swal.fire({
+        title: 'OCR Complete!',
+        text: 'Receipt data has been extracted and filled automatically. Please review and adjust as needed.',
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error processing OCR data:', error);
+      Swal.fire('Error', 'Failed to process OCR data', 'error');
     }
+  };
+
+  const autoSuggestSelections = async (ocrData: any) => {
+    try {
+      // Auto-select payment status
+      if (ocrData.total_amount > 0) {
+        const paidStatus = paymentStatuses.find(ps => ps.name === 'Paid');
+        if (paidStatus) {
+          setFormData(prev => ({ ...prev, payment_status_id: paidStatus.id }));
+        }
+      }
+
+      // ENHANCED: Auto-select terms based on OCR payment_terms
+      let selectedTermsId = '';
+      
+      if (ocrData.payment_terms) {
+        const termsText = ocrData.payment_terms.toLowerCase();
+        console.log(`Processing OCR terms: '${termsText}'`); // FIXED: Use template literals instead of f-string
+        
+        // Try to match OCR terms with database terms
+        if (termsText.includes('net') && termsText.includes('60')) {
+          const net60Terms = terms.find(t => t.name.toLowerCase().includes('net') && t.name.toLowerCase().includes('60'));
+          selectedTermsId = net60Terms?.id || '';
+          console.log('Matched: Net 60');
+        } else if (termsText.includes('net') && termsText.includes('30')) {
+          const net30Terms = terms.find(t => t.name.toLowerCase().includes('net') && t.name.toLowerCase().includes('30'));
+          selectedTermsId = net30Terms?.id || '';
+          console.log('Matched: Net 30');
+        } else if (termsText.includes('net') && termsText.includes('15')) {
+          const net15Terms = terms.find(t => t.name.toLowerCase().includes('net') && t.name.toLowerCase().includes('15'));
+          selectedTermsId = net15Terms?.id || '';
+          console.log('Matched: Net 15');
+        } else if (termsText.includes('net') && termsText.includes('7')) {
+          const net7Terms = terms.find(t => t.name.toLowerCase().includes('net') && t.name.toLowerCase().includes('7'));
+          selectedTermsId = net7Terms?.id || '';
+          console.log('Matched: Net 7');
+        } else if (termsText.includes('net') && termsText.includes('90')) {
+          const net90Terms = terms.find(t => t.name.toLowerCase().includes('net') && t.name.toLowerCase().includes('90'));
+          selectedTermsId = net90Terms?.id || '';
+          console.log('Matched: Net 90');
+        } else if (termsText.includes('cash')) {
+          const cashTerms = terms.find(t => t.name.toLowerCase().includes('cash'));
+          selectedTermsId = cashTerms?.id || '';
+          console.log('Matched: Cash');
+        }
+      }
+      
+      // DEFAULT: Fallback to Cash if no valid match found or no terms extracted
+      if (!selectedTermsId) {
+        const cashTerms = terms.find(t => t.name.toLowerCase() === 'cash');
+        selectedTermsId = cashTerms?.id || terms[0]?.id || '';
+        console.log('Defaulted to: Cash');
+      }
+      
+      if (selectedTermsId) {
+        setFormData(prev => ({ ...prev, terms_id: selectedTermsId }));
+      }
+
+      // Rest of the function remains the same...
+    } catch (error) {
+      console.error('Error auto-suggesting selections:', error);
+    }
+  };
+
+  const handleOCRError = (error: string) => {
+    Swal.fire('OCR Error', error, 'error');
   };
 
   return (
     <div className="modalOverlay">
       <div className="receiptModal">
-        
-
         <div className="modalHeader">
           <h1>Add Receipt</h1>
           <div className="timeDate">
@@ -500,34 +626,38 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                 <i className="ri-edit-line"></i>
                 <p>Manual Entry</p>
               </div>
-<<<<<<< Updated upstream
               <div 
-                // className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
-                // onClick={() => setSourceOption('OCR_Camera')}
-              >
-                {/* <i className="ri-camera-line"></i>
-                <p>Camera Scan</p> */}
-              </div>
-=======
-              {/*<div 
                 className={`source-option ${sourceOption === 'OCR_Camera' ? 'active' : ''}`}
                 onClick={() => setSourceOption('OCR_Camera')}
               >
                 <i className="ri-camera-line"></i>
                 <p>Camera Scan</p> 
-              </div>*/}
->>>>>>> Stashed changes
+              </div>
               <div 
-                // className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
-                // onClick={() => setSourceOption('OCR_File')}
+                 className={`source-option ${sourceOption === 'OCR_File' ? 'active' : ''}`}
+                 onClick={() => setSourceOption('OCR_File')}
               >
-                {/* <i className="ri-upload-line"></i>
-                <p>File Upload</p> */}
+                <i className="ri-upload-line"></i>
+                <p>File Upload</p> 
               </div>
             </div>
 
-            {sourceOption === 'OCR_File' && <div><OCRUpload /></div>}
-            {sourceOption === 'OCR_Camera' && <div><OCRCamera onOCRComplete={handleOCRComplete} /></div>}
+            {sourceOption === 'OCR_File' && (
+              <div>
+                <OCRUpload 
+                  onOCRComplete={handleOCRComplete}
+                  onError={handleOCRError}
+                />
+              </div>
+            )}
+            {sourceOption === 'OCR_Camera' && (
+              <div>
+                <OCRCamera 
+                  onOCRComplete={handleOCRComplete}
+                  onError={handleOCRError}
+                />
+              </div>
+            )}
 
             <div className="formFieldsHorizontal">
               <div className="formInputs">
@@ -656,20 +786,35 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                     />
                   </div>
                 </div>
-
-                <div className="formRow">
-                  <div className="formField">
-                    <label htmlFor="vat_reg_tin">VAT Reg TIN</label>
-                    <input
-                      type="text"
-                      id="vat_reg_tin"
-                      name="vat_reg_tin"
-                      value={formData.vat_reg_tin}
-                      onChange={handleInputChange}
-                      placeholder="Optional"
-                      className="formInput"
-                    />
-                  </div>
+                  <div className="formRow">
+                    <div className="formField">
+                      <label htmlFor="vat_reg_tin">VAT Reg TIN</label>
+                      <input
+                        type="text"
+                        id="vat_reg_tin"
+                        name="vat_reg_tin"
+                        value={formData.vat_reg_tin}
+                        onChange={handleInputChange}
+                        placeholder="Optional"
+                        className="formInput"
+                      />
+                    </div>
+                    
+                    {/* ADDED: Display extracted payment terms for reference */}
+                    {formData.payment_terms && (
+                      <div className="formField">
+                        <label>Extracted Terms (Reference)</label>
+                        <input
+                          type="text"
+                          value={formData.payment_terms}
+                          readOnly
+                          className="formInput"
+                          style={{ backgroundColor: '#f5f5f5', fontStyle: 'italic' }}
+                          title="Terms extracted from OCR - use this to help select the correct terms below"
+                        />
+                      </div>
+                    )}
+                    
                     <div className="formField">
                       <label htmlFor="terms_id">Terms</label>
                       <select
@@ -686,7 +831,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                         ))}
                       </select>
                     </div>
-                </div>
+                  </div>
                 <div className="formRow">
                   <div className="formField">
                     <label htmlFor="payment_status_id">Payment Status</label>
