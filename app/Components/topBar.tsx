@@ -67,10 +67,10 @@ const Topbar = () => {
 		<div className="top-bar">
 			<div className="top-links">
 				<a href="#" className="top-link active">Finance</a>
-				{/*<a href="#" className="top-link">Dashboard</a>*/}
-				{/*<a href="#" className="top-link">Human Resource</a>
+				<a href="#" className="top-link">Dashboard</a>
+				<a href="#" className="top-link">Human Resource</a>
 				<a href="#" className="top-link">Inventory</a>
-				<a href="#" className="top-link">Operational</a>*/}
+				<a href="#" className="top-link">Operational</a>
 				<div className="link-underline" ref={underlineRef}></div>
 			</div>
 		</div>
