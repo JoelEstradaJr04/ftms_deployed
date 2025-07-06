@@ -42,10 +42,10 @@
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
 }
 
 thead {
+    font-size: var(--table-header-font-size);
     position: sticky;
     top: 0;
     z-index: 2;
@@ -57,6 +57,7 @@ thead {
 }
 
 tbody {
+    font-size: var(--table-body-font-size);
     text-align: center;
     color: var(--secondary-text-color);
     vertical-align: middle;

@@ -6,6 +6,8 @@ import ExportConfirmationModal from "../../Components/ExportConfirmationModal";
 import "../../styles/dashboard.css";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
+import EmotionSettingsModal from "../../Components/dashboardEmotion";
+
 //import { formatDisplayText } from '@/app/utils/formatting';
 
 interface RevenueRecord {
@@ -36,6 +38,13 @@ interface DashboardData {
   profit: number;
 }
 
+interface EmotionSettings {
+  veryPoor: number;
+  poor: number;
+  good: number;
+  excellent: number;
+}
+
 const DashboardPage = () => {
   const today = new Date().toISOString().split('T')[0];
   const [loading, setLoading] = useState(true);
@@ -49,13 +58,42 @@ const DashboardPage = () => {
     profit: 0
   });
 
-  // Function to get emoji based on profit
+  const [isEmotionModalOpen, setIsEmotionModalOpen] = useState(false);
+  const [emotionSettings, setEmotionSettings] = useState<EmotionSettings>({
+    veryPoor: 0,
+    poor: 10000,
+    good: 50000,
+    excellent: 100000
+  });
+
+  // Updated function to get emoji based on profit and settings
   const getProfitEmoji = (profit: number) => {
-    if (profit < 0) return "/sad.webm";
-    if (profit <= 10000) return "/sad.webm";
-    if (profit <= 10000) return "/happy.webm";
-    return "/happy.webm";
+    if (profit < emotionSettings.veryPoor) return "/very-sad.webm";
+    if (profit < emotionSettings.poor) return "/sad.webm";
+    if (profit < emotionSettings.good) return "/happy.webm";
+    return "/very-happy.webm";
   };
+
+  const getEmotionStatus = (profit: number) => {
+    if (profit < emotionSettings.veryPoor) return "Very Poor";
+    if (profit < emotionSettings.poor) return "Poor";
+    if (profit < emotionSettings.good) return "Good";
+    return "Excellent";
+  };
+
+  const handleEmotionSave = (newSettings: EmotionSettings) => {
+    setEmotionSettings(newSettings);
+    // Optionally save to localStorage or backend
+    localStorage.setItem('emotionSettings', JSON.stringify(newSettings));
+  };
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('emotionSettings');
+    if (savedSettings) {
+      setEmotionSettings(JSON.parse(savedSettings));
+    }
+  }, []);
 
   // Function to fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -272,9 +310,15 @@ const DashboardPage = () => {
 
         <div className="dataContainer">
                 <div className="data">
+                    {/* Revenue Card */}
                     <div className="dataGrid" id="revenue">
-                        <div className="title"><h2>Revenue</h2></div>
-                        <p>₱{dashboardData.revenue.total.toLocaleString()}</p>
+                        <div className="cardHeader">
+                            <div className="cardIcon">💰</div>
+                            <div className="cardInfo">
+                                <h3>Revenue</h3>
+                                <span className="categoryCount">₱{Object.keys(dashboardData.revenue.byCategory).length}</span>
+                            </div>
+                        </div>
                         <div className="categoryBreakdown">
                           {Object.entries(dashboardData.revenue.byCategory).map(([categoryName, categoryData]) => (
                             <div key={categoryName} className="categoryItem">
@@ -284,9 +328,16 @@ const DashboardPage = () => {
                           ))}
                         </div>
                     </div>
+
+                    {/* Expenses Card */}
                     <div className="dataGrid" id="expenses">
-                        <div className="title"><h2>Expenses</h2></div>  
-                        <p>₱{dashboardData.expense.total.toLocaleString()}</p>
+                        <div className="cardHeader">
+                            <div className="cardIcon">💸</div>
+                            <div className="cardInfo">
+                                <h3>Expenses</h3>
+                                <span className="categoryCount">₱{Object.keys(dashboardData.expense.byCategory).length}</span>
+                            </div>
+                        </div>
                         <div className="categoryBreakdown">
                           {Object.entries(dashboardData.expense.byCategory).map(([categoryName, categoryData]) => (
                             <div key={categoryName} className="categoryItem">
@@ -296,20 +347,44 @@ const DashboardPage = () => {
                           ))}
                         </div>
                     </div>
+
+                    {/* Profit Card */}
                     <div className="dataGrid" id="profit">
-                        <div className="title"><h2>Profit</h2></div>
-                        <p>₱{dashboardData.profit.toLocaleString()}</p>
-                    </div>
-                    <div className="dataGrid" id="emoji">
-                        <div className="emoji">
-                          <video
-                            src={getProfitEmoji(dashboardData.profit)}
-                            autoPlay
-                            loop
-                            muted
-                          />
+                        <div className="cardHeader">
+                            <div className="cardIcon">📈</div>
+                            <div className="cardInfo">
+                                <h3>Profit</h3>
+                            </div>
+                        </div>
+                        <div className="profitAmount">
+                            ₱{dashboardData.profit.toLocaleString()}
                         </div>
                     </div>
+
+                    {/* Status/Emoji Card */}
+                    <div className="dataGrid" id="emoji">
+                      <div className="cardHeader">
+                          <div className="cardIcon">😊</div>
+                          <div className="cardInfo">
+                              <h3>Emotion</h3>
+                              <span className="categoryCount">{getEmotionStatus(dashboardData.profit)}</span>
+                          </div>
+                          <button 
+                            className="three-dots-btn"
+                            onClick={() => setIsEmotionModalOpen(true)}
+                          >
+                            ⋯
+                          </button>
+                      </div>
+                      <div className="emoji">
+                        <video
+                          src={getProfitEmoji(dashboardData.profit)}
+                          autoPlay
+                          loop
+                          muted
+                        />
+                      </div>
+                  </div>
                 </div>
 
                 <div className="graphContainer-wrapper">
@@ -330,6 +405,13 @@ const DashboardPage = () => {
           </div>
       </div>
     </div>
+
+    <EmotionSettingsModal
+      isOpen={isEmotionModalOpen}
+      onClose={() => setIsEmotionModalOpen(false)}
+      onSave={handleEmotionSave}
+      currentSettings={emotionSettings}
+    />
 
     <ExportConfirmationModal
       isOpen={isExportModalOpen}

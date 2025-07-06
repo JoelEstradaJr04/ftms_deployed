@@ -50,253 +50,349 @@ button:hover {
 .dashboard_settings input[type="text"],
 .dashboard_settings input[type="date"],
 .dashboard_settings select {
-  padding: 8px !important;
-  font-size: 1rem !important;
-  border: none !important;
-  border-radius: 5px !important;
+  padding: 0.5rem !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--page-button-border-radius) !important;
+  font-family: var(--font-sans) !important;
   background-color: var(--foreground-color) !important;
   color: var(--primary-text-color) !important;
-  transition: border-color 0.3s !important;
-  font-size: var(--page-button-font-size) !important;
-  width: var(--page-button-width) !important;
-  height: var(--page-button-height) !important;
-  box-shadow: var(--box-shadow) !important;
 }
+
 .dashboard_settings input[type="text"]:focus,
 .dashboard_settings input[type="date"]:focus,
 .dashboard_settings select:focus {
   outline: none !important;
-  border-color: var(--info-color) !important;
+  border-color: var(--primary-color) !important;
 }
 
 /* Date Range / Filtering */
-
 .filterDate,
 .dateRangePicker {
   display: flex !important;
-  gap: 0.5rem !important;
+  gap: 1rem !important;
+  align-items: center !important;
 }
+
 .date, .dashboard_filter {
   display: flex !important;
   flex-direction: column !important;
+  gap: 0.3rem !important;
 }
+
 .date label, .dashboard_filter label {
-  font-size: var(--input-label-font-size) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
   color: var(--secondary-text-color) !important;
-  margin-right: 0.5rem !important;
 }
 
 /* ---------- Export Button ---------- */
 .exportButton {
-  display: flex !important;
-  align-items: flex-end !important;
-  gap: 0.5rem !important;
-  background-color: transparent !important;
-  padding: 0 !important;
+  margin-left: auto !important;
 }
 
 .exportButton button {
-  background: var(--secondary-color) !important;
+  background-color: var(--primary-color) !important;
+  color: white !important;
   border: none !important;
-  outline: none !important;
+  padding: 0.6rem 1.2rem !important;
   border-radius: var(--page-button-border-radius) !important;
-  color: var(--button-font-color) !important;
-  font-size: var(--page-button-font-size) !important;
-  width: var(--page-button-width) !important;
-  height: var(--page-button-height) !important;
-  box-shadow: var(--box-shadow) !important;
-  transition: background-color 0.3s ease !important;
-  padding: none !important;
   display: flex !important;
-  justify-content: center !important;
   align-items: center !important;
+  gap: 0.5rem !important;
 }
 
-/* ---------- Main Data / Graph Container ---------- */
+/* ---------- Main Data Container ---------- */
 .dataContainer {
   display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  gap: 1rem !important;
-  padding: 1rem 0rem !important;
-  width: 100% !important;
-  height: auto !important;
-  justify-content: space-between !important;
-  align-items: stretch !important;
-  border: none !important;
-  outline: none !important;
-  background-color: none !important;
+  gap: 2rem !important;
+  margin-top: 2rem !important;
 }
 
 .data {
   display: grid !important;
-  max-width: 50% !important;
-  gap: 1rem !important;
-  flex: 0.6 1 0 !important;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
-  border: none !important;
-  outline: none !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 1.5rem !important;
+  flex: 1 !important;
 }
 
+/* ---------- Updated Data Grid Cards (New Style) ---------- */
 .dataGrid {
   display: flex !important;
   flex-direction: column !important;
-  gap: 1rem !important;
-  padding: 1rem !important;
+  gap: var(--card-gap) !important;
+  padding: var(--card-padding) !important;
   background-color: var(--foreground-color) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: var(--box-shadow) !important;
-  transition: transform 0.3s, box-shadow 0.3s !important;
+  border-radius: var(--card-border-radius) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  border-left: var(--card-border-width) solid transparent !important;
+  position: relative !important;
+  min-height: 140px !important;
 }
+
 .dataGrid:hover {
-  transform: translateY(-5px) !important;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+  transform: var(--card-hover-transform) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
 }
-.dataGrid p {
-  font-size: 2rem !important;
-  font-weight: 700 !important;
+
+/* Card Header Layout */
+.cardHeader {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  position: relative !important;
+}
+
+.three-dots-btn {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  background: none !important;
+  border: none !important;
+  font-size: 1.5rem !important;
+  color: var(--secondary-text-color) !important;
+  cursor: pointer !important;
+  padding: 0.25rem !important;
+  border-radius: 100rem !important;
+  transition: all 0.2s !important;
+  outline: none !important;
+  border: none !important;
+}
+
+.three-dots-btn:hover {
+  background: var(--table-header-hover-color) !important;
+  color: var(--primary-text-color) !important;
+}
+
+.cardIcon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 24px !important;
+  color: white !important;
+  flex-shrink: 0 !important;
+}
+
+.cardInfo h3 {
+  font-size: var(--card-title-font-size) !important;
+  font-weight: var(--card-title-font-weigth) !important;
+  color: var(--secondary-text-color) !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.cardInfo h3 {
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  color: var(--secondary-text-color) !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.categoryCount {
+  font-size: var(--card-number-font-size) !important;
+  font-weight: var(--card-number-font-weight) !important;
+  color: var(--primary-text-color) !important;
+  line-height: 1 !important;
+}
+
+/* Profit Amount Styling */
+.profitAmount {
+  flex: 1 !important;
+  height: min-content;
+  font-size: var(--card-number-font-size) !important;
+  font-weight: var(--card-number-font-weight) !important;
   margin: 0 !important;
   text-align: center !important;
+  line-height: 1 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  margin-top: 0rem !important;
 }
 
-/* Category breakdown list */
-.categoryBreakdown {
+/* Profit Card Styling */
+#profit {
+  border-left-color: #3b82f6 !important; /* Blue */
   display: flex !important;
   flex-direction: column !important;
-  gap: 0.5rem !important;
-  font-size: 0.9rem !important;
-  max-height: 45% !important;
-  overflow-y: scroll !important;
-  overflow-x: hidden !important;
-}
-.categoryItem {
-  display: flex !important;
   justify-content: space-between !important;
-  padding: 0.3rem !important;
-  background-color: var(--table-header-hover-color) !important;
-  border-radius: 4px !important;
 }
-.categoryItem span:last-child {
-  font-weight: 600 !important;
+#profit .cardIcon {
+  background-color: #3b82f6 !important;
+}
+#profit .categoryCount {
+  color: #3b82f6 !important;
+}
+#profit .profitAmount {
+  color: #3b82f6 !important;
 }
 
-/* Revenue, Expenses, Profit panels */
-#revenue       { box-shadow: var(--box-shadow) !important; }
-#expenses      { box-shadow: var(--box-shadow) !important; }
-#profit        { box-shadow: var(--box-shadow) !important;   }
-#revenue p     { color: var(--success-color) !important; }
-#expenses p    { color: var(--primary-color) !important; }
-#profit p      { color: var(--info-color) !important;    }
-
-/* Emoji / Mood Panel */
-#emoji {
-  font-size: 3rem !important;
-  text-align: center !important;
-  padding: 0.5rem !important;
-  border-radius: var(--border-radius) !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
+/* Revenue Card Styling */
+#revenue {
+  border-left-color: #f59e0b !important; /* Orange like the reference */
 }
+#revenue .cardIcon {
+  background-color: #f59e0b !important;
+}
+#revenue .categoryCount, #revenue .cardInfo h3 {
+  color: #f59e0b !important;
+}
+
+/* Expenses Card Styling */
+#expenses {
+  border-left-color: #ef4444 !important; /* Red */
+}
+#expenses .cardIcon {
+  background-color: #ef4444 !important;
+}
+#expenses .categoryCount, #expenses .cardInfo h3 {
+  color: #ef4444 !important;
+}
+
+/* Profit Card Styling */
+#profit {
+  border-left-color: #3b82f6 !important; /* Blue */
+}
+#profit .cardIcon {
+  background-color: #3b82f6 !important;
+}
+#profit .categoryCount {
+  color: #3b82f6 !important;
+}
+#profit .profitAmount, #profit .cardInfo h3 {
+  color: #3b82f6 !important;
+}
+
+/* Emoji video adjustments */
 .emoji {
   display: flex !important;
   justify-content: center !important;
-  align-items: center !important;
-  height: 100% !important;
+  align-items: flex-start !important;
+  margin-top: auto !important;
+  margin-left: 0 !important; /* Remove the left margin */
+  flex: 1 !important; /* Take up remaining space */
 }
 .emoji video {
-  width: 125px !important;
-  height: 90% !important;
+  width: 80px !important;
+  height: 60px !important;
   border-radius: var(--border-radius) !important;
-  padding: 0.5rem !important;
+}
+
+/* Status/Emoji Card Styling */
+#emoji {
+  border-left-color: #8b5cf6 !important; /* Purple */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important; /* Better spacing like profit card */
+}
+#emoji .cardIcon {
+  background-color: #8b5cf6 !important;
+}
+#emoji .categoryCount, #emoji .cardInfo h3 {
+  color: #8b5cf6 !important;
+}
+
+
+/* Category Breakdown Adjustments */
+.categoryBreakdown {
+  margin-top: auto !important;
+  font-size: 0.85rem !important;
+  max-height: 100px !important;
+  overflow-y: auto !important;
+  margin-left: 4rem !important;
+}
+
+.categoryItem {
+  padding: 0.4rem 0.6rem !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-radius: 6px !important;
+  margin-bottom: 0.3rem !important;
+  display: flex !important;
+  justify-content: space-between !important;
+}
+
+.categoryItem span:last-child {
+  font-weight: 600 !important;
+  color: var(--primary-text-color) !important;
 }
 
 /* ---------- Graph Section ---------- */
 .graphContainer-wrapper {
-  display: flex !important;
-  border-radius: 4px !important;
-  flex-wrap: wrap !important;
-  background-color: none !important;
-  padding: 0rem !important;
   flex: 1 !important;
-  overflow: hidden !important;
-  max-height: 100% !important;
-  align-items: stretch !important; /* ← FIXED */
-  box-shadow: var(--box-shadow) !important;
+  min-width: 400px !important;
 }
 
 .graphContainer {
-  display: flex !important;
-  flex: 1 !important;
-  flex-direction: column !important;
-  gap: 0 !important;
-  padding: 1rem !important;
   background-color: var(--foreground-color) !important;
-  box-shadow: var(--box-shadow) !important;
-  justify-content: center !important;
-  align-items: center !important;
-  background-color: none !important;
-  min-height: 0 !important;         /* ← FIXED */
-  max-height: 100% !important;      /* ← FIXED */
-  border-radius: 4px !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
+  border-radius: 12px !important;
+  padding: 2rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  height: fit-content !important;
 }
 
 .graphContainer .title {
-  margin-bottom: 1rem !important;
-  font-size: var(--title-font-size) !important;
-  font-weight: var(--title-font-weight) !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.graphContainer .title h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  color: var(--primary-text-color) !important;
+  margin: 0 !important;
 }
 
 .pieChartContainer {
-  width: 100% !important;
-  max-width: 100% !important;
-  height: auto !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  overflow: hidden !important;
-  background-color: none !important;
+  min-height: 300px !important;
 }
 
 .pieChartContainer canvas {
-  width: 100% !important;
-  height: auto !important;
   max-width: 100% !important;
-  object-fit: contain !important;
-  max-height: min-content !important;
-  background-color: none !important;
-  gap: 1rem !important;
+  height: auto !important;
 }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1620px) {
   .dataContainer {
-    max-height: none !important;
+    flex-direction: column !important;
+  }
+  
+  .graphContainer-wrapper {
+    min-width: unset !important;
   }
 }
 
 @media (max-width: 1260px) {
   .data {
-    max-width: 40% !important;
-    gap: 0.2rem !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
-  .dataContainer { flex-direction: row !important; }
-  .dataGrid p { font-size: 1rem !important; }
-  .categoryBreakdown { font-size: 0.8rem !important; }
 }
 
 @media (max-width: 900px) {
-  .data       { max-width: 100% !important; gap: 0.5rem !important; }
-  .dataContainer { flex-direction: column !important; max-height: none !important; }
-  .graphContainer { width: 100% !important; }
+  .data {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .dashboard_settings {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  
+  .exportButton {
+    margin-left: 0 !important;
+  }
 }
 
 /* --------- FIX: Reset after mobile --------- */
 @media (min-width: 901px) {
-  .dataContainer {
-    max-height: 600px !important;
-    flex-direction: row !important;
+  .data {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }

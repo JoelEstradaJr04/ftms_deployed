@@ -133,7 +133,7 @@ textarea.input-error {
   --title-margin-bottom: 15px;
 
   /* Input Labels */
-  --input-label-font-size: 14px;
+  --input-label-font-size: 16px;
   --input-label-font-weight: 600;
   --search-input-border-radius: 8px;
   --search-input-height: 35px;
@@ -141,7 +141,7 @@ textarea.input-error {
   --search-input-padding-right: 0 8px;
 
   /* Page Buttons - Export, import, add*/
-  --page-button-font-size: 14px;
+  --page-button-font-size: 16px;
   --page-button-width: 160px;
   --page-button-height: 35px;
   --page-button-border-radius: 8px;
@@ -160,6 +160,8 @@ textarea.input-error {
   --modal-button-gap: 8px;
 
   /* ================ TABLES ================*/
+  --table-header-font-size: 16px;
+  --table-body-font-size: 16px;
   --table-border-radius: 8px;
   --table-header-height: 40px;
   --table-row-height: 40px;
@@ -213,6 +215,17 @@ textarea.input-error {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ================ DASHBOARD ================ */
+  --card-title-font-size: 16px;
+  --card-title-font-weight: normal; /* Fixed typo: weigth -> weight */
+  --card-number-font-size: 2.2rem;
+  --card-number-font-weight: 700;
+  --card-padding: 1.5rem;
+  --card-border-radius: 12px;
+  --card-gap: 1.5rem;
+  --card-hover-transform: translateY(-2px);
+  --card-border-width: 4px;
 
 }
 
