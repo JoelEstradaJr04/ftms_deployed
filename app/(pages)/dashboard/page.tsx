@@ -68,10 +68,10 @@ const DashboardPage = () => {
 
   // Updated function to get emoji based on profit and settings
   const getProfitEmoji = (profit: number) => {
-    if (profit < emotionSettings.veryPoor) return "/very-sad.webm";
-    if (profit < emotionSettings.poor) return "/sad.webm";
-    if (profit < emotionSettings.good) return "/happy.webm";
-    return "/very-happy.webm";
+    if (profit < emotionSettings.veryPoor) return "/cry.webp";
+    if (profit < emotionSettings.poor) return "/neutral.webp";
+    if (profit < emotionSettings.good) return "/smile_with_big_eyes.webp";
+    return "/congratulation.webp";
   };
 
   const getEmotionStatus = (profit: number) => {
@@ -377,11 +377,14 @@ const DashboardPage = () => {
                           </button>
                       </div>
                       <div className="emoji">
-                        <video
+                        <img
                           src={getProfitEmoji(dashboardData.profit)}
-                          autoPlay
-                          loop
-                          muted
+                          alt="Emotion"
+                          style={{ 
+                            width: '80px', 
+                            height: '60px', 
+                            objectFit: 'contain' 
+                          }}
                         />
                       </div>
                   </div>
