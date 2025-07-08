@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import '../../styles/viewRevenue.css';
+import '../../styles/revenue/viewRevenue.css';
 import { formatDateTime } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
 import type { Assignment } from '@/lib/operations/assignments';

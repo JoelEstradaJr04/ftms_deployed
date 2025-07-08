@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import "../../styles/report.css";
-import "../../styles/table.css";
+import "../../styles/report/report.css";
+import "../../styles/components/table.css";
 import LineChart from '../../Components/expenseRevenueLineChart';
 import ExpensesPieChart from '../../Components/expensesPieChart';
 import RevenuePieChart from '../../Components/revenuePieChart';

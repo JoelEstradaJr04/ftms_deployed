@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
-import '../../styles/editReceipt.css';
+import '../../styles/receipt/editReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 
 // Global types, aligned with schema

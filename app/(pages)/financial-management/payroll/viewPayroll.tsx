@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import '../../../styles/viewPayroll.css';
+import '../../../styles/payroll/viewPayroll.css';
 
 // Add types for processed_benefits, processed_deductions, and hr_data_snapshot
 interface BenefitItem {

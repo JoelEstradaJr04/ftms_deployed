@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
-import "../styles/revenueBusSelector.css";
+import "../styles/components/revenueBusSelector.css";
 import type { Assignment } from '@/lib/operations/assignments';
 
 type Employee = {

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import '../styles/OCRUpload.css';
+import '../styles/components/OCRUpload.css';
 
 interface OCRUploadProps {
   onOCRComplete?: (data: any) => void;

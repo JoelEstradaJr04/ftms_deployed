@@ -1,7 +1,7 @@
 'use client';
 
 import "./globals.css";
-import './styles/index.css';
+import './styles/general/index.css';
 import SideBar from "./Components/sideBar";
 import TopBar from './Components/topBar';
 

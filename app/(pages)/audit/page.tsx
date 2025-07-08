@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import '../../styles/table.css';
-import "../../styles/audit.css";
+import '../../styles/components/table.css';
+import "../../styles/audit/audit.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from "sweetalert2";
 import Loading from '../../Components/loading';

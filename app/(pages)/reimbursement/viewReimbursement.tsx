@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import ViewExpenseModal from '../expense/viewExpense';
-import '../../styles/viewReimbursement.css';
+import '../../styles/reimbursement/viewReimbursement.css';
 
 type Reimbursement = {
   reimbursement_id: string;

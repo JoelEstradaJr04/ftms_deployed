@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import "../styles/sidebar.css";
+import "../styles/components/sidebar.css";
 
 const routeToItem: { [key: string]: string } = {
   "/dashboard": "dashboard",

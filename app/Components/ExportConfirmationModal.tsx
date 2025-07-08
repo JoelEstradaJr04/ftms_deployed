@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import styles from '../styles/ExportConfirmationModal.module.css';
+import styles from '../styles/components/ExportConfirmationModal.module.css';
 
 type DashboardCategoryData = Record<string, { name: string; amount: number }>;
 

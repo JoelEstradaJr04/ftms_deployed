@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import '../../styles/addRevenue.css';
+import '../../styles/revenue/addRevenue.css';
 import {
   showEmptyFieldWarning,
   showAddConfirmation,

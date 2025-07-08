@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import "../../styles/expense.css";
-import "../../styles/table.css";
+import "../../styles/expense/expense.css";
+import "../../styles/components/table.css";
 import PaginationComponent from "../../Components/pagination";
 import AddExpense from "./addExpense"; 
 import Swal from 'sweetalert2';

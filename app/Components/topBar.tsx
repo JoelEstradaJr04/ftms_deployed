@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import "../styles/topbar.css";
+import "../styles/components/topbar.css";
 
 const Topbar = () => {
 	const underlineRef = useRef<HTMLDivElement>(null);

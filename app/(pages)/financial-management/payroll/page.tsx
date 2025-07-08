@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback} from "react";
-import "../../../styles/payroll.css";
-import "../../../styles/table.css";
-import "../../../styles/chips.css";
+import "../../../styles/payroll/payroll.css";
+import "../../../styles/components/table.css";
+import "../../../styles/components/chips.css";
 import PaginationComponent from "../../../Components/pagination";
 import Loading from '../../../Components/loading';
 import Swal from 'sweetalert2';

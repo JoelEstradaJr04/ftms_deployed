@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { showSuccess, showError } from '../../utility/Alerts';
-import "../../styles/applyReimbursement.css";
+import "../../styles/reimbursement/applyReimbursement.css";
 import EmployeeSelectorModal, { Employee } from "../../Components/employeeSelector";
 
 interface ApplyReimbursementProps {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import PieChart from "../../Components/pieChart";
 import ExportConfirmationModal from "../../Components/ExportConfirmationModal";
-import "../../styles/dashboard.css";
+import "../../styles/dashboard/dashboard.css";
 import { logAuditToServer } from "../../lib/clientAuditLogger";
 import Loading from '../../Components/loading';
 import EmotionSettingsModal from "../../Components/dashboardEmotion";

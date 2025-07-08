@@ -2,7 +2,7 @@
 'use client';
 import React from 'react';
 import { formatDateTime } from '../../utility/dateFormatter';
-import '../../styles/viewExpense.css';
+import '../../styles/expense/viewExpense.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
 import type { Receipt } from '../../types/receipt';

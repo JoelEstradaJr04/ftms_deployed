@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import "../../styles/receipt.css";
-import "../../styles/table.css";
+import "../../styles/receipt/receipt.css";
+import "../../styles/components/table.css";
 import PaginationComponent from "../../Components/pagination";
 import Swal from 'sweetalert2';
 import { formatDateTime } from '../../utility/dateFormatter';

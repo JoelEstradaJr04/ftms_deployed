@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
-import "../styles/busSelector.css"
-import "../styles/table.css"
+import "../styles/components/busSelector.css"
+import "../styles/components/table.css"
 import type { Assignment } from '@/lib/operations/assignments';
 import { formatDateTime } from '../utility/dateFormatter';
 

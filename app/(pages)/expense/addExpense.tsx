@@ -3,7 +3,7 @@
 
 //---------------------IMPORTS HERE----------------------//
 import React, { useState, useEffect } from 'react';
-import '../../styles/addExpense.css';
+import '../../styles/expense/addExpense.css';
 import { formatDate } from '../../utility/dateFormatter';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { validateField, isValidAmount, ValidationRule } from "../../utility/validation";

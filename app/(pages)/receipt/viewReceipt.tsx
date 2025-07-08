@@ -2,7 +2,7 @@
 'use client';
 import React from 'react';
 import { formatDate, formatDateTime } from '../../utility/dateFormatter';
-import '../../styles/viewReceipt.css';
+import '../../styles/receipt/viewReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
 
 type ReceiptItem = {

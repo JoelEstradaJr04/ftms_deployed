@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import '../styles/navbar.css'; // External CSS for styling
+import '../styles/components/sidebar.css'; // External CSS for styling
 import NavItem from './NavItem'; // Importing NavItem component
 import SubModule from './SubModule'; // Importing SubModule component
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import '../styles/confirmationModal.css';
+import '../styles/components/confirmationModal.css';
 
 type ConfirmationModalProps = {
   isOpen: boolean;

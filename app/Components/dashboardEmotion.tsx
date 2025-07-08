@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import '../styles/dashboardEmotion.css';
+import '../styles/components/dashboardEmotion.css';
 
 interface EmotionSettings {
   veryPoor: number;
@@ -132,7 +132,7 @@ const EmotionSettingsModal: React.FC<EmotionSettingsModalProps> = ({
 
           <div className="emotion-setting">
             <div className="emotion-setting-row">
-              <label>😐 Poor (₱{settings.veryPoor.toLocaleString()} - ):</label>
+              <label>😐 Poor (₱{(settings.veryPoor + 1).toLocaleString()} - ):</label>
               <div className="input-group">
                 <span>₱</span>
                 <input
@@ -151,7 +151,7 @@ const EmotionSettingsModal: React.FC<EmotionSettingsModalProps> = ({
 
           <div className="emotion-setting">
             <div className="emotion-setting-row">
-              <label>😊 Good (₱{settings.poor.toLocaleString()} - ):</label>
+              <label>😊 Good (₱{(settings.poor + 1).toLocaleString()} - ):</label>
               <div className="input-group">
                 <span>₱</span>
                 <input

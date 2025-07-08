@@ -1,12 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import '../../styles/table.css';
-import "../../styles/reimbursement.css";
+import '../../styles/components/table.css';
+import "../../styles/reimbursement/reimbursement.css";
 import PaginationComponent from "../../Components/pagination";
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import ViewReimbursement from "./viewReimbursement";
-import styles from '../../styles/ExportConfirmationModal.module.css';
+import styles from '../../styles/components/ExportConfirmationModal.module.css';
 import { formatDateTime } from '../../utility/dateFormatter';
 import type { Receipt } from '../../types/receipt';
 
