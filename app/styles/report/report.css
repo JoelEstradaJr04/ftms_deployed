@@ -25,7 +25,7 @@ button {
   justify-content: space-between !important;
 }
 
-.settings input[type="date"],
+.settings .date input[type="date"],
 .settings select {
   font-size: var(--page-button-font-size) !important;  
   border-radius: 4px !important;
@@ -59,20 +59,6 @@ button {
   box-shadow: none !important;
 }
 
-/* Buttons inside .settings */
-.settings button {
-  padding: 8px 12px !important;
-  font-size: 1rem !important;
-  cursor: pointer !important;
-  border-radius: 5px !important;
-  border: 1px solid var(--border-color) !important;
-  background-color: var(--secondary-color) !important;
-  color: var(--button-font-color) !important;
-  transition: background-color 0.2s !important;
-}
-.settings button:hover {
-  background-color: var(--secondary-hover-color) !important;
-}
 
 /* ---------- Import / Export ---------- */
 

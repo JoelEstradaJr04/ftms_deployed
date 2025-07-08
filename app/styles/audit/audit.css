@@ -19,7 +19,7 @@
   justify-content: space-between !important;
 }
 
-.settings input[type="date"],
+
 .settings select {
   padding: 0 8px !important;
   font-size: var(--page-button-font-size) !important;  
