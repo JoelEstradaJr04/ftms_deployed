@@ -303,7 +303,7 @@ const DashboardPage = () => {
             )}
           </div>
 
-          <div className="exportButton">
+          <div className="dashboard_exportButton">
               <button onClick={() => setIsExportModalOpen(true)}><i className="ri-receipt-line" /> Export</button>
           </div>
         </div>

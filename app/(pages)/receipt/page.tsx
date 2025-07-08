@@ -10,6 +10,7 @@ import EditReceiptModal from './editReceipt';
 import AddReceipt from './addReceipt';
 import { formatDisplayText } from '@/app/utils/formatting';
 import Loading from '../../Components/loading';
+import FilterDropdown, { FilterSection } from "../../Components/filter";
 import type { UpdatedReceiptData } from './editReceipt';
 
 type ReceiptItem = {
@@ -106,6 +107,61 @@ const ReceiptPage = () => {
   const [itemUnits, setItemUnits] = useState<{ id: string; name: string }[]>([]);
   const [globalsLoading, setGlobalsLoading] = useState(true);
   const [pageSize] = useState(10);
+
+  // Filter sections configuration similar to revenue and expense pages
+  const filterSections: FilterSection[] = [
+    {
+      id: 'dateRange',
+      title: 'Date Range',
+      type: 'dateRange',
+      defaultValue: { from: dateFrom, to: dateTo }
+    },
+    {
+      id: 'category',
+      title: 'Category',
+      type: 'checkbox',
+      options: categories.map(cat => ({
+        id: cat.name,
+        label: formatDisplayText(cat.name)
+      }))
+    },
+    {
+      id: 'status',
+      title: 'Payment Status',
+      type: 'checkbox',
+      options: paymentStatuses.map(status => ({
+        id: status.name,
+        label: formatDisplayText(status.name)
+      }))
+    }
+  ];
+
+  // Handle filter application
+  const handleFilterApply = (filterValues: Record<string, string | string[] | {from: string; to: string}>) => {
+    // Date range filter
+    if (filterValues.dateRange && typeof filterValues.dateRange === 'object') {
+      const dateRange = filterValues.dateRange as { from: string; to: string };
+      setDateFrom(dateRange.from);
+      setDateTo(dateRange.to);
+    }
+    
+    // Category filter (multiple selection support)
+    if (filterValues.category && Array.isArray(filterValues.category)) {
+      setCategoryFilter(filterValues.category.join(','));
+    } else {
+      setCategoryFilter('');
+    }
+
+    // Status filter (multiple selection support)
+    if (filterValues.status && Array.isArray(filterValues.status)) {
+      setStatusFilter(filterValues.status.join(','));
+    } else {
+      setStatusFilter('');
+    }
+
+    // Reset pagination page
+    setCurrentPage(1);
+  };
 
   const fetchReceipts = useCallback(async (isInitialLoad = false) => {
     if (isInitialLoad) {
@@ -334,8 +390,10 @@ const ReceiptPage = () => {
         item.supplier.toLowerCase().includes(search.toLowerCase()) ||
         item.receipt_id.toLowerCase().includes(search.toLowerCase())
       );
-      const matchesCategory = categoryFilter ? item.category_name === categoryFilter : true;
-      const matchesStatus = statusFilter ? item.payment_status_name === statusFilter : true;
+      const matchesCategory = categoryFilter ? 
+        categoryFilter.split(',').some(cat => item.category_name === cat.trim()) : true;
+      const matchesStatus = statusFilter ? 
+        statusFilter.split(',').some(status => item.payment_status_name === status.trim()) : true;
       const matchesDate = (!dateFrom || item.transaction_date >= dateFrom) && 
                         (!dateTo || item.transaction_date <= dateTo);
       return matchesSearch && matchesCategory && matchesStatus && matchesDate;
@@ -366,39 +424,16 @@ const ReceiptPage = () => {
               onChange={(e) => setSearch(e.target.value)}
             /> 
           </div>
+          <FilterDropdown
+              sections={filterSections}
+              onApply={handleFilterApply}
+              initialValues={{
+                dateRange: { from: dateFrom, to: dateTo },
+                category: categoryFilter ? categoryFilter.split(',') : [],
+                status: statusFilter ? statusFilter.split(',') : []
+              }}
+            />
           <div className="filters">
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.category_id} value={cat.name}>{formatDisplayText(cat.name)}</option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">All Status</option>
-              {paymentStatuses.map(status => (
-                <option key={status.id} value={status.name}>{formatDisplayText(status.name)}</option>
-              ))}
-            </select>
             <button onClick={() => setShowModal(true)} id='receipt_addButton'><i className="ri-add-line" /> Add Receipt</button>
           </div>
         </div>

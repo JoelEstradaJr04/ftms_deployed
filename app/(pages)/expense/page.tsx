@@ -14,9 +14,11 @@ import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
+import FilterDropdown, { FilterSection } from "../../Components/filter";
 // Import shared types
 import { Receipt } from '@/app/types/receipt';
 import type { Assignment } from '@/lib/operations/assignments';
+
 
 
 // Add interface for new expense creation
@@ -129,6 +131,44 @@ const ExpensePage = () => {
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
   
+  // Filter sections configuration similar to revenue page
+  const filterSections: FilterSection[] = [
+    {
+      id: 'dateRange',
+      title: 'Date Range',
+      type: 'dateRange',
+      defaultValue: { from: dateFrom, to: dateTo }
+    },
+    {
+      id: 'category',
+      title: 'Category',
+      type: 'checkbox',
+      options: availableCategories.map(cat => ({
+        id: cat.name,
+        label: cat.name
+      }))
+    }
+  ];
+
+  // Handle filter application
+  const handleFilterApply = (filterValues: Record<string, string | string[] | {from: string; to: string}>) => {
+    // Date range filter
+    if (filterValues.dateRange && typeof filterValues.dateRange === 'object') {
+      const dateRange = filterValues.dateRange as { from: string; to: string };
+      setDateFrom(dateRange.from);
+      setDateTo(dateRange.to);
+    }
+    
+    // Category filter (multiple selection support)
+    if (filterValues.category && Array.isArray(filterValues.category)) {
+      setCategoryFilter(filterValues.category.join(','));
+    } else {
+      setCategoryFilter('');
+    }
+
+    // Reset pagination page
+    setCurrentPage(1);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -255,7 +295,7 @@ const filteredData = data.filter((item: ExpenseData) => {
     (item.receipt?.total_amount_due?.toString() || '').includes(searchLower);
     
   const matchesCategory = categoryFilter ? 
-    (item.category?.name === categoryFilter || item.category_name === categoryFilter) : true;
+    categoryFilter.split(',').some(cat => item.category?.name === cat.trim() || item.category_name === cat.trim()) : true;
   const matchesDate = (!dateFrom || item.expense_date >= dateFrom) && 
                     (!dateTo || item.expense_date <= dateTo);
   return matchesSearch && matchesCategory && matchesDate;
@@ -694,38 +734,18 @@ const filteredData = data.filter((item: ExpenseData) => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             /> 
+            
+            
           </div>
-          
+          <FilterDropdown
+            sections={filterSections}
+            onApply={handleFilterApply}
+            initialValues={{
+              dateRange: { from: dateFrom, to: dateTo },
+              category: categoryFilter ? categoryFilter.split(',') : []
+            }}
+          />
           <div className="filters">
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              max={today}
-            />
-
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              max={today}
-            />
-
-            <select
-              value={categoryFilter}
-              id="categoryFilter"
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {availableCategories.map((category) => (
-                <option key={category.category_id} value={category.name}>
-                  {formatDisplayText(category.name)}
-                </option>
-              ))}
-            </select>
-
             <button onClick={handleExport} id="export"><i className="ri-receipt-line" /> Export CSV</button>
 
             <button onClick={() => setShowModal(true)} id='addExpense'><i className="ri-add-line" /> Add Expense</button>

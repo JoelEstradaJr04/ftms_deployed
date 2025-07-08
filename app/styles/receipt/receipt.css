@@ -606,7 +606,6 @@
   justify-content: space-between !important;
 }
 
-.settings input[type="date"],
 .settings select {
   padding: 0 8px !important;
   font-size: var(--page-button-font-size) !important;  
@@ -620,12 +619,11 @@
   height: var(--search-input-height) !important;
 }
 
-.settings button {
+.settings .filters button {
   font-size: var(--page-button-font-size) !important;
   cursor: pointer !important;
   border-radius: 5px !important;
   border: none !important;
-  background-color: var(--secondary-color) !important;
   color: var(--button-font-color) !important;
   transition: background-color 0.2s !important;
   box-shadow: var(--box-shadow) !important;
@@ -636,7 +634,7 @@
   gap: 0.5rem !important;
   justify-content: center !important;
 }
-.settings button:hover {
+.settings .filters button:hover {
   background-color: var(--secondary-hover-color) !important;
 }
 

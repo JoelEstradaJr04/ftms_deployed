@@ -16,6 +16,7 @@ import { showSuccess, showError } from '../../utility/Alerts';
 import { formatDateTime } from "../../utility/dateFormatter";
 import { formatDisplayText } from '@/app/utils/formatting';
 import type { Assignment } from '@/lib/operations/assignments';
+import FilterDropdown, { FilterSection } from "../../Components/filter"
 
 interface GlobalCategory {
   category_id: string;
@@ -86,6 +87,48 @@ const RevenuePage = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [recordToView, setRecordToView] = useState<RevenueData | null>(null);
   const [availableCategories, setAvailableCategories] = useState<GlobalCategory[]>([]);
+
+
+  const filterSections: FilterSection[] = [
+    {
+      id: 'dateRange',
+      title: 'Date Range',
+      type: 'dateRange',
+      defaultValue: { from: dateFrom, to: dateTo }
+    },
+
+    {
+      id: 'category',
+      title: 'Category',
+      type: 'checkbox',
+      options: availableCategories.map(cat => ({
+        id: cat.name,
+        label: cat.name
+      }))
+    }
+  ]
+
+  // Handle filter application
+  const handleFilterApply = (filterValues: Record<string, string | string[] | {from: string; to: string}>) => {
+    //date range filter
+    if (filterValues.dateRange && typeof filterValues.dateRange == 'object') {
+      const dateRange = filterValues.dateRange as { from: string; to: string};
+      setDateFrom(dateRange.from);
+      setDateTo(dateRange.to);
+    }
+    
+    //category filter
+    if (filterValues.category && Array.isArray(filterValues.category)) {
+      setCategoryFilter(filterValues.category.join(','));
+    } else {
+      setCategoryFilter('');
+    }
+
+    //reset pagination page
+    setCurrentPage(1);
+  }
+
+  
 
   const fetchCategories = async () => {
     try {
@@ -239,7 +282,9 @@ const RevenuePage = () => {
     (assignment?.conductor_name?.toLowerCase() || '').includes(searchLower) ||
     (assignment?.date_assigned && formatDate(assignment.date_assigned).toLowerCase().includes(searchLower));
 
-    const matchesCategory = categoryFilter ? item.category.name === categoryFilter : true;
+    const matchesCategory = categoryFilter ? 
+      categoryFilter.split(',').some(cat => item.category.name === cat.trim()) : true;
+
     const itemDate = new Date(item.collection_date).toISOString().split('T')[0]; // Extract date part for comparison
     const matchesDate = (!dateFrom || itemDate >= dateFrom) && 
             (!dateTo || itemDate <= dateTo);
@@ -691,36 +736,16 @@ const RevenuePage = () => {
             /> 
           </div>
 
+          <FilterDropdown
+            sections={filterSections}
+            onApply={handleFilterApply}
+            initialValues={{
+              dateRange: { from: dateFrom, to: dateTo },
+              category: categoryFilter ? categoryFilter.split(',') : []
+            }}
+          />
+
           <div className="filters">
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              max={maxDate}
-            />
-
-            <input
-              type="date"
-              className="dateFilter"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              max={maxDate}
-            />
-
-            <select
-              value={categoryFilter}
-              id="categoryFilter"
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {availableCategories.map((category) => (
-                <option key={category.category_id} value={category.name}>
-                  {formatDisplayText(category.name)}
-                </option>
-              ))}
-            </select>
-
             {/* Export CSV */}
             <button id="export" onClick={handleExport}><i className="ri-receipt-line" /> Export CSV</button>
             {/* Add Revenue */}
@@ -903,6 +928,7 @@ const RevenuePage = () => {
             }}
           />
         )}
+
       </div>
     </div>
   );

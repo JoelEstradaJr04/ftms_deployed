@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import '../styles/components/filter.css';
 
 // Generic filter option type
 export interface FilterOption {

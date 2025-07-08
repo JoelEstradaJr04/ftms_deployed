@@ -2,175 +2,177 @@
 
 /* ----- FILTER STYLING ----- */
 .filter {
-    flex: 1;
-    display: flex;
-    gap: 15px;
-    position: relative;
-    display: inline-block;
+    flex: 1 !important;
+    display: flex !important;
+    gap: 15px !important;
+    position: relative !important;
+    display: inline-block !important;
+    margin-left: 0.5rem !important;
 }
 
 
 /* ----- FILTER BUTTON STYLING ----- */
 .filter-btn {
-    width: 85px;
-    height: 35px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    border-radius: 8px;
-    background-color: var(--table-header-color);
-    border: 1px solid var(--border-color);
-    color: var(--secondary-text-color);
-    font-size: 14px;
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
+    width: 85px !important;
+    height: 35px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    border-radius: 8px !important;
+    background-color: var(--table-header-color) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--secondary-text-color) !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease-in-out !important;
+    cursor: pointer !important;
 }
 
 .filter-btn:hover {
-    background-color: var(--table-header-hover-color);
+    background-color: var(--table-header-hover-color) !important;
 }
 
 
 /* ----- FILTER DROPDOWN STYLING ----- */
 .filter-dropdown {
-    position: absolute;
-    top: 40px;
-    left: 0;
-    width: 400px;
-    max-height: 400px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    background: var(--foreground-color);
-    border: 1px solid var(--table-header-color);
-    color: var(--secondary-text-color);
-    padding: 16px;
-    font-size: 12px;
-    overflow-x: auto;
-    z-index: 500;
+    position: absolute !important;
+    top: 40px !important;
+    left: 0 !important;
+    width: 400px !important;
+    max-height: 400px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    background: var(--foreground-color) !important;
+    border: 1px solid var(--table-header-color) !important;
+    color: var(--secondary-text-color) !important;
+    padding: 16px !important;
+    font-size: 12px !important;
+    overflow-x: auto !important;
+    z-index: 500 !important;
 }
 
 .filter-dropdown::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 8px !important;
+    height: 8px !important;
 }
 
 .filter-dropdown::-webkit-scrollbar-thumb {
-    background-color: var(--border-color);
-    border-radius: 4px;
+    background-color: var(--border-color) !important;
+    border-radius: 4px !important;
 }
 
 .filter-dropdown::-webkit-scrollbar-track {
-    background-color: var(--table-header-color);
-    border-radius: 8px;
+    background-color: var(--table-header-color) !important;
+    border-radius: 8px !important;
 }
 
 .filter-section {
-    margin-bottom: 12px;
+    margin-bottom: 12px !important;
 }
 
 .filter-section h3 {
-    color: var(--primary-text-color);
-    margin-bottom: 8px;
-    font-weight: 600;
+    color: var(--primary-text-color) !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
 }
 
 
 /* ----- FILTER DROPDOWN STYLING: DATE RANGE ----- */
 .date-range-inputs {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 15px;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    gap: 15px !important;
 }
 
 .date-field {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
 }
 
-.date-field input {
-    flex: 1;
-    padding: 6px 12px;
-    background-color: var(--table-header-color);
-    border: 1px solid var(--table-header-color);
-    border-radius: 4px;
-    transition: all 0.2s ease;
+.date-range-inputs .date-field input {
+    flex: 1 !important;
+    padding: 6px 12px !important;
+    background-color: var(--table-header-color) !important;
+    border: 1px solid var(--table-header-color) !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+    font-size: 12px !important;
 }
 
 .date-field input:hover {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color) !important;
 }
 
 .date-field input:focus {
-    outline: none;
-    border-color: var(--primary-text-color);
+    outline: none !important;
+    border-color: var(--primary-text-color) !important;
 }
 
 
 /* ----- FILTER DROPDOWN STYLING: CHECKBOX & RADIO ----- */
 .filter-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
 }
 
 .filter-option {
-    padding: 6px 12px;
-    background-color: var(--table-header-color);
-    border: 1px solid var(--table-header-color);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    padding: 6px 12px !important;
+    background-color: var(--table-header-color) !important;
+    border: 1px solid var(--table-header-color) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
 }
 
 .filter-option:hover {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color) !important;
 }
 
 .filter-option.selected {
-    background-color: #EEDDDD;
-    color: var(--primary-color);
-    border-color: var(--primary-color);
+    background-color: #EEDDDD !important;
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
 }
 
 
 /* ----- FILTER DROPDOWN STYLING: ACTION BUTTONS ----- */
 .filter-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-    gap: 15px;
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 20px !important;
+    gap: 15px !important;
 }
 
 .filter-actions .clear-btn {
-    flex: 1;
-    padding: 8px;
-    background-color: var(--table-header-color);
-    color: var(--primary-text-color);
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease-in-out;
+    flex: 1 !important;
+    padding: 8px !important;
+    background-color: var(--table-header-color) !important;
+    color: var(--primary-text-color) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease-in-out !important;
 }
 
 .filter-actions .clear-btn:hover {
-    background-color: var(--table-header-hover-color);
+    background-color: var(--table-header-hover-color) !important;
 }
 
 .filter-actions .apply-btn {
-    flex: 1;
-    padding: 8px;
-    background-color: var(--primary-color);
-    color: var(--foreground-color);
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease-in-out;
+    flex: 1 !important;
+    padding: 8px !important;
+    background-color: var(--primary-color) !important;
+    color: var(--foreground-color) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease-in-out !important;
 }
 
 .filter-actions .apply-btn:hover {
-    background-color: var(--primary-hover-color);
+    background-color: var(--primary-hover-color) !important;
 }

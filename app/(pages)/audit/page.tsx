@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import Loading from '../../Components/loading';
 import { showSuccess, showError, showConfirmation } from '../../utility/Alerts';
 import { formatDisplayText } from '@/app/utils/formatting';
+import FilterDropdown, { FilterSection } from "../../Components/filter";
 
 type AuditLog = {
   log_id: string;
@@ -88,16 +89,55 @@ const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
 };
 
 const AuditPage = () => {
-  const today = new Date().toISOString().split('T')[0];
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tableFilter, setTableFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+
+  // Available tables for filtering
+  const availableTables = [
+    { id: 'ExpenseRecord', label: 'Expense Records' },
+    { id: 'RevenueRecord', label: 'Revenue Records' },
+    { id: 'Receipt', label: 'Receipts' },
+    { id: 'Reimbursement', label: 'Reimbursements' }
+  ];
+
+  // Available actions for filtering
+  const availableActions = [
+    { id: 'CREATE', label: 'Create' },
+    { id: 'UPDATE', label: 'Update' },
+    { id: 'DELETE', label: 'Delete' },
+    { id: 'EXPORT', label: 'Export' },
+    { id: 'VIEW', label: 'View' }
+  ];
+
+  // Filter sections configuration
+  const filterSections: FilterSection[] = [
+    {
+      id: 'dateRange',
+      title: 'Date Range',
+      type: 'dateRange',
+      defaultValue: { from: dateFrom, to: dateTo }
+    },
+    {
+      id: 'table',
+      title: 'Table',
+      type: 'checkbox',
+      options: availableTables
+    },
+    {
+      id: 'action',
+      title: 'Action',
+      type: 'checkbox',
+      options: availableActions
+    }
+  ];
 
   useEffect(() => {
     const fetchAuditLogs = async () => {
@@ -122,12 +162,16 @@ const AuditPage = () => {
       (log.performed_by && typeof log.performed_by === 'string' && log.performed_by.toLowerCase().includes(search.toLowerCase())) ||
       (log.action && typeof log.action === 'string' && log.action.toLowerCase().includes(search.toLowerCase()));
     
-    const matchesTable = tableFilter ? log.table_affected === tableFilter : true;
+    const matchesTable = tableFilter ? 
+      tableFilter.split(',').some(table => log.table_affected === table.trim()) : true;
     
     const logDate = new Date(log.timestamp).toISOString().split('T')[0];
     const matchesDate = (!dateFrom || logDate >= dateFrom) && (!dateTo || logDate <= dateTo);
     
-    return matchesSearch && matchesTable && matchesDate;
+    const matchesAction = actionFilter ? 
+      actionFilter.split(',').some(action => log.action === action.trim()) : true;
+    
+    return matchesSearch && matchesTable && matchesDate && matchesAction;
   });
 
   const indexOfLastRecord = currentPage * pageSize;
@@ -153,6 +197,7 @@ const AuditPage = () => {
         <div class="exportConfirmation">
           <p><strong>Date Range:</strong> ${dateFrom ? formatDateTime(dateFrom) : 'Start'} to ${dateTo ? formatDateTime(dateTo) : 'End'}</p>
           <p><strong>Table Filter:</strong> ${tableFilter || 'All Tables'}</p>
+          <p><strong>Action Filter:</strong> ${actionFilter || 'All Actions'}</p>
           <p><strong>Search Term:</strong> ${search || 'None'}</p>
           <p><strong>Number of Records:</strong> ${filteredLogs.length}</p>
         </div>`,
@@ -190,7 +235,7 @@ const AuditPage = () => {
           action: 'EXPORT',
           table_affected: 'AuditLog',
           record_id: exportId,
-          details: `Exported audit logs with filters - Date Range: ${dateFrom || 'Start'} to ${dateTo || 'End'}, Table: ${tableFilter || 'All'}, Search: ${search || 'None'}, Records: ${filteredLogs.length}`
+          details: `Exported audit logs with filters - Date Range: ${dateFrom || 'Start'} to ${dateTo || 'End'}, Table: ${tableFilter || 'All'}, Action: ${actionFilter || 'All'}, Search: ${search || 'None'}, Records: ${filteredLogs.length}`
         }),
       });
 
@@ -233,6 +278,33 @@ const AuditPage = () => {
     }
   };
 
+  // Handle filter application
+  const handleFilterApply = (filterValues: Record<string, string | string[] | {from: string; to: string}>) => {
+    // Date range filter
+    if (filterValues.dateRange && typeof filterValues.dateRange === 'object') {
+      const dateRange = filterValues.dateRange as { from: string; to: string };
+      setDateFrom(dateRange.from);
+      setDateTo(dateRange.to);
+    }
+    
+    // Table filter (multiple selection support)
+    if (filterValues.table && Array.isArray(filterValues.table)) {
+      setTableFilter(filterValues.table.join(','));
+    } else {
+      setTableFilter('');
+    }
+
+    // Action filter (new filter for actions)
+    if (filterValues.action && Array.isArray(filterValues.action)) {
+      setActionFilter(filterValues.action.join(','));
+    } else {
+      setActionFilter('');
+    }
+
+    // Reset pagination page
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
         <div className="card">
@@ -257,33 +329,17 @@ const AuditPage = () => {
               onChange={(e) => setSearch(e.target.value)}
             /> 
           </div>
+          <FilterDropdown
+            sections={filterSections}
+            onApply={handleFilterApply}
+            initialValues={{
+              dateRange: { from: dateFrom, to: dateTo },
+              table: tableFilter ? tableFilter.split(',') : [],
+              action: actionFilter ? actionFilter.split(',') : []
+            }}
+          />
+
           <div className="filters">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="dateFilter"
-              max={today}
-            />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="dateFilter"
-              max={today}
-            />
-            <select
-              value={tableFilter}
-              onChange={(e) => setTableFilter(e.target.value)}
-              className="categoryFilter"
-              id="categoryFilter"
-            >
-              <option value="">All Tables</option>
-              <option value="ExpenseRecord">Expense Records</option>
-              <option value="RevenueRecord">Revenue Records</option>
-              <option value="Receipt">Receipts</option>
-              <option value="Reimbursement">Reimbursements</option>
-            </select>
             
             <button onClick={handleExport} id="export"><i className="ri-receipt-line" /> Export Logs</button>
           </div>

@@ -33,7 +33,7 @@
   height: var(--search-input-height) !important;
 }
 
-.settings button {
+.settings .filters button {
   font-size: var(--page-button-font-size) !important;
   cursor: pointer !important;
   border-radius: 5px !important;
@@ -45,7 +45,7 @@
   width: 125px !important;
   height: var(--search-input-height) !important;
 }
-.settings button:hover {
+.settings .filters button:hover {
   background-color: var(--secondary-hover-color) !important;
 }
 
@@ -133,7 +133,6 @@
 
 /* ---------- Export Button (separate action) ---------- */
 .exportButton {
-  background-color: var(--success-color) !important;
   color: var(--button-font-color) !important;
   border: none !important;
   padding: 8px 16px !important;
@@ -141,9 +140,6 @@
   cursor: pointer !important;
   font-weight: 500 !important;
   transition: background-color 0.2s !important;
-}
-.exportButton:hover {
-  background-color: var(--success-hover-color) !important;
 }
 
 /* ---------- View Details Modal ---------- */
@@ -204,13 +200,13 @@
   gap: 15px !important;
 }
 
-detailRow {
+.detailRow {
   display: flex !important;
   gap: 10px !important;
   padding: 8px 0 !important;
 }
 
-detailRow strong {
+.detailRow strong {
   min-width: 120px !important;
   color: var(--secondary-text-color) !important;
 }

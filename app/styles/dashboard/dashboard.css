@@ -86,11 +86,11 @@ button:hover {
 }
 
 /* ---------- Export Button ---------- */
-.exportButton {
+.dashboard_exportButton {
   margin-left: auto !important;
 }
 
-.exportButton button {
+.dashboard_exportButton button {
   background-color: var(--primary-color) !important;
   color: white !important;
   border: none !important;
