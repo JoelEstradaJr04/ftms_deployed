@@ -39,6 +39,27 @@ type ViewModalProps = {
 const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
   if (!log) return null;
 
+  const getActionIcon = (action: string) => {
+    switch (action.toUpperCase()) {
+      case 'CREATE': return '✨';
+      case 'UPDATE': return '✏️';
+      case 'DELETE': return '🗑️';
+      case 'EXPORT': return '📤';
+      case 'VIEW': return '👁️';
+      default: return '📋';
+    }
+  };
+
+  const getTableIcon = (table: string) => {
+    switch (table.toLowerCase()) {
+      case 'expenserecord': return '💰';
+      case 'revenuerecord': return '📈';
+      case 'receipt': return '🧾';
+      case 'reimbursement': return '💳';
+      default: return '📊';
+    }
+  };
+
   return (
       <div className="modalOverlay">
         <div className="viewDetailsModal">
@@ -47,40 +68,80 @@ const ViewDetailsModal: React.FC<ViewModalProps> = ({ log, onClose }) => {
             <button onClick={onClose} className="closeButton">&times;</button>
           </div>
           <div className="modalContent">
-            <div className="detailRow">
-              <strong>Date & Time:</strong>
-              <span>{formatDateTime(log.timestamp)}</span>
-            </div>
-            <div className="detailRow">
-              <strong>Action:</strong>
-              <span>{log.action}</span>
-            </div>
-            <div className="detailRow">
-              <strong>Table:</strong>
-              <span>{formatDisplayText(log.table_affected)}</span>
-            </div>
-            <div className="detailRow">
-              <strong>Record ID:</strong>
-              <span>{log.record_id}</span>
-            </div>
-            <div className="detailRow">
-              <strong>Performed By:</strong>
-              <span>{log.performed_by}</span>
-            </div>
-            <div className="detailRow">
-              <strong>IP Address:</strong>
-              <span>{log.ip_address || 'N/A'}</span>
-            </div>
-            <div className="detailRow">
-              <strong>Details:</strong>
-              <span className="fullDetails">
-                {typeof log.details === 'string'
-                  ? log.details
-                  : <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>
-                      {JSON.stringify(log.details, null, 2)}
-                    </pre>
-                }
-              </span>
+            <div className="audit-details-container">
+              {/* Primary Information Card */}
+              <div className="audit-detail-card">
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">🕒</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Date & Time</div>
+                    <div className="audit-detail-value">{formatDateTime(log.timestamp)}</div>
+                  </div>
+                </div>
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">{getActionIcon(log.action)}</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Action</div>
+                    <div className="audit-detail-value">
+                      <span className={`action-badge ${log.action.toLowerCase()}`}>
+                        {log.action}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">{getTableIcon(log.table_affected)}</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Table Affected</div>
+                    <div className="audit-detail-value">{formatDisplayText(log.table_affected)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Secondary Information Card */}
+              <div className="audit-detail-card">
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">🔑</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Record ID</div>
+                    <div className="audit-detail-value">
+                      <span className="code-text">{log.record_id}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">👤</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Performed By</div>
+                    <div className="audit-detail-value">{log.performed_by}</div>
+                  </div>
+                </div>
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">🌐</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">IP Address</div>
+                    <div className="audit-detail-value">
+                      <span className="code-text">{log.ip_address || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details Card */}
+              <div className="audit-detail-card">
+                <div className="audit-detail-row">
+                  <div className="audit-detail-icon">📋</div>
+                  <div className="audit-detail-content">
+                    <div className="audit-detail-label">Details</div>
+                    <div className="audit-detail-value details-section">
+                      {typeof log.details === 'string'
+                        ? log.details
+                        : JSON.stringify(log.details, null, 2)
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
