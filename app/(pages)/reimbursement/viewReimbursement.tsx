@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import ViewExpenseModal from '../expense/viewExpense';
 import '../../styles/reimbursement/viewReimbursement.css';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type Reimbursement = {
   reimbursement_id: string;
@@ -68,12 +69,7 @@ const ViewReimbursement: React.FC<ViewReimbursementProps> = ({
     <>
       <div className="modalOverlay" onClick={onClose}>
         <div className="viewReimbursementModal" onClick={e => e.stopPropagation()}>
-          <div className="modalHeader">
-            <h2>Reimbursement Details</h2>
-            <button className="closeButton" onClick={onClose}>
-              <i className="ri-close-line"></i>
-            </button>
-          </div>
+          <ModalHeader title="Reimbursement Details" onClose={onClose} />
           <div className="modalBody">
             <div className="mainDetails">
               <div className="detailRow">

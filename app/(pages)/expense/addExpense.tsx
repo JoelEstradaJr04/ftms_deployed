@@ -10,6 +10,7 @@ import { validateField, isValidAmount, ValidationRule } from "../../utility/vali
 import type { Receipt } from '@/app/types/receipt';
 import { formatDisplayText } from '../../utils/formatting';
 import BusSelector from '../../Components/busSelector';
+import ModalHeader from '../../Components/ModalHeader';
 import type { Assignment } from '@/lib/operations/assignments';
 import { fetchEmployeesForReimbursementClient } from '@/lib/supabase/employees';
 
@@ -62,8 +63,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   currentUser 
 }) => {
   const [showBusSelector, setShowBusSelector] = useState(false);
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
   const [source, setSource] = useState<'operations' | 'receipt'>('operations');
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [receiptLoading, setReceiptLoading] = useState(true);
@@ -205,17 +204,6 @@ const AddExpense: React.FC<AddExpenseProps> = ({
     const minutes = String(now.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(formatDate(now));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Fetch all employees from the new endpoint
   useEffect(() => {
@@ -672,18 +660,11 @@ const AddExpense: React.FC<AddExpenseProps> = ({
   return (
     <div className="modalOverlay">
       <div className="addExpenseModal">
-        {/* Close Button */}
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
-
-        <div className="modalHeader">
-          <h1>Add Expense</h1>
-          <div className="timeDate">
-            <div className="currTime">{currentTime}</div>
-            <div className="currDate">{currentDate}</div>
-          </div>
-        </div>
+        <ModalHeader 
+          title="Add Expense" 
+          onClose={onClose} 
+          showDateTime={true} 
+        />
 
       <form onSubmit={handleSubmit}>
         <div className="modalContent">

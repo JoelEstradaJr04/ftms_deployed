@@ -663,7 +663,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
               <div className="formInputs">
                 <div className="formRow">
                   <div className="formField">
-                    <label htmlFor="supplier">Supplier</label>
+                    <label htmlFor="supplier">Supplier<span className='requiredTags'> *</span></label>
                     <input
                       type="text"
                       id="supplier"
@@ -677,7 +677,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                   </div>
 
                     <div className="formField">
-                      <label htmlFor="category_id">Category</label>
+                      <label htmlFor="category_id">Category<span className='requiredTags'> *</span></label>
                       {isCategoryEditable(items) ? (
                         !isOtherCategory ? (
                           <div className="categoryField">
@@ -760,7 +760,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
 
                 <div className="formRow">
                 <div className="formField">
-                  <label htmlFor="transaction_date">Transaction Date & Time</label>
+                  <label htmlFor="transaction_date">Transaction Date & Time<span className='requiredTags'> *</span></label>
                   <input
                     type="datetime-local"
                     id="transaction_date"
@@ -816,7 +816,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                     )}
                     
                     <div className="formField">
-                      <label htmlFor="terms_id">Terms</label>
+                      <label htmlFor="terms_id">Terms<span className='requiredTags'> *</span></label>
                       <select
                         id="terms_id"
                         name="terms_id"
@@ -834,7 +834,7 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                   </div>
                 <div className="formRow">
                   <div className="formField">
-                    <label htmlFor="payment_status_id">Payment Status</label>
+                    <label htmlFor="payment_status_id">Payment Status<span className='requiredTags'> *</span></label>
                     <select
                       id="payment_status_id"
                       name="payment_status_id"
@@ -886,12 +886,12 @@ const AddReceipt: React.FC<AddReceiptFormData> = ({
                   <table className="itemTable">
                     <thead className='itemTable'>
                       <tr>
-                        <th>Item Name</th>
-                        <th>Unit</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
+                        <th>Item Name<span className='requiredTags'> *</span></th>
+                        <th>Unit<span className='requiredTags'> *</span></th>
+                        <th>Quantity<span className='requiredTags'> *</span></th>
+                        <th>Unit Price<span className='requiredTags'> *</span></th>
                         <th>Total Price</th>
-                        <th>Category</th>
+                        <th>Category<span className='requiredTags'> *</span></th>
                         <th>Action</th>
                       </tr>
                     </thead>

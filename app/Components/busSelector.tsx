@@ -5,6 +5,7 @@ import "../styles/components/busSelector.css"
 import "../styles/components/table.css"
 import type { Assignment } from '@/lib/operations/assignments';
 import { formatDateTime } from '../utility/dateFormatter';
+import ModalHeader from './ModalHeader';
 
 type Employee = {
   employee_id: string;
@@ -89,12 +90,7 @@ const BusSelectorModal: React.FC<BusSelectorModalProps> = ({
   return (
     <div className="modalOverlay">
       <div className="addExpenseModal">
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
-        <div className="modalHeader">
-          <h1>Select Bus Assignment</h1>
-        </div>
+        <ModalHeader title="Select Bus Assignment" onClose={onClose} />
         <div className="modalContent">
           <input
             type="text"

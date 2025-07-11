@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import '../../styles/receipt/editReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 // Global types, aligned with schema
 interface GlobalCategory { category_id: string; name: string; }
@@ -396,16 +397,10 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
     <div className="editReceiptModalOverlay">
       <div className="editReceiptModalContent">
         
-        
-        <div className="modalHeader">
-          <h2>Edit Receipt</h2>
-          <button type="button" className="closeButton" onClick={onClose}>
-            <i className="ri-close-line"></i>
-          </button>
-        </div>
+        <ModalHeader title="Edit Receipt" onClose={onClose} />
 
         <div className="formGroup">
-          <label>Supplier</label>
+          <label>Supplier<span className='requiredTags'> *</span></label>
           <input
             type="text"
             name="supplier"
@@ -417,7 +412,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
 
         <div className="formRow">
           <div className="formGroup">
-            <label>Transaction Date & Time</label>
+            <label>Transaction Date & Time<span className='requiredTags'> *</span></label>
             <input
               type="datetime-local"
               name="transaction_date"
@@ -483,7 +478,7 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
             </div>
           </div>
           <div className="formGroup">
-            <label>Payment Status</label>
+            <label>Payment Status<span className='requiredTags'> *</span></label>
             <select
               name="payment_status_id"
               value={paymentStatusId}
@@ -518,12 +513,12 @@ const EditReceiptModal: React.FC<EditReceiptModalProps> = ({
           <table>
             <thead>
               <tr>
-                <th>Item Name</th>
-                <th>Unit</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
+                <th>Item Name<span className='requiredTags'> *</span></th>
+                <th>Unit<span className='requiredTags'> *</span></th>
+                <th>Quantity<span className='requiredTags'> *</span></th>
+                <th>Unit Price<span className='requiredTags'> *</span></th>
                 <th>Total Price</th>
-                <th>Category</th>
+                <th>Category<span className='requiredTags'> *</span></th>
                 <th>Action</th>
               </tr>
             </thead>

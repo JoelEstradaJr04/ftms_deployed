@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import '../../../styles/payroll/viewPayroll.css';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 // Add types for processed_benefits, processed_deductions, and hr_data_snapshot
 interface BenefitItem {
@@ -168,10 +169,7 @@ const ViewPayrollModal: React.FC<ViewPayrollModalProps> = ({ period, onClose }) 
   return (
     <div className="modalOverlay">
       <div className="viewPayrollModal">
-        <div className="modalHeader">
-          <h2>View Payroll Details - {period.payroll_type} ({period.cut_off_period})</h2>
-          <button className="closeButton" onClick={onClose}>&times;</button>
-        </div>
+        <ModalHeader title={`View Payroll Details - ${period.payroll_type} (${period.cut_off_period})`} onClose={onClose} />
         <div className="modalBody">
           {/* Period Summary */}
           <div className="mainDetails">

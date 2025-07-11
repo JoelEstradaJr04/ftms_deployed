@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { showSuccess, showError } from '../../utility/Alerts';
 import "../../styles/reimbursement/applyReimbursement.css";
 import EmployeeSelectorModal, { Employee } from "../../Components/employeeSelector";
+import ModalHeader from '@/app/Components/ModalHeader';
 
 interface ApplyReimbursementProps {
   isOpen: boolean;
@@ -131,24 +132,14 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
     <>
     <div className="modalOverlay" onClick={handleClose}>
       <div className="modalContent" onClick={(e) => e.stopPropagation()}>
-        <div className="modalHeader">
-          <h2>Apply for Reimbursement</h2>
-          <button 
-            type="button" 
-            className="closeButton" 
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
-            <i className="ri-close-line"></i>
-          </button>
-        </div>
+        <ModalHeader title="Apply for Reimbursement" onClose={handleClose} />
 
         <div className="modalBody">
           <div className="form-container">
 
             <div className="form-group">
               <label>
-                Employee <span className="required">*</span>
+                Employee<span className='requiredTags'> *</span>
               </label>
               <button
                 type="button"
@@ -165,7 +156,7 @@ const ApplyReimbursement: React.FC<ApplyReimbursementProps> = ({
 
             <div className="form-group">
               <label htmlFor="amount">
-                Amount (₱) <span className="requiredTags"> *</span>
+                Amount (₱)<span className='requiredTags'> *</span>
               </label>
               <input
                 type="number"

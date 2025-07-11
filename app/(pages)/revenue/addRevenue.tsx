@@ -15,6 +15,7 @@ import { formatDate } from '../../utility/dateFormatter';
 import { formatDisplayText } from '../../utils/formatting';
 import { Assignment } from '@/lib/operations/assignments';
 import RevenueSourceSelector from '../../Components/revenueBusSelector';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type GlobalCategory = {
   category_id: string;
@@ -49,8 +50,6 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
   currentUser,
   existingRevenues
 }) => {
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
   const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [categories, setCategories] = useState<GlobalCategory[]>([]);
   
@@ -109,17 +108,6 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
     };
 
     fetchGlobals();
-  }, []);
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(formatDate(now));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   // Filter assignments based on selected category
@@ -338,18 +326,7 @@ const AddRevenue: React.FC<AddRevenueProps & { existingRevenues: ExistingRevenue
   return (
     <div className="modalOverlay">
       <div className="addRevenueModal">
-        {/* Close Button */}
-        <button type="button" className="closeButton" onClick={() => { console.log('[EVENT] Close button clicked'); onClose(); }}>
-          <i className="ri-close-line"></i>
-        </button>
-
-        <div className="modalHeader">
-          <h1>Add Revenue</h1>
-          <div className="timeDate">
-            <div className="currTime">{currentTime}</div>
-            <div className="currDate">{currentDate}</div>
-          </div>
-        </div>
+        <ModalHeader title="Add Revenue" onClose={onClose} />
 
         <form onSubmit={handleSubmit}>
           <div className="addRevenue_modalContent">

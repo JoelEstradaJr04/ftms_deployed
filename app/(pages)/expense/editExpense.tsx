@@ -11,6 +11,7 @@ import { formatDate } from '../../utility/dateFormatter';
 import { validateField, ValidationRule, isValidAmount } from "../../utility/validation";
 import type { Assignment } from '@/lib/operations/assignments';
 import type { Receipt } from '@/app/types/receipt';
+import ModalHeader from '../../Components/ModalHeader';
 import Swal from "sweetalert2";
 
 /* ───── types ──────────────────────────────────────────────── */
@@ -88,9 +89,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   onClose,
   onSave
 }) => {
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
-  
   // Convert expense_date to datetime-local format for input
   const formatDateTimeLocal = (dateString: string) => {
     const date = new Date(dateString);
@@ -222,17 +220,6 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
       }
     }
   };
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(formatDate(now));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleAmountChange = (newAmount: number) => {
     if (isNaN(newAmount)) {
@@ -415,18 +402,11 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   return (
     <div className="modalOverlay">
       <div className="editExpenseModal">
-        {/* Close Button */}
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
-
-        <div className="modalHeader">
-          <h1>Edit Expense</h1>
-          <div className="timeDate">
-            <div className="currTime">{currentTime}</div>
-            <div className="currDate">{currentDate}</div>
-          </div>
-        </div>
+        <ModalHeader 
+          title="Edit Expense" 
+          onClose={onClose} 
+          showDateTime={true} 
+        />
 
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <div className="editExpense_modalContent">

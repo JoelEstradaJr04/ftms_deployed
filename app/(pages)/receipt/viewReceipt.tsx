@@ -4,6 +4,7 @@ import React from 'react';
 import { formatDate, formatDateTime } from '../../utility/dateFormatter';
 import '../../styles/receipt/viewReceipt.css';
 import { formatDisplayText } from '@/app/utils/formatting';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type ReceiptItem = {
   receipt_item_id: string;
@@ -69,10 +70,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
     return (
       <div className="viewReceipt__modalOverlay">
         <div className="viewReceipt__modalContent">
-          <div className="viewReceipt__modalHeader">
-            <h2>View Receipt</h2>
-            <button className="closeButton" onClick={onClose}>&times;</button>
-          </div>
+          <ModalHeader title="View Receipt" onClose={onClose} />
           <div className="mainDetails">
             <div className="detailRow">
               <span className="label">Error:</span>
@@ -131,10 +129,7 @@ const ViewReceiptModal: React.FC<ViewReceiptModalProps> = ({ record, onClose }):
   return (
     <div className="viewReceipt__modalOverlay">
       <div className="viewReceipt__modalContent">
-        <div className="viewReceipt__modalHeader">
-          <h2>View Receipt</h2>
-          <button className="closeButton" onClick={onClose}>&times;</button>
-        </div>
+        <ModalHeader title="View Receipt" onClose={onClose} />
         
         <div className="mainDetails">
           <div className="detailRow">

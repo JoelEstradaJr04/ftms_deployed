@@ -3,6 +3,7 @@ import PaginationComponent from "./pagination"; // Reuse your pagination
 import Loading from "./loading"; // Reuse your loading spinner
 import "../styles/components/revenueBusSelector.css";
 import type { Assignment } from '@/lib/operations/assignments';
+import ModalHeader from './ModalHeader';
 
 type Employee = {
   employee_id: string;
@@ -85,12 +86,7 @@ const RevenueSourceSelector: React.FC<RevenueSourceSelectorProps> = ({
   return (
     <div className="modalOverlay">
       <div className="addRevenueModal">
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
-        <div className="modalHeader">
-          <h1>Select Assignment</h1>
-        </div>
+        <ModalHeader title="Select Assignment" onClose={onClose} />
         <div className="revenue_modalContent">
           <input
             type="text"

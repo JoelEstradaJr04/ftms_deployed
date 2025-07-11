@@ -7,6 +7,7 @@ import { formatDisplayText } from '@/app/utils/formatting';
 import ViewReceiptModal from '../receipt/viewReceipt';
 import type { Receipt } from '../../types/receipt';
 import type { Assignment } from '@/lib/operations/assignments';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type Reimbursement = {
   reimbursement_id: string;
@@ -132,10 +133,7 @@ const ViewExpenseModal: React.FC<ViewExpenseModalProps> = ({ record, onClose }) 
   return (
     <div className="modalOverlay">
       <div className="viewExpenseModal">
-        <div className="modalHeader">
-          <h2>View Expense</h2>
-          <button className="closeButton" onClick={onClose}>&times;</button>
-        </div>
+        <ModalHeader title="View Expense" onClose={onClose} />
 
         <div className="mainDetails">
           <div className="detailRow">

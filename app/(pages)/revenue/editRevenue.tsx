@@ -5,6 +5,7 @@ import "../../styles/revenue/editRevenue.css";
 import { getAssignmentById } from '@/lib/operations/assignments';
 import { formatDate } from '../../utility/dateFormatter';
 import { validateField, ValidationRule, isValidAmount } from "../../utility/validation";
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type EditProps = {
   record: {
@@ -40,9 +41,6 @@ interface AssignmentDisplay {
 }
 
 const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
-  
   // Convert collection_date to datetime-local format for input
   const formatDateTimeLocal = (dateString: string) => {
     const date = new Date(dateString);
@@ -168,17 +166,6 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
       }
     }
   };
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(formatDate(now));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const fetchAssignmentData = async () => {
@@ -365,18 +352,7 @@ const EditRevenueModal: React.FC<EditProps> = ({ record, onClose, onSave }) => {
   return (
     <div className="modalOverlay">
       <div className="editRevenueModal">
-        {/* Close Button */}
-        <button type="button" className="closeButton" onClick={onClose}>
-          <i className="ri-close-line"></i>
-        </button>
-
-        <div className="modalHeader">
-          <h1>Edit Revenue</h1>
-          <div className="timeDate">
-            <div className="currTime">{currentTime}</div>
-            <div className="currDate">{currentDate}</div>
-          </div>
-        </div>
+        <ModalHeader title="Edit Revenue" onClose={onClose} />
 
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <div className="editRevenue_modalContent">

@@ -6,6 +6,7 @@ import '../../styles/revenue/viewRevenue.css';
 import { formatDateTime } from '../../utility/dateFormatter';
 import { formatDisplayText } from '@/app/utils/formatting';
 import type { Assignment } from '@/lib/operations/assignments';
+import ModalHeader from '@/app/Components/ModalHeader';
 
 type GlobalCategory = {
   category_id: string;
@@ -137,10 +138,7 @@ const ViewRevenue: React.FC<ViewRevenueProps> = ({ record, onClose }) => {
   return (
     <div className="modalOverlay">
       <div className="viewRevenueModal">
-        <div className="modalHeader">
-          <h2>View Revenue</h2>
-          <button className="closeButton" onClick={onClose}>&times;</button>
-        </div>
+        <ModalHeader title="View Revenue" onClose={onClose} />
 
         <div className="mainDetails">
           <div className="detailRow">

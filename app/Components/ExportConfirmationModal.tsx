@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import styles from '../styles/components/ExportConfirmationModal.module.css';
+import ModalHeader from './ModalHeader';
 
 type DashboardCategoryData = Record<string, { name: string; amount: number }>;
 
@@ -103,7 +104,7 @@ const ExportConfirmationModal: React.FC<ExportConfirmationModalProps> = ({
         ref={modalRef}
         role="document"
       >
-        <h2 id="export-modal-title">Confirm Export</h2>
+        <ModalHeader title="Confirm Export" onClose={onClose} />
 
         <div
           className={styles.summarySection}
