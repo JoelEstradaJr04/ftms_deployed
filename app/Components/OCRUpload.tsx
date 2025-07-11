@@ -158,41 +158,43 @@ const OCRUpload: React.FC<OCRUploadProps> = ({ onOCRComplete, onError }) => {
           )}
         </div>
 
-        {extractedText && (
-          <div className="extraction-section">
-            <div className="extraction-header">
-              <h4>
-                Extracted Data ({
-                  extractedText.field_count || 
-                  extractedText.fields_detected || 
-                  extractedText.ocr_fields?.length || 
-                  extractedText.debug_info?.fields_detected || 
-                  0
-                } fields detected)
-              </h4>
-              <div className="confidence-badge">
-                <span className="confidence-label">Accuracy:</span>
-                <span className={`confidence-value ${
-                  (extractedText.overall_confidence || extractedText.accuracy || 0) > 0.8 ? 'high' : 
-                  (extractedText.overall_confidence || extractedText.accuracy || 0) > 0.6 ? 'medium' : 'low'
-                }`}>
-                  {(() => {
-                    // Try multiple confidence sources
-                    const confidence = extractedText.overall_confidence || 
-                                      extractedText.accuracy || 
-                                      extractedText.confidence_percentage || 
-                                      (extractedText.confidence / 100) || 
-                                      0;
-                    
-                    // If confidence is already a percentage (>1), use as-is, otherwise convert to percentage
-                    const percentage = confidence > 1 ? confidence : confidence * 100;
-                    return percentage.toFixed(1);
-                  })()}%
-                </span>
+        {/* Always show extraction section with outline */}
+        <div className="extraction-section">
+          {extractedText ? (
+            <>
+              <div className="extraction-header">
+                <h4>
+                  Extracted Data ({
+                    extractedText.field_count || 
+                    extractedText.fields_detected || 
+                    extractedText.ocr_fields?.length || 
+                    extractedText.debug_info?.fields_detected || 
+                    0
+                  } fields detected)
+                </h4>
+                <div className="confidence-badge">
+                  <span className="confidence-label">Accuracy:</span>
+                  <span className={`confidence-value ${
+                    (extractedText.overall_confidence || extractedText.accuracy || 0) > 0.8 ? 'high' : 
+                    (extractedText.overall_confidence || extractedText.accuracy || 0) > 0.6 ? 'medium' : 'low'
+                  }`}>
+                    {(() => {
+                      // Try multiple confidence sources
+                      const confidence = extractedText.overall_confidence || 
+                                        extractedText.accuracy || 
+                                        extractedText.confidence_percentage || 
+                                        (extractedText.confidence / 100) || 
+                                        0;
+                      
+                      // If confidence is already a percentage (>1), use as-is, otherwise convert to percentage
+                      const percentage = confidence > 1 ? confidence : confidence * 100;
+                      return percentage.toFixed(1);
+                    })()}%
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="extracted-content">
+              <div className="extracted-content">
               {/* Raw Text Debug Section */}
               {extractedText.raw_text && extractedText.raw_text.length > 0 && (
                 <div className="raw-text-debug">
@@ -419,8 +421,18 @@ const OCRUpload: React.FC<OCRUploadProps> = ({ onOCRComplete, onError }) => {
                 </div>
               )}
             </div>
-          </div>
-        )}
+          </>
+          ) : (
+            <div className="extraction-placeholder">
+              <div className="placeholder-icon">
+                <i className="ri-file-text-line"></i>
+              </div>
+              <h4>Scanned Details</h4>
+              <p>Scanned details will appear here</p>
+              <small>Upload an image to extract text and data automatically</small>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

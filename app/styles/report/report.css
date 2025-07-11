@@ -33,6 +33,15 @@ button {
   color: var(--primary-text-color) !important;
   width: 125px !important;
   height: var(--search-input-height) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--page-button-border-radius) !important;
+  text-align: center;
+}
+
+.settings .date input[type="date"]:focus,
+.settings select:focus {
+  outline: none !important;
+  border-color: var(--primary-color) !important;
 }
 
 /* Search bar */
@@ -326,7 +335,7 @@ button {
   border-radius: var(--page-button-border-radius) !important;
   cursor: pointer !important;
   transition: all 0.3s ease !important;
-  font-size: var(--page-button-font-size) !important;
+  font-size: calc(var(--page-button-font-size) - 1px) !important;
   font-weight: 500 !important;
   box-shadow: var(--box-shadow) !important;
   width: var(--page-button-width) !important;

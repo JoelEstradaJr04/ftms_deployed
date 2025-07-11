@@ -650,7 +650,7 @@ const ReportPage = () => {
                       })}
                     </tbody>
                   </table>
-                  {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+                  {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
                 </div>
               </div>
               
@@ -738,7 +738,7 @@ const ReportPage = () => {
                       })}
                     </tbody>
                   </table>
-                  {currentRecords.length === 0 && !loading && <p>No records found.</p>}
+                  {currentRecords.length === 0 && !loading && <p className="noRecords">No records found.</p>}
                 </div>
               </div>
               

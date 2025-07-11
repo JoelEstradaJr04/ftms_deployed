@@ -774,7 +774,8 @@
 .itemsSection .removeItemBtn,
 .add_itemsSection .clearCustomBtn,
 .add_itemsSection .removeItemBtn {
-  background: none;
+  background: none !important;
+  outline: none !important;
   border: none;
   color: #e74c3c;
   cursor: pointer;
